@@ -1,6 +1,6 @@
-// TV Show Action Figure Prompts
+// TV Show Action Figure Prompts - Generic TV character archetypes
 interface TVShowActionFigurePrompt {
-  title: string;
+  archetype: string;
   basePrompt: string;
   additions: string[];
   removals: string[];
@@ -10,244 +10,244 @@ interface TVShowActionFigurePrompt {
 
 const tvPrompts: TVShowActionFigurePrompt[] = [
   {
-    title: "Zack Morris Bayside King Figure",
-    basePrompt: "A high school heartthrob action figure in a colorful polo and acid-washed jeans, holding a giant brick cell phone and standing in front of a locker-lined hallway. Includes time-freeze pose feature.",
-    additions: ["Bayside yearbook", "Detention slip prop"],
+    archetype: "High School Heartthrob Figure",
+    basePrompt: "Create a pastel clamshell package for [NAME] from [COMPANY] as a high school heartthrob action figure in a colorful polo and acid-washed jeans, holding a giant brick cell phone and standing in front of a locker-lined hallway. Includes time-freeze pose feature. Professional toy photography with 90s aesthetic lighting.",
+    additions: ["School yearbook", "Detention slip prop"],
     removals: ["Phone", "Backpack"],
     poses: ["Finger point", "Cell phone lean", "Locker lean"],
-    packaging: "Saved by the Bell pastel clamshell with screech quotes and zig-zag borders",
+    packaging: "Pastel clamshell with quotes and zig-zag borders"
   },
   {
-    title: "Fox Mulder Paranormal Agent Figure",
-    basePrompt: "A trench-coat wearing FBI agent with briefcase and flashlight, posed mid-investigation with a flying saucer silhouette behind. Includes alien skull and poster accessory.",
-    additions: ["X-Files folder", "Secret vault backdrop"],
+    archetype: "Paranormal Agent Figure",
+    basePrompt: "Create a dark government-issue packaging for [NAME] from [COMPANY] as a trench-coat wearing FBI agent with briefcase and flashlight, posed mid-investigation with a flying saucer silhouette behind. Includes alien skull and poster accessory. Professional photography with mysterious lighting.",
+    additions: ["Files folder", "Secret vault backdrop"],
     removals: ["Flashlight", "Poster"],
     poses: ["Flashlight crouch", "Holding badge", "Looking up at light"],
-    packaging: "Dark government-issue packaging with foil stamp and secret message liner",
+    packaging: "Dark government-issue packaging with foil stamp and secret message liner"
   },
   {
-    title: "Will Smith Fresh Prince Figure",
-    basePrompt: "A stylish 90s teen in neon streetwear, posed with a tilted cap and boom box accessory on a Bel-Air graffiti wall base. Features expressive facial stickers and poseable dance limbs.",
-    additions: ["Basketball", "DJ Jazzy Jeff accessory"],
+    archetype: "Fresh Prince Style Figure",
+    basePrompt: "Create a graffiti-sprayed flip box for [NAME] from [COMPANY] as a stylish 90s teen in neon streetwear, posed with a tilted cap and boom box accessory on a graffiti wall base. Features expressive facial stickers and poseable dance limbs. Professional photography with urban street lighting.",
+    additions: ["Basketball", "DJ accessory"],
     removals: ["Boom box", "Jacket"],
     poses: ["Jump pose", "One-arm mic move", "Side lean chill"],
-    packaging: "Graffiti-sprayed flip box with bold 'West Philly' sticker sheet",
+    packaging: "Graffiti-sprayed flip box with bold sticker sheet"
   },
   {
-    title: "Rachel Green Central Perk Figure",
-    basePrompt: "A 90s fashionista figure with layered haircut and coffee tray, posed behind a Central Perk sofa backdrop with chalkboard specials wall. Includes changeable waitress and casual outfits.",
-    additions: ["Coffee cup", "'We Were On a Break' banner"],
+    archetype: "Coffee Shop Fashionista Figure",
+    basePrompt: "Create a sitcom-style stage set box for [NAME] from [COMPANY] as a 90s fashionista figure with layered haircut and coffee tray, posed behind a coffee shop sofa backdrop with chalkboard specials wall. Includes changeable waitress and casual outfits. Professional toy photography.",
+    additions: ["Coffee cup", "Quote banner"],
     removals: ["Tray", "Apron"],
     poses: ["Serving pose", "Talking on phone", "Hand on hip smile"],
-    packaging: "Sitcom-style stage set box with pop-out quote bubbles and couch stand",
+    packaging: "Sitcom-style stage set box with pop-out quote bubbles and couch stand"
   },
   {
-    title: "CJ Parker Lifeguard Baywatch Figure",
-    basePrompt: "An action-ready lifeguard figure in red swimsuit and whistle, posed on a sandy beach base with lifeguard tower backdrop. Features splash effects and slow-motion running stance.",
+    archetype: "Lifeguard Figure",
+    basePrompt: "Create a wave-washed box for [NAME] from [COMPANY] as an action-ready lifeguard figure in red swimsuit and whistle, posed on a sandy beach base with lifeguard tower backdrop. Features splash effects and slow-motion running stance. Professional photography with beach lighting.",
     additions: ["Rescue float", "Binoculars"],
-    removals: ["Whistle", "Baywatch logo patch"],
-    poses: ["Baywatch run", "Lifeguard stand wave", "Kneeling rescue pose"],
+    removals: ["Whistle", "Logo patch"],
+    poses: ["Running stance", "Lifeguard stand wave", "Kneeling rescue pose"],
     packaging: "Wave-washed box with transparent ocean texture and iconic 90s title bar"
   },
   {
-    title: "Uncle Jesse Full House Rocker Figure",
-    basePrompt: "A cool uncle figure with flowing hair, leather jacket, and guitar accessory, posed in front of a San Francisco townhouse with a soft pink sky. Includes motorcycle and 'Have Mercy' sign.",
+    archetype: "Cool Uncle Rocker Figure",
+    basePrompt: "Create a 90s sitcom box for [NAME] from [COMPANY] as a cool uncle figure with flowing hair, leather jacket, and guitar accessory, posed in front of a San Francisco townhouse with a soft pink sky. Includes motorcycle and motivational sign. Professional photography with sitcom lighting.",
     additions: ["Drumsticks", "Baby backpack"],
     removals: ["Guitar", "Sunglasses"],
     poses: ["Finger point", "Mic croon", "Family hug pose"],
-    packaging: "90s sitcom box with family photo cutout and soft glow filter",
+    packaging: "90s sitcom box with family photo cutout and soft glow filter"
   },
   {
-    title: "Steve Urkel Nerd Icon Figure",
-    basePrompt: "A quirky nerd figure in suspenders, thick glasses, and high-waisted pants, posed mid-snort with science kit and family house background. Includes interchangeable 'cool' variant.",
+    archetype: "Nerd Icon Figure",
+    basePrompt: "Create a checkerboard clamshell for [NAME] from [COMPANY] as a quirky nerd figure in suspenders, thick glasses, and high-waisted pants, posed mid-snort with science kit and family house background. Includes interchangeable 'cool' variant. Professional toy photography.",
     additions: ["Beaker", "Hover boots"],
     removals: ["Suspenders", "Glasses"],
     poses: ["Did I do that? pose", "Point and laugh", "Nose push"],
-    packaging: "Checkerboard clamshell with pop quiz stickers and Urkel catchphrases",
+    packaging: "Checkerboard clamshell with pop quiz stickers and catchphrases"
   },
   {
-    title: "Buffy Summers Vampire Slayer Figure",
-    basePrompt: "A high school slayer figure with wooden stake, crossbow, and leather jacket, posed on a dark cemetery base with crypt lights. Includes vampire dust effects and library accessories.",
-    additions: ["Mr. Pointy stake", "Grimoire"],
+    archetype: "Vampire Slayer Figure",
+    basePrompt: "Create a graveyard gate box for [NAME] from [COMPANY] as a high school slayer figure with wooden stake, crossbow, and leather jacket, posed on a dark cemetery base with crypt lights. Includes vampire dust effects and library accessories. Professional photography with gothic lighting.",
+    additions: ["Pointy stake", "Grimoire"],
     removals: ["Crossbow", "Jacket"],
     poses: ["Mid-kick stake", "Defensive cross pose", "Library research"],
-    packaging: "Graveyard gate box with gothic text and embossed stake emblems",
+    packaging: "Graveyard gate box with gothic text and embossed stake emblems"
   },
   {
-    title: "Carlton Banks Dance Icon Figure",
-    basePrompt: "A stylish cousin in sweater vest and bowtie posed doing his iconic dance move in a luxury Bel-Air foyer set. Includes dance radio, trophy case backdrop, and piano stand.",
-    additions: ["Dance boom box", "Cousin Will photo"],
+    archetype: "Dance Icon Figure",
+    basePrompt: "Create a family mansion diorama for [NAME] from [COMPANY] as a stylish cousin in sweater vest and bowtie posed doing his iconic dance move in a luxury foyer set. Includes dance radio, trophy case backdrop, and piano stand. Professional photography with mansion lighting.",
+    additions: ["Dance boom box", "Family photo"],
     removals: ["Sweater vest", "Radio"],
-    poses: ["Carlton dance", "Jazz hands", "Clap and spin"],
-    packaging: "Family mansion diorama with pop-out floor rug and disco overlay",
+    poses: ["Dance move", "Jazz hands", "Clap and spin"],
+    packaging: "Family mansion diorama with pop-out floor rug and disco overlay"
   },
   {
-    title: "Sabrina Spellman Teenage Witch Figure",
-    basePrompt: "A teen witch figure in sparkly top with spell book and black cat, posed in front of her living room with magic portal base. Includes bubbling cauldron and wand.",
-    additions: ["Talking Salem cat", "Magic journal"],
+    archetype: "Teenage Witch Figure",
+    basePrompt: "Create a mystical purple box for [NAME] from [COMPANY] as a teen witch figure in sparkly top with spell book and black cat, posed in front of her living room with magic portal base. Includes bubbling cauldron and wand. Professional photography with magical lighting.",
+    additions: ["Talking cat", "Magic journal"],
     removals: ["Cauldron", "Wand"],
     poses: ["Wand cast pose", "Smirk with book", "Floating meditation"],
-    packaging: "Mystical purple box with star shimmer and cauldron bubble textures",
+    packaging: "Mystical purple box with star shimmer and cauldron bubble textures"
   },
   {
-    title: "Al Bundy Couch Potato Figure",
-    basePrompt: "A grumpy dad figure in dress shirt and tie sitting on a cracked living room couch with TV remote and football. Includes newspaper and shoe store receipt props.",
-    additions: ["Shoe box", "Polk High jersey"],
+    archetype: "Couch Potato Figure",
+    basePrompt: "Create a faded family living room box for [NAME] from [COMPANY] as a grumpy dad figure in dress shirt and tie sitting on a cracked living room couch with TV remote and football. Includes newspaper and receipt props. Professional toy photography.",
+    additions: ["Shoe box", "High school jersey"],
     removals: ["Remote", "Shoes"],
     poses: ["Couch recline", "Facepalm", "Football throw"],
-    packaging: "Faded family living room box with remote flap and sarcastic banner",
+    packaging: "Faded family living room box with remote flap and sarcastic banner"
   },
   {
-    title: "Dana Scully Sci-Fi Analyst Figure",
-    basePrompt: "A sharp-suited FBI figure with medical folder and glowing X-file, standing against a lab background with alien outline shadow. Includes gun holster and flashlight.",
+    archetype: "Sci-Fi Analyst Figure",
+    basePrompt: "Create an X-Files black and white slipcase for [NAME] from [COMPANY] as a sharp-suited FBI figure with medical folder and glowing file, standing against a lab background with alien outline shadow. Includes gun holster and flashlight. Professional photography with sci-fi lighting.",
     additions: ["X-ray slide", "Alien handprint"],
     removals: ["Flashlight", "Medical file"],
     poses: ["Holding evidence", "File open", "Pistol stance"],
-    packaging: "X-Files black and white slipcase with mysterious symbols and seal cutout",
+    packaging: "Black and white slipcase with mysterious symbols and seal cutout"
   },
   {
-    title: "Joey Tribbiani Actor Wannabe Figure",
-    basePrompt: "A laid-back figure with leather jacket and pizza box, posed mid-'How you doin?' with camera light base. Includes soap opera script and sandwich add-ons.",
+    archetype: "Actor Wannabe Figure",
+    basePrompt: "Create a studio apartment box for [NAME] from [COMPANY] as a laid-back figure with leather jacket and pizza box, posed mid-greeting with camera light base. Includes soap opera script and sandwich add-ons. Professional photography with apartment lighting.",
     additions: ["Stuffed penguin", "Soap script"],
     removals: ["Pizza box", "Jacket"],
     poses: ["How you doin?", "Overacting stare", "Thumbs-up nod"],
-    packaging: "Studio apartment box with cheesy spotlight overlay and pizza scent panel",
+    packaging: "Studio apartment box with cheesy spotlight overlay and pizza scent panel"
   },
   {
-    title: "MacGyver Improv Survivalist Figure",
-    basePrompt: "A resourceful agent in mullet hairstyle, leather jacket, and tool belt, surrounded by random objects turned inventions. Includes wire-cutting pose and explosion backdrop.",
+    archetype: "Improv Survivalist Figure",
+    basePrompt: "Create a utility case box for [NAME] from [COMPANY] as a resourceful agent in mullet hairstyle, leather jacket, and tool belt, surrounded by random objects turned inventions. Includes wire-cutting pose and explosion backdrop. Professional toy photography.",
     additions: ["Swiss army knife", "Toothpick"],
     removals: ["Jacket", "Duct tape roll"],
     poses: ["Trap build", "Escape crawl", "Thinking pose"],
-    packaging: "Utility case box with blueprint inserts and mystery object bag",
+    packaging: "Utility case box with blueprint inserts and mystery object bag"
   },
   {
-    title: "Frasier Crane Radio Shrink Figure",
-    basePrompt: "A classy figure in blazer with coffee cup and psychology book, posed mid-rant in front of a talk-radio mic. Includes wine bottle prop and studio chair.",
+    archetype: "Radio Shrink Figure",
+    basePrompt: "Create a radio booth backdrop box for [NAME] from [COMPANY] as a classy figure in blazer with coffee cup and psychology book, posed mid-rant in front of a talk-radio mic. Includes wine bottle prop and studio chair. Professional photography with radio studio lighting.",
     additions: ["Sherry glass", "Call-in light"],
     removals: ["Coffee", "Book"],
     poses: ["Finger in air", "Relaxed monologue", "Coffee lean"],
-    packaging: "Radio booth backdrop box with Seattle skyline and mini Niles cameo"
+    packaging: "Radio booth backdrop box with Seattle skyline and mini cameo"
   },
   {
-    title: "Homer Simpson Donut Lover Figure",
-    basePrompt: "A yellow cartoon father figure in white shirt and blue pants, holding a pink donut and can of Duff beer. Background features living room couch and TV set.",
+    archetype: "Cartoon Father Figure",
+    basePrompt: "Create a cartoon background box for [NAME] from [COMPANY] as a yellow cartoon father figure in white shirt and blue pants, holding a pink donut and beverage can. Background features living room couch and TV set. Professional toy photography with cartoon lighting.",
     additions: ["Nuclear plant badge", "Saxophone"],
-    removals: ["Beer can", "Donut"],
+    removals: ["Beverage can", "Donut"],
     poses: ["D'oh face", "Donut drool", "Strangling pose"],
-    packaging: "Springfield background box with cloud shape window and character silhouettes",
+    packaging: "Cartoon background box with cloud shape window and character silhouettes"
   },
   {
-    title: "Captain Picard Starfleet Commander",
-    basePrompt: "A bald starship captain figure in red and black uniform, seated in captain's chair with phaser and communicator badge. Backdrop shows bridge view of space with stars.",
-    additions: ["Earl Grey tea cup", "Command console"],
+    archetype: "Starfleet Commander",
+    basePrompt: "Create a Federation-style slipcase for [NAME] from [COMPANY] as a bald starship captain figure in red and black uniform, seated in captain's chair with phaser and communicator badge. Backdrop shows bridge view of space with stars. Professional photography with sci-fi lighting.",
+    additions: ["Tea cup", "Command console"],
     removals: ["Phaser", "Chair"],
     poses: ["Engage point", "Make it so stance", "Facepalm"],
-    packaging: "Federation-style slipcase with transporter effect window and tech specs",
+    packaging: "Federation-style slipcase with transporter effect window and tech specs"
   },
   {
-    title: "Kramer Entrance Specialist Figure",
-    basePrompt: "A tall lanky neighbor figure with wild hair, colorful vintage shirt, and exaggerated gestures. Features spring-loaded door-slide action and apartment backdrop.",
+    archetype: "Entrance Specialist Figure",
+    basePrompt: "Create an apartment door cardboard cutout for [NAME] from [COMPANY] as a tall lanky neighbor figure with wild hair, colorful vintage shirt, and exaggerated gestures. Features spring-loaded door-slide action and apartment backdrop. Professional toy photography.",
     additions: ["Coffee table book", "Lobster bib"],
     removals: ["Apartment door", "Vintage shirt"],
     poses: ["Door slide", "Hair push", "Elaborate gesture"],
-    packaging: "Apartment door cardboard cutout with peephole viewer and seinfeld bassline button",
+    packaging: "Apartment door cardboard cutout with peephole viewer and bassline button"
   },
   {
-    title: "Mr. T Pity Fool Commando",
-    basePrompt: "A muscular action hero figure with mohawk, gold chains, and camo pants. Includes van accessory and 'I Pity the Fool' sound chip when squeezed.",
+    archetype: "Pity Fool Commando",
+    basePrompt: "Create a van box for [NAME] from [COMPANY] as a muscular action hero figure with mohawk, gold chains, and camo pants. Includes van accessory and motivational sound chip when squeezed. Professional photography with action lighting.",
     additions: ["Gold van", "Tool belt"],
     removals: ["Chains", "Mohawk"],
     poses: ["Fist-up stance", "Grimace face", "Pointing pose"],
-    packaging: "A-Team van box with metallic gold trim and explosion effects",
+    packaging: "Van box with metallic gold trim and explosion effects"
   },
   {
-    title: "Ross Geller Paleontology Prof Figure",
-    basePrompt: "A nerdy scientist figure in tweed jacket holding fossil and pointing at dinosaur chart. Features 'pivot' sound button and museum display backdrop.",
+    archetype: "Paleontology Prof Figure",
+    basePrompt: "Create a museum display case for [NAME] from [COMPANY] as a nerdy scientist figure in tweed jacket holding fossil and pointing at dinosaur chart. Features 'pivot' sound button and museum display backdrop. Professional photography with museum lighting.",
     additions: ["Mini couch", "Leather pants"],
     removals: ["Fossil", "Chart"],
-    poses: ["We were on a break!", "Pivot pose", "Professor lecture"],
-    packaging: "Museum display case with foldout dinosaur diorama and friend group photo",
+    poses: ["Pivot pose", "Professor lecture", "Emotional outburst"],
+    packaging: "Museum display case with foldout dinosaur diorama and friend group photo"
   },
   {
-    title: "Chandler Bing Sarcasm Master Figure",
-    basePrompt: "A 90s office worker figure in vest and tie with sarcastic expression and briefcase. Includes office cubicle backdrop and comic speech bubble attachments.",
-    additions: ["La-Z-Boy recliner", "Duck and chick pets"],
+    archetype: "Sarcasm Master Figure",
+    basePrompt: "Create an office cubicle box for [NAME] from [COMPANY] as a 90s office worker figure in vest and tie with sarcastic expression and briefcase. Includes office cubicle backdrop and comic speech bubble attachments. Professional toy photography.",
+    additions: ["Recliner", "Duck and chick pets"],
     removals: ["Briefcase", "Office backdrop"],
     poses: ["Could I BE any more...?", "Dance awkward", "Sarcastic point"],
-    packaging: "Office cubicle box with sarcastic quips and magnets for speech bubbles",
+    packaging: "Office cubicle box with sarcastic quips and magnets for speech bubbles"
   },
   {
-    title: "Monica Geller Clean Freak Chef",
-    basePrompt: "A perfectionist chef figure with spatula and chef hat in spotless kitchen backdrop. Includes cleaning supplies and miniature thanksgiving turkey.",
+    archetype: "Clean Freak Chef",
+    basePrompt: "Create a kitchen backdrop box for [NAME] from [COMPANY] as a perfectionist chef figure with spatula and chef hat in spotless kitchen backdrop. Includes cleaning supplies and miniature thanksgiving turkey. Professional photography with kitchen lighting.",
     additions: ["Cooking timer", "Recipe cards"],
     removals: ["Chef hat", "Cleaning supplies"],
     poses: ["Cooking stance", "Competitive point", "Cleaning frenzy"],
-    packaging: "Kitchen backdrop box with real recipe cards and miniature apron",
+    packaging: "Kitchen backdrop box with real recipe cards and miniature apron"
   },
   {
-    title: "Phoebe Buffay Eccentric Musician",
-    basePrompt: "A quirky bohemian figure with acoustic guitar and flowing dress, posed mid-song in Central Perk coffee shop. Includes 'Smelly Cat' lyric sheet and street performer case.",
+    archetype: "Eccentric Musician",
+    basePrompt: "Create a coffee shop stage for [NAME] from [COMPANY] as a quirky bohemian figure with acoustic guitar and flowing dress, posed mid-song in coffee shop. Includes lyric sheet and street performer case. Professional photography with coffee shop lighting.",
     additions: ["Massage table", "Triplet babies"],
     removals: ["Guitar", "Coffee shop backdrop"],
     poses: ["Guitar strum", "Surprised face", "Running weird"],
-    packaging: "Coffee shop stage with musical note border and cat stickers",
+    packaging: "Coffee shop stage with musical note border and cat stickers"
   },
   {
-    title: "Walter White Chemistry Teacher",
-    basePrompt: "A chemistry teacher figure in green apron and glasses with lab equipment and RV backdrop. Features removable hat and color-changing features.",
+    archetype: "Chemistry Teacher",
+    basePrompt: "Create a chemistry lab box for [NAME] from [COMPANY] as a chemistry teacher figure in green apron and glasses with lab equipment and RV backdrop. Features removable hat and color-changing features. Professional toy photography with lab lighting.",
     additions: ["Gas mask", "Blue crystal prop"],
     removals: ["Glasses", "Lab equipment"],
     poses: ["Say my name stance", "Lab work", "Hat adjustment"],
-    packaging: "Chemistry lab box with periodic table background and warning labels",
+    packaging: "Chemistry lab box with periodic table background and warning labels"
   },
   {
-    title: "Eleven Psychic Girl Figure",
-    basePrompt: "A young girl figure with shaved head, hospital gown, and nosebleed effect. Features light-up eyes and telekinetic hand pose with floating objects.",
-    additions: ["Eggo waffles", "Sensory tank"],
+    archetype: "Psychic Girl Figure",
+    basePrompt: "Create an 80s-style blister pack for [NAME] from [COMPANY] as a young girl figure with shaved head, hospital gown, and nosebleed effect. Features light-up eyes and telekinetic hand pose with floating objects. Professional photography with supernatural lighting.",
+    additions: ["Waffle prop", "Sensory tank"],
     removals: ["Hospital gown", "Nosebleed effect"],
     poses: ["Telekinetic stance", "Staring intensely", "Running scared"],
-    packaging: "80s-style blister pack with flickering Christmas lights border and alphabet wall",
+    packaging: "80s-style blister pack with flickering Christmas lights border and alphabet wall"
   },
   {
-    title: "Tyrion Lannister Strategic Advisor",
-    basePrompt: "A diminutive noble figure in medieval tunic with goblet and scroll, posed with knowing smirk beside castle table map. Includes Hand of the King pin.",
-    additions: ["Iron Throne mini", "Crossbow prop"],
+    archetype: "Strategic Advisor",
+    basePrompt: "Create an Iron Throne backdrop box for [NAME] from [COMPANY] as a diminutive noble figure in medieval tunic with goblet and scroll, posed with knowing smirk beside castle table map. Includes advisor pin. Professional photography with medieval lighting.",
+    additions: ["Throne mini", "Crossbow prop"],
     removals: ["Goblet", "Scroll"],
     poses: ["Drinking stance", "Strategic planning", "Court statement"],
-    packaging: "Iron Throne backdrop box with House sigil banners and medieval scroll text",
+    packaging: "Throne backdrop box with House sigil banners and medieval scroll text"
   },
   {
-    title: "Daenerys Targaryen Dragon Queen",
-    basePrompt: "A silver-haired royal figure in blue dress with dragon on shoulder and chain accessory. Features flame light effects and rocky throne base.",
-    additions: ["Dragon eggs", "Dothraki arakh"],
+    archetype: "Dragon Queen",
+    basePrompt: "Create an Iron and dragonscale box for [NAME] from [COMPANY] as a silver-haired royal figure in blue dress with dragon on shoulder and chain accessory. Features flame light effects and rocky throne base. Professional photography with fantasy lighting.",
+    additions: ["Dragon eggs", "Ancient weapon"],
     removals: ["Dragon", "Throne"],
     poses: ["Conquest stance", "Dragon command", "Queen's address"],
-    packaging: "Iron and dragonscale box with map of Westeros and fire effect backdrop",
+    packaging: "Iron and dragonscale box with map and fire effect backdrop"
   },
   {
-    title: "Jon Snow Winter Warden",
-    basePrompt: "A brooding warrior figure in black fur cloak with sword and direwolf companion, posed on snowy castle wall backdrop. Includes Night's Watch accessories.",
+    archetype: "Winter Warden",
+    basePrompt: "Create a Castle Black wall display for [NAME] from [COMPANY] as a brooding warrior figure in black fur cloak with sword and direwolf companion, posed on snowy castle wall backdrop. Includes Night's Watch accessories. Professional photography with winter lighting.",
     additions: ["Dragonglass dagger", "Wildling companion"],
     removals: ["Direwolf", "Sword"],
     poses: ["Sword stance", "Brooding look", "Battle ready"],
-    packaging: "Castle Black wall display with icy effect window and falling snow accents",
+    packaging: "Castle Black wall display with icy effect window and falling snow accents"
   },
   {
-    title: "Dwight Schrute Assistant Manager",
-    basePrompt: "A serious office figure in short-sleeve shirt and tie with glasses and briefcase. Includes beet farm backdrop and removable mustard-colored shirt.",
-    additions: ["Bobblehead mini", "Beet farming tools"],
+    archetype: "Assistant Manager",
+    basePrompt: "Create an office supply clamshell for [NAME] from [COMPANY] as a serious office figure in short-sleeve shirt and tie with glasses and briefcase. Includes farm backdrop and removable mustard-colored shirt. Professional toy photography.",
+    additions: ["Bobblehead mini", "Farming tools"],
     removals: ["Glasses", "Briefcase"],
     poses: ["Karate stance", "Fact declaration", "Office presentation"],
-    packaging: "Office supply clamshell with Dunder Mifflin logo and desk accessory set",
+    packaging: "Office supply clamshell with logo and desk accessory set"
   },
   {
-    title: "Michael Scott World's Best Boss",
-    basePrompt: "A clueless manager figure with coffee mug, suit with too-short tie, and 'That's what she said' voice box. Features conference room backdrop.",
-    additions: ["Prison Mike bandana", "Dundie award"],
+    archetype: "World's Best Boss",
+    basePrompt: "Create an office diorama for [NAME] from [COMPANY] as a clueless manager figure with coffee mug, suit with too-short tie, and motivational voice box. Features conference room backdrop. Professional photography with office lighting.",
+    additions: ["Bandana", "Award"],
     removals: ["Coffee mug", "Tie"],
     poses: ["Finger guns", "Dynamic presentation", "Awkward dancing"],
-    packaging: "Office diorama with pull-out quotes and character photo wall",
+    packaging: "Office diorama with pull-out quotes and character photo wall"
   }
 ];
 

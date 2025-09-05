@@ -1,7 +1,7 @@
-// Wrestling Action Figures - Collection of wrestling legend action figure prompts
+// Wrestling Action Figures - Collection of wrestling legend archetypes
 
 interface WrestlingActionFigurePrompt {
-  title: string;
+  archetype: string;
   basePrompt: string;
   additions: string[];
   removals: string[];
@@ -11,252 +11,164 @@ interface WrestlingActionFigurePrompt {
 
 const wrestlingPrompts: WrestlingActionFigurePrompt[] = [
   {
-    title: "Hulk Hogan Hulkamania Icon Figure",
-    basePrompt: "A larger-than-life wrestler in yellow tights and red bandana, posed mid-leg-drop with 'Hulkamania' logo behind. Includes American flag cape and removable shirt-rip pose.",
+    archetype: "Hulkamania Icon Figure",
+    basePrompt: "Create a WrestleMania box for [NAME] from [COMPANY] as a larger-than-life wrestler in yellow tights and red bandana, posed mid-leg-drop with logo behind. Includes American flag cape and removable shirt-rip pose. Professional toy photography with wrestling arena lighting.",
     additions: ["Championship belt", "Microphone stand"],
     removals: ["Cape", "Bandana"],
     poses: ["Leg drop", "Ear cup pose", "Flexed yell"],
-    packaging: "WrestleMania box with bold 80s font, fire sparks, and logo sticker",
+    packaging: "WrestleMania box with bold 80s font, fire sparks, and logo sticker"
   },
   {
-    title: "Macho Man Randy Savage Madness Figure",
-    basePrompt: "A flamboyant wrestler with cowboy hat and fringe jacket, posed on a neon entrance ramp with 'OH YEAH!' backdrop. Includes glitter glasses and title belt.",
-    additions: ["Slim Jim accessory", "Star shades"],
+    archetype: "Macho Madness Figure",
+    basePrompt: "Create a zebra stripe box for [NAME] from [COMPANY] as a flamboyant wrestler with cowboy hat and fringe jacket, posed on a neon entrance ramp with motivational backdrop. Includes glitter glasses and title belt. Professional photography with arena lighting.",
+    additions: ["Snack accessory", "Star shades"],
     removals: ["Hat", "Cape"],
     poses: ["Rope jump", "Point to sky", "Fist pump"],
-    packaging: "Zebra stripe box with metallic stars and Madness logo burst",
+    packaging: "Zebra stripe box with metallic stars and Madness logo burst"
   },
   {
-    title: "The Ultimate Warrior Energy Surge Figure",
-    basePrompt: "A wild warrior in face paint and arm tassels, posed sprinting down a ramp with muscle veins glowing. Includes title belt and full charge stand base.",
+    archetype: "Ultimate Energy Figure",
+    basePrompt: "Create an exploding lightning clamshell for [NAME] from [COMPANY] as a wild warrior in face paint and arm tassels, posed sprinting down a ramp with muscle veins glowing. Includes title belt and full charge stand base. Professional photography with high-energy lighting.",
     additions: ["Championship belt", "Lightning fists"],
     removals: ["Face paint", "Arm tassels"],
     poses: ["Charge sprint", "Turnbuckle climb", "Power flex"],
-    packaging: "Exploding lightning clamshell with neon tribal marks and rope effect",
+    packaging: "Exploding lightning clamshell with neon tribal marks and rope effect"
   },
   {
-    title: "Andre the Giant Colossal Legend Figure",
-    basePrompt: "A towering figure in black singlet and boots, posed arms crossed in the ring with mini-wrestlers around. Includes giant hand prop and arena backdrop.",
+    archetype: "Colossal Legend Figure",
+    basePrompt: "Create an oversized box for [NAME] from [COMPANY] as a towering figure in black singlet and boots, posed arms crossed in the ring with mini-wrestlers around. Includes giant hand prop and arena backdrop. Professional photography with dramatic scale lighting.",
     additions: ["Trophy accessory", "Mini ring base"],
     removals: ["Singlet", "Boots"],
     poses: ["Lifted choke", "Crossed arms", "Gentle giant wave"],
-    packaging: "Oversized box with crowd effect wrap and WrestleMania III banner",
+    packaging: "Oversized box with crowd effect wrap and WrestleMania III banner"
   },
   {
-    title: "Bret 'The Hitman' Hart Excellence Figure",
-    basePrompt: "A technical wrestler in pink and black gear with shades, posed mid-sharpshooter with entrance ramp. Includes glasses, pink jacket, and quote stand.",
+    archetype: "Excellence Figure",
+    basePrompt: "Create a heart-styled box for [NAME] from [COMPANY] as a technical wrestler in pink and black gear with shades, posed mid-sharpshooter with entrance ramp. Includes glasses, pink jacket, and quote stand. Professional photography with technical wrestling lighting.",
     additions: ["Championship belt", "Calgary flag"],
     removals: ["Sunglasses", "Jacket"],
     poses: ["Sharpshooter lock", "Arms spread", "Corner lean"],
     packaging: "Heart-styled box with pink flame art and ring bell sound clip"
   },
   {
-    title: "The Undertaker Phenom of Darkness Figure",
-    basePrompt: "A shadowy wrestler in black trench coat and wide-brimmed hat, standing in front of an eerie smoke-filled graveyard stage. Includes casket accessory and urn.",
+    archetype: "Phenom of Darkness Figure",
+    basePrompt: "Create a gravestone box for [NAME] from [COMPANY] as a shadowy wrestler in black trench coat and wide-brimmed hat, standing in front of an eerie smoke-filled graveyard stage. Includes casket accessory and urn. Professional photography with gothic lighting.",
     additions: ["Ministry robe", "Rest in Peace tombstone"],
     removals: ["Hat", "Coat"],
     poses: ["Eyes rolled back", "Choke slam", "Kneeling lightning call"],
-    packaging: "Gravestone box with rising fog FX and bell toll button",
+    packaging: "Gravestone box with rising fog FX and bell toll button"
   },
   {
-    title: "Shawn Michaels Heartbreak Kid Figure",
-    basePrompt: "A charismatic showman in zebra pants and glitter vest, striking a pose on entrance ramp with pyrotechnic arches. Includes mirror backdrop and entrance gear.",
+    archetype: "Heartbreak Kid Figure",
+    basePrompt: "Create a mirror box for [NAME] from [COMPANY] as a charismatic showman in zebra pants and glitter vest, striking a pose on entrance ramp with pyrotechnic arches. Includes mirror backdrop and entrance gear. Professional photography with showman lighting.",
     additions: ["Heart sunglasses", "Heartbreak pose stand"],
     removals: ["Vest", "Bandana"],
     poses: ["Sweet Chin Music", "Flexed prayer", "Mic serenade"],
-    packaging: "Mirror box with glitter cutout and heartbreak arrow slash",
+    packaging: "Mirror box with glitter cutout and heartbreak arrow slash"
   },
   {
-    title: "Stone Cold Steve Austin Rattlesnake Figure",
-    basePrompt: "A bald brawler in black trunks and vest with beer cans, posed flipping the bird mid-stunner. Includes shattered glass backdrop and 3:16 belt.",
-    additions: ["Broken beer can prop", "Steel chair"],
+    archetype: "Rattlesnake Figure",
+    basePrompt: "Create a glass break clamshell for [NAME] from [COMPANY] as a bald brawler in black trunks and vest with beverage cans, posed in mid-stunner position. Includes shattered glass backdrop and belt. Professional photography with attitude era lighting.",
+    additions: ["Broken beverage can prop", "Steel chair"],
     removals: ["Vest", "Kneepads"],
     poses: ["Stunner pose", "Middle finger", "Turnbuckle salute"],
-    packaging: "Glass break clamshell with Attitude Era logo and sound FX button",
+    packaging: "Glass break clamshell with Attitude Era logo and sound FX button"
   },
   {
-    title: "The Rock People's Champion Figure",
-    basePrompt: "A confident icon in designer shirt and sunglasses with eyebrow raised. Stands on titantron base with 'If Ya Smell' voice chip.",
+    archetype: "People's Champion Figure",
+    basePrompt: "Create a titantron frame for [NAME] from [COMPANY] as a confident icon in designer shirt and sunglasses with eyebrow raised. Stands on titantron base with motivational voice chip. Professional photography with championship lighting.",
     additions: ["Lapel mic", "Championship title"],
     removals: ["Shades", "Shirt"],
     poses: ["Elbow drop", "Mic raise", "Eyebrow raise"],
-    packaging: "Titantron frame with Brahma bull emboss and voice sample button",
+    packaging: "Titantron frame with bull emboss and voice sample button"
   },
   {
-    title: "Ric Flair Stylin' & Profilin' Figure",
-    basePrompt: "A flamboyant veteran in rhinestone robe and flowing hair, posed mid-'WOOO!' in front of mirror lights. Includes feather boa and walk-and-strut FX.",
+    archetype: "Stylin' & Profilin' Figure",
+    basePrompt: "Create a velvet robe box for [NAME] from [COMPANY] as a flamboyant veteran in rhinestone robe and flowing hair, posed mid-celebration in front of mirror lights. Includes feather boa and walk-and-strut FX. Professional photography with luxury lighting.",
     additions: ["Championship belt", "Champagne flute"],
     removals: ["Robe", "Boots"],
     poses: ["Wooo pose", "Finger wag", "Strut entrance"],
-    packaging: "Velvet robe box with spotlight halo and classic NWA emblems",
+    packaging: "Velvet robe box with spotlight halo and classic emblems"
   },
   {
-    title: "Kane Big Red Machine Figure",
-    basePrompt: "A masked monster in black and red flame suit with metal chains, posed with flaming turnbuckle and dark arena backdrop. Includes voice chip growl.",
+    archetype: "Big Red Machine Figure",
+    basePrompt: "Create a hellfire blister pack for [NAME] from [COMPANY] as a masked monster in black and red flame suit with metal chains, posed with flaming turnbuckle and dark arena backdrop. Includes voice chip growl. Professional photography with inferno lighting.",
     additions: ["Chain gauntlet", "Inferno FX base"],
     removals: ["Mask", "Belt"],
     poses: ["Choke slam", "Fire raise", "Roar and flex"],
-    packaging: "Hellfire blister pack with burnt steel rim and fire crackle sound",
+    packaging: "Hellfire blister pack with burnt steel rim and fire crackle sound"
   },
   {
-    title: "Mankind Hardcore Icon Figure",
-    basePrompt: "A wild-eyed figure in brown mask, white shirt, and tie, holding sock puppet and steel chair. Includes boiler room base and tooth prop.",
+    archetype: "Hardcore Icon Figure",
+    basePrompt: "Create a torn padding clamshell for [NAME] from [COMPANY] as a wild-eyed figure in brown mask, white shirt, and tie, holding sock puppet and steel chair. Includes boiler room base and tooth prop. Professional photography with hardcore lighting.",
     additions: ["Socko stand", "Broken table"],
     removals: ["Tie", "Chair"],
-    poses: ["Mr. Socko attack", "Falling bump", "Leaned scream"],
-    packaging: "Torn padding clamshell with hardcore insert and brick wall wrap",
+    poses: ["Socko attack", "Falling bump", "Leaned scream"],
+    packaging: "Torn padding clamshell with hardcore insert and brick wall wrap"
   },
   {
-    title: "Eddie Guerrero Latino Heat Figure",
-    basePrompt: "A slick figure with mullet and smug grin, holding lowrider door in one hand and lying/cheating/stealing belt in the other. Includes SmackDown base.",
+    archetype: "Latino Heat Figure",
+    basePrompt: "Create a lowrider bumper box for [NAME] from [COMPANY] as a slick figure with mullet and smug grin, holding lowrider door in one hand and championship belt in the other. Includes show base. Professional photography with lowrider aesthetic lighting.",
     additions: ["Frog splash platform", "Rose prop"],
     removals: ["Shirt", "Belt"],
     poses: ["Frog splash", "Lowrider lean", "Lying cheat grin"],
-    packaging: "Lowrider bumper box with glitter trim and viva heat sticker",
+    packaging: "Lowrider bumper box with glitter trim and heat sticker"
   },
   {
-    title: "Trish Stratus Diva of Domination Figure",
-    basePrompt: "A fitness icon and trailblazer with trench coat and cowboy hat, standing with mic and belt over shoulder. Includes ring mat base with spotlight shine.",
+    archetype: "Diva of Domination Figure",
+    basePrompt: "Create a pink-gloss box for [NAME] from [COMPANY] as a fitness icon and trailblazer with trench coat and cowboy hat, standing with mic and belt over shoulder. Includes ring mat base with spotlight shine. Professional photography with diva lighting.",
     additions: ["Yoga pose stand", "Diva title"],
     removals: ["Hat", "Jacket"],
     poses: ["Kick pose", "Flex and smirk", "Champion raise"],
-    packaging: "Pink-gloss box with spotlight shimmer and signature autograph",
+    packaging: "Pink-gloss box with spotlight shimmer and signature autograph"
   },
   {
-    title: "John Cena Never Give Up Figure",
-    basePrompt: "A powerhouse figure with jorts, cap, and dog tags, mid-attitude adjustment on clear backdrop. Includes 'U Can't See Me' stand and salute FX.",
+    archetype: "Never Give Up Figure",
+    basePrompt: "Create a red/white/blue themed box for [NAME] from [COMPANY] as a powerhouse figure with cap and dog tags, mid-attitude adjustment on clear backdrop. Includes motivational stand and salute FX. Professional photography with patriotic lighting.",
     additions: ["Spinner belt", "Microphone"],
     removals: ["Cap", "Dog tags"],
     poses: ["Attitude adjustment", "Salute", "Can't see me hand wave"],
-    packaging: "Cenation box with spinner sticker, red/white/blue theme, and invisible clear plastic"
+    packaging: "Box with spinner sticker, red/white/blue theme, and invisible clear plastic"
   },
   {
-    title: "Randy Savage 'Macho Man' Legend Figure",
-    basePrompt: "A bearded wrestler in colorful sunglasses and fringed jacket, posed mid-flying elbow drop with psychedelic backdrop. Includes Slim Jim accessory and championship trophy.",
-    additions: ["Cowboy hat", "Miss Elizabeth figure"],
-    removals: ["Sunglasses", "Belt"],
-    poses: ["Elbow drop", "Finger point", "Flexing stance"],
-    packaging: "Cosmic explosion box with neon patterns and 'Oh Yeah!' speech bubble",
-  },
-  {
-    title: "Rey Mysterio Luchador Master Figure",
-    basePrompt: "A masked high-flyer in colorful lucha libre attire with matching boots, posed on top turnbuckle with '619' backdrop. Includes removable mask collection and spring-loaded legs.",
+    archetype: "Luchador Master Figure",
+    basePrompt: "Create a Mexican-inspired box for [NAME] from [COMPANY] as a masked high-flyer in colorful lucha libre attire with matching boots, posed on top turnbuckle with backdrop. Includes removable mask collection and spring-loaded legs. Professional photography with lucha lighting.",
     additions: ["Mini wrestling ring", "Championship belt"],
     removals: ["Mask", "Shirt"],
     poses: ["619 pose", "Flying leap", "Top rope stance"],
-    packaging: "Mexican-inspired box with luchador art and mask display window",
+    packaging: "Mexican-inspired box with luchador art and mask display window"
   },
   {
-    title: "Mick Foley Mankind/Cactus Jack Figure",
-    basePrompt: "A hardcore legend figure with interchangeable heads (leather mask/wild hair), flannel shirt and barbed wire bat. Includes thumbtacks accessory and Hell in a Cell backdrop.",
+    archetype: "Hardcore Legend Figure",
+    basePrompt: "Create a hardcore-themed torn cardboard for [NAME] from [COMPANY] as a hardcore legend figure with interchangeable heads (leather mask/wild hair), flannel shirt and barbed wire bat. Includes thumbtacks accessory and cell backdrop. Professional photography with hardcore lighting.",
     additions: ["Mr. Socko", "Folding chair"],
     removals: ["Mask", "Bat"],
     poses: ["Mandible claw", "Fall off cage", "Bang bang guns"],
-    packaging: "Hardcore-themed torn cardboard with cell structure overlay and Foley faces",
+    packaging: "Hardcore-themed torn cardboard with cell structure overlay"
   },
   {
-    title: "Rowdy Roddy Piper Hot Rod Figure",
-    basePrompt: "A Scottish brawler in kilt and leather jacket with bagpipes accessory, posed ready to fight on Piper's Pit set. Includes coconut prop and interview backdrop.",
+    archetype: "Hot Rod Figure",
+    basePrompt: "Create a tartan-trimmed box for [NAME] from [COMPANY] as a Scottish brawler in kilt and leather jacket with bagpipes accessory, posed ready to fight on interview set. Includes coconut prop and interview backdrop. Professional photography with Scottish lighting.",
     additions: ["Coconut", "Hot Rod sunglasses"],
     removals: ["Kilt", "Jacket"],
     poses: ["Sleeper hold", "Interview point", "Bagpipe play"],
-    packaging: "Tartan-trimmed box with Piper's Pit logo and tropical coconut accent",
+    packaging: "Tartan-trimmed box with interview logo and tropical coconut accent"
   },
   {
-    title: "Randy Orton Viper Strike Figure",
-    basePrompt: "A calculated wrestler in minimal gear with tribal tattoos, posed in mid-RKO with snake-like stance. Includes pyro effects stand and slow-motion capture base.",
+    archetype: "Viper Strike Figure",
+    basePrompt: "Create a snake-skin texture box for [NAME] from [COMPANY] as a calculated wrestler in minimal gear with tribal tattoos, posed in mid-RKO with snake-like stance. Includes pyro effects stand and slow-motion capture base. Professional photography with viper lighting.",
     additions: ["Snake accessory", "Legacy jacket"],
     removals: ["Wristbands", "Knee pads"],
     poses: ["RKO pose", "Viper stance", "Arms wide taunt"],
-    packaging: "Snake-skin texture box with striking Viper logo and 'Outta Nowhere' backdrop",
+    packaging: "Snake-skin texture box with striking Viper logo and 'Outta Nowhere' backdrop"
   },
   {
-    title: "Goldberg Undefeated Streak Figure",
-    basePrompt: "A bald powerhouse with tribal tattoo and black tights, posed mid-spear with smoke effects and cracked ring mat. Includes streak counter accessory.",
+    archetype: "Undefeated Streak Figure",
+    basePrompt: "Create a black and gold box for [NAME] from [COMPANY] as a bald powerhouse with tribal tattoo and black tights, posed mid-spear with smoke effects and cracked ring mat. Includes streak counter accessory. Professional photography with powerhouse lighting.",
     additions: ["Barbed wire jacket", "Championship belt"],
     removals: ["Gloves", "Entrance smoke"],
     poses: ["Spear pose", "Jackhammer ready", "Intense stare"],
-    packaging: "Black and gold box with streak numbers and explosive entrance effects",
-  },
-  {
-    title: "Chris Jericho Y2J Figure",
-    basePrompt: "A rockstar wrestler with lion mane hair and light-up jacket, posed with mic and 'RAW IS JERICHO' backdrop. Includes countdown timer and light-up entrance jacket.",
-    additions: ["List of Jericho", "Title belt collection"],
-    removals: ["Jacket", "Mic"],
-    poses: ["Arms out pose", "Walls of Jericho", "Rock star stance"],
-    packaging: "Countdown clock box with light-up Y2J logo and list of 1,004 holds",
-  },
-  {
-    title: "Triple H The Game Figure",
-    basePrompt: "A muscular figure with sledgehammer and leather jacket, posed in water-spit entrance with throne backdrop. Includes crown and scepter accessories.",
-    additions: ["Sledgehammer", "Skull crown"],
-    removals: ["Jacket", "Knee braces"],
-    poses: ["Water spit", "Sledgehammer pose", "Pedigree setup"],
-    packaging: "Iron throne display box with skull logo emboss and Authority nameplate",
-  },
-  {
-    title: "CM Punk Voice of the Voiceless Figure",
-    basePrompt: "A tattooed straight-edge superstar with taped fists and ice cream bar t-shirt, posed sitting cross-legged with mic in hand. Includes pipe bomb backdrop and title belt.",
-    additions: ["GTS knee pad", "Ice cream bar"],
-    removals: ["Wristbands", "T-shirt"],
-    poses: ["Pipe bomb sit", "GTS knee", "X arms taunt"],
-    packaging: "Static TV box with mic drop graphic and Best in the World certificate",
-  },
-  {
-    title: "Brock Lesnar Beast Incarnate Figure",
-    basePrompt: "A monstrous wrestler with buzz cut and MMA gloves, posed in F5 position with destroyed ring pieces. Includes advocate manager accessory and championship belt.",
-    additions: ["Suplex city sign", "UFC gloves"],
-    removals: ["Manager", "Ring debris"],
-    poses: ["Suplex pose", "F5 position", "Beast roar"],
-    packaging: "Suplex City limits sign box with cracked ring canvas texture",
-  },
-  {
-    title: "Booker T Five-Time Champ Figure",
-    basePrompt: "A muscular wrestler with dreadlocks and golden crown, posed mid-Spinaroonie with five title belts displayed. Includes announcer table and Harlem Heat backdrop.",
-    additions: ["Shucky ducky sign", "King crown"],
-    removals: ["Crown", "Title belts"],
-    poses: ["Spinaroonie", "Scissors kick", "Book end"],
-    packaging: "Five-sided box with gold championship trim and royal scepter",
-  },
-  {
-    title: "Chyna Ninth Wonder Figure",
-    basePrompt: "A powerful female wrestler with black gear and fingerless gloves, posed in athletic stance with sledgehammer accessory. Includes championship belt and DX backdrop.",
-    additions: ["DX tank", "Leather jacket"],
-    removals: ["Sledgehammer", "Gloves"],
-    poses: ["Power stance", "DDT position", "Flex pose"],
-    packaging: "Metallic black and green box with DX spray tag and women's division emblem",
-  },
-  {
-    title: "Edge Rated-R Superstar Figure",
-    basePrompt: "A long-haired wrestler with trench coat and sunglasses, posed with spear-ready stance and smoke effects. Includes ladder accessory and Money in the Bank briefcase.",
-    additions: ["MITB briefcase", "Entrance coat"],
-    removals: ["Sunglasses", "Coat"],
-    poses: ["Spear position", "Edge-o-matic", "Metal horns"],
-    packaging: "Rated-R warning label box with live edge resin and chair shot backdrop",
-  },
-  {
-    title: "Sasha Banks Boss Figure",
-    basePrompt: "A vibrant wrestler with colorful hair and bling gear, posed with 'Legit Boss' knuckles and championship bling. Includes sunglasses and entrance jacket accessories.",
-    additions: ["Boss ring", "Statement necklace"],
-    removals: ["Glasses", "Jacket"],
-    poses: ["Bank Statement", "Boss pose", "Title hold"],
-    packaging: "Boss-branded box with gold chains and purple light-up backdrop",
-  },
-  {
-    title: "Roman Reigns Tribal Chief Figure",
-    basePrompt: "A powerful Samoan wrestler with tribal tattoos and championship belt, posed mid-Superman punch with 'Head of the Table' display base. Includes family bloodline accessories.",
-    additions: ["Tribal necklace", "Table set"],
-    removals: ["Championship", "Wristbands"],
-    poses: ["Spear ready", "Head of table sit", "Acknowledge me gesture"],
-    packaging: "Tribal pattern box with family tree design and Bloodline symbol",
-  },
-  {
-    title: "Becky Lynch The Man Figure",
-    basePrompt: "A fiery redhead wrestler in leather jacket and steampunk goggles, posed with double championship belts and Man logo backdrop. Includes entrance gear and armband accessories.",
-    additions: ["Goggles", "Steampunk jacket"],
-    removals: ["Belt", "Armbands"],
-    poses: ["Dis-arm-her", "Pointing taunt", "Championship pose"],
-    packaging: "The Man logo box with industrial gear pattern and championship collector cards",
+    packaging: "Black and gold box with streak numbers and explosive entrance effects"
   }
 ];
 

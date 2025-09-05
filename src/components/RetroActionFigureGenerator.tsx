@@ -183,7 +183,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                Retro Character
+                Action Figure Archetype
               </label>
               <button 
                 onClick={() => setShowAllCharacters(!showAllCharacters)}
@@ -196,7 +196,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
               {(showAllCharacters ? retroPrompts : retroPrompts.slice(0, 8)).map((prompt, index) => (
                 <div
-                  key={prompt.title}
+                  key={prompt.archetype}
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedPrompt === index 
                       ? 'ring-2 ring-indigo-500 shadow-md' 
@@ -220,7 +220,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                     </div>
                   </div>
                   <div className="p-1 text-center">
-                    <p className="text-xs font-medium truncate">{prompt.title.split(' ')[0]}</p>
+                    <p className="text-xs font-medium truncate">{prompt.archetype.split(' ')[0]}</p>
                   </div>
                 </div>
               ))}
@@ -458,7 +458,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h4 className="font-medium mb-2 flex items-center">
               <Box className="w-4 h-4 text-indigo-600 mr-1" />
-              Selected Character: {getCurrentPrompt().title}
+              Selected Archetype: {getCurrentPrompt().archetype}
             </h4>
             <p className="text-sm text-gray-600 mb-3">
               {getCurrentPrompt().basePrompt}
@@ -479,7 +479,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               <ul className="text-sm space-y-1">
                 <li className="flex items-center">
                   <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
-                  Character: <span className="font-medium ml-1">{getCurrentPrompt().title}</span>
+                  Archetype: <span className="font-medium ml-1">{getCurrentPrompt().archetype}</span>
                 </li>
                 {selectedPose && (
                   <li className="flex items-center">
@@ -525,10 +525,10 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-medium text-blue-700 flex items-center mb-2">
               <Lightbulb className="w-4 h-4 mr-1" />
-              Retro Action Figures
+              Retro Action Figure Archetypes
             </h4>
             <p className="text-sm text-blue-700">
-              Action figures from the 80s and 90s were iconic collectibles with distinctive packaging, bright colors, and unique accessories. Each figure had special features like "battle action" or "power moves" that made them stand out on toy shelves.
+              These archetypes represent the distinctive styles and packaging aesthetics of 80s and 90s action figures, with customizable features, bright colors, and unique accessories. Each archetype can be personalized with your own characters and company branding.
             </p>
           </div>
         </div>

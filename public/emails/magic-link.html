@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Your Magic Link | VideoRemix</title>
+  <style type="text/css">
+    /* Base styles */
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', Arial, sans-serif;
+      background-color: #f9fafb;
+      color: #1f2937;
+    }
+    a {
+      color: #6d28d9;
+      text-decoration: none;
+    }
+    /* Email container */
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      padding: 30px 30px 20px;
+      text-align: center;
+    }
+    /* Logo */
+    .logo {
+      margin-bottom: 15px;
+    }
+    /* Content */
+    .content {
+      padding: 30px;
+    }
+    /* Footer */
+    .footer {
+      padding: 20px 30px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 12px;
+      border-top: 1px solid #e5e7eb;
+      background-color: #f9fafb;
+    }
+    /* Button */
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      color: #ffffff !important;
+      font-weight: 600;
+      text-align: center;
+      padding: 12px 24px;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: 0 4px 6px rgba(139, 92, 246, 0.25);
+    }
+    /* Magic divider */
+    .magic-divider {
+      margin: 30px 0;
+      height: 1px;
+      background: linear-gradient(to right, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.5), rgba(139, 92, 246, 0));
+    }
+    /* Responsive */
+    @media screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+      }
+      .content, .header, .footer {
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+      }
+    }
+    /* Dark mode */
+    @media (prefers-color-scheme: dark) {
+      .email-container {
+        background-color: #1f2937 !important;
+        color: #f3f4f6 !important;
+      }
+      .content {
+        background-color: #1f2937 !important;
+        color: #f3f4f6 !important;
+      }
+      .footer {
+        background-color: #111827 !important;
+        border-top-color: #374151 !important;
+        color: #9ca3af !important;
+      }
+      h1, h2, h3, p {
+        color: #f3f4f6 !important;
+      }
+      .magic-box {
+        background-color: #374151 !important;
+        border-color: #4b5563 !important;
+      }
+    }
+    /* Magic Box */
+    .magic-box {
+      background-color: #f5f3ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: center;
+      position: relative;
+    }
+    .magic-icon {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      padding: 8px;
+      border-radius: 50%;
+    }
+    .expiry {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-top: 10px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#f9fafb">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table cellpadding="0" cellspacing="0" border="0" width="600" class="email-container" style="border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- HEADER -->
+          <tr>
+            <td class="header" bgcolor="#8b5cf6">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" class="logo">
+                    <img src="https://via.placeholder.com/80x80/6d28d9/FFFFFF?text=VR" alt="VideoRemix" width="80" style="display: block; border-radius: 12px;">
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="color: #ffffff; padding-bottom: 10px;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Your Magic Link</h1>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- CONTENT -->
+          <tr>
+            <td class="content">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <p style="margin-top: 0; margin-bottom: 20px; font-size: 16px; line-height: 1.5;">Hi {{firstName}},</p>
+                    <p style="margin-top: 0; margin-bottom: 20px; font-size: 16px; line-height: 1.5;">Your passwordless sign-in link for VideoRemix is ready! Click the button below to sign in instantly - no password needed.</p>
+                    
+                    <div class="magic-box">
+                      <div class="magic-icon">
+                        <img src="https://via.placeholder.com/24x24/FFFFFF/FFFFFF?text=✨" alt="Magic" width="24" height="24">
+                      </div>
+                      <p style="margin-top: 10px; margin-bottom: 15px; font-size: 18px; font-weight: 600;">One-click magic sign in</p>
+                      <div style="text-align: center;">
+                        <a href="{{magicLinkUrl}}" class="button">Sign In Now</a>
+                      </div>
+                      <p class="expiry">This link expires in 24 hours</p>
+                    </div>
+                    
+                    <div class="magic-divider"></div>
+                    
+                    <p style="margin-top: 0; margin-bottom: 20px; font-size: 16px; line-height: 1.5;">VideoRemix is ready for you to create personalized content that engages your audience like never before. With our AI-powered tools, you'll generate hyper-personalized images and videos that drive 985% higher conversion rates.</p>
+                    
+                    <p style="margin-top: 0; margin-bottom: 5px; font-size: 16px; line-height: 1.5;">Best regards,</p>
+                    <p style="margin-top: 0; margin-bottom: 20px; font-size: 16px; line-height: 1.5; font-weight: 600;">The VideoRemix Team</p>
+                    
+                    <p style="margin-top: 30px; margin-bottom: 0; font-size: 14px; color: #6b7280; font-style: italic;">Button not working? Paste this link into your browser: <a href="{{magicLinkUrl}}" style="color: #6d28d9; word-break: break-all;">{{magicLinkUrl}}</a></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- FOOTER -->
+          <tr>
+            <td class="footer">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="padding-bottom: 20px;">
+                    <img src="https://via.placeholder.com/150x40/6d28d9/FFFFFF?text=VideoRemix" alt="VideoRemix" width="150" style="display: block; margin: 0 auto;">
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <p style="margin: 0 0 10px; font-size: 12px;">© 2025 VideoRemix. All rights reserved.</p>
+                    <p style="margin: 0; font-size: 12px;">AI-Powered Content Personalization</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <p style="margin: 10px 0; font-size: 12px;">
+                      <a href="{{privacyUrl}}" style="color: #6b7280; margin: 0 10px;">Privacy Policy</a> | 
+                      <a href="{{termsUrl}}" style="color: #6b7280; margin: 0 10px;">Terms of Service</a> | 
+                      <a href="{{unsubscribeUrl}}" style="color: #6b7280; margin: 0 10px;">Unsubscribe</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

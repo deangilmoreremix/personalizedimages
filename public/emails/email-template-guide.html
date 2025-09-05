@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VideoRemix Email Templates Guide</title>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+      background-color: #f9fafb;
+    }
+    h1, h2, h3 {
+      color: #4f46e5;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+    h3 {
+      font-size: 1.25rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      margin-bottom: 1rem;
+    }
+    code {
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+      background-color: #f3f4f6;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      color: #4f46e5;
+    }
+    pre {
+      background-color: #f3f4f6;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      margin: 1.5rem 0;
+    }
+    a {
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .card {
+      background-color: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    th {
+      background-color: #f3f4f6;
+      font-weight: 600;
+    }
+    .note {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0.25rem;
+    }
+    .warning {
+      background-color: #fff7ed;
+      border-left: 4px solid #f59e0b;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>VideoRemix Email Templates Guide</h1>
+  
+  <div class="card">
+    <h2>Overview</h2>
+    <p>VideoRemix includes professionally designed, responsive HTML email templates for various authentication and notification purposes. These templates maintain the VideoRemix brand identity and are optimized for compatibility across email clients.</p>
+    
+    <h3>Available Templates</h3>
+    <ul>
+      <li><a href="#confirm-signup">Confirm Signup</a></li>
+      <li><a href="#invite-user">Invite User</a></li>
+      <li><a href="#magic-link">Magic Link</a></li>
+      <li><a href="#change-email">Change Email Address</a></li>
+      <li><a href="#reset-password">Reset Password</a></li>
+      <li><a href="#reauthentication">Reauthentication</a></li>
+    </ul>
+  </div>
+
+  <h2 id="using-templates">Using the Templates</h2>
+  
+  <div class="card">
+    <h3>Template Locations</h3>
+    <p>All email templates are located in the <code>public/emails/</code> directory:</p>
+    <pre>public/emails/
+├── confirm-signup.html
+├── invite-user.html
+├── magic-link.html
+├── change-email.html
+├── reset-password.html
+└── reauthentication.html</pre>
+  </div>
+
+  <div class="card">
+    <h3>Personalization Tokens</h3>
+    <p>The templates use double curly braces as placeholders for dynamic content. For example: <code>{{firstName}}</code></p>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Description</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>{{firstName}}</code></td>
+          <td>User's first name</td>
+          <td>Sarah</td>
+        </tr>
+        <tr>
+          <td><code>{{confirmUrl}}</code></td>
+          <td>Confirmation URL</td>
+          <td>https://videoremix.com/confirm?token=xyz</td>
+        </tr>
+        <tr>
+          <td><code>{{inviteUrl}}</code></td>
+          <td>Invite acceptance URL</td>
+          <td>https://videoremix.com/invite?token=xyz</td>
+        </tr>
+        <tr>
+          <td><code>{{magicLinkUrl}}</code></td>
+          <td>Magic link authentication URL</td>
+          <td>https://videoremix.com/auth/magic?token=xyz</td>
+        </tr>
+        <tr>
+          <td><code>{{resetUrl}}</code></td>
+          <td>Password reset URL</td>
+          <td>https://videoremix.com/reset-password?token=xyz</td>
+        </tr>
+        <tr>
+          <td><code>{{verifyUrl}}</code></td>
+          <td>Verification URL for reauthentication</td>
+          <td>https://videoremix.com/verify?token=xyz</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="integration">Integration with Supabase Auth</h2>
+  
+  <div class="card">
+    <h3>Setting Up Custom Email Templates</h3>
+    <p>To use these custom email templates with Supabase Auth:</p>
+    
+    <ol>
+      <li>Navigate to your Supabase project dashboard</li>
+      <li>Go to Authentication > Email Templates</li>
+      <li>Select the template type you want to customize</li>
+      <li>Paste the HTML content from the corresponding template file</li>
+      <li>Update the message subject if needed</li>
+      <li>Save the changes</li>
+    </ol>
+    
+    <div class="note">
+      <p><strong>Note:</strong> Supabase provides its own set of template variables that will replace our placeholder variables. You may need to adjust the variable names to match what Supabase expects, such as <code>{{ .Email }}</code> instead of <code>{{email}}</code>.</p>
+    </div>
+  </div>
+
+  <h2 id="customization">Customization</h2>
+  
+  <div class="card">
+    <h3>Modifying Templates</h3>
+    <p>These templates are designed to be easily customizable:</p>
+    
+    <ul>
+      <li><strong>Colors:</strong> Update the gradient colors in the <code>header</code> class and the <code>button</code> class</li>
+      <li><strong>Logo:</strong> Replace the placeholder image with your actual logo</li>
+      <li><strong>Content:</strong> Modify the text to match your voice and branding</li>
+      <li><strong>Footer:</strong> Update links and copyright information</li>
+    </ul>
+    
+    <div class="warning">
+      <p><strong>Warning:</strong> When modifying email templates, always maintain the table-based structure and inline styles to ensure compatibility across email clients. Avoid using CSS features that aren't widely supported in email clients.</p>
+    </div>
+  </div>
+
+  <h2 id="testing">Testing Email Templates</h2>
+  
+  <div class="card">
+    <h3>Best Practices for Email Testing</h3>
+    <p>Before deploying your customized email templates:</p>
+    
+    <ol>
+      <li>Test in multiple email clients (Gmail, Outlook, Apple Mail, etc.)</li>
+      <li>Check both desktop and mobile rendering</li>
+      <li>Verify all links work correctly</li>
+      <li>Ensure personalization tokens are properly replaced</li>
+      <li>Consider using email testing services like Litmus or Email on Acid</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2 id="accessibility">Accessibility Considerations</h2>
+    <ul>
+      <li>Maintain proper color contrast for readability</li>
+      <li>Use appropriate font sizes (minimum 14px for body text)</li>
+      <li>Include alternative text for all images</li>
+      <li>Ensure links have descriptive text</li>
+      <li>Test with screen readers if possible</li>
+    </ul>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,402 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply font-sans text-gray-800 bg-white;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold leading-tight text-gray-900;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  p {
+    @apply leading-relaxed;
+  }
+}
+
+@layer components {
+  /* Modern button styles with subtle shadows and transitions */
+  .btn {
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-200 inline-flex items-center justify-center;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 shadow hover:shadow-md hover:translate-y-[-1px];
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-600 text-white hover:bg-secondary-700 shadow hover:shadow-md hover:translate-y-[-1px];
+  }
+
+  .btn-accent {
+    @apply bg-accent-500 text-white hover:bg-accent-600 shadow hover:shadow-md hover:translate-y-[-1px];
+  }
+
+  .btn-outline {
+    @apply border border-primary-600 text-primary-600 hover:bg-primary-50 hover:translate-y-[-1px];
+  }
+  
+  .btn-ghost {
+    @apply text-gray-700 hover:bg-gray-100;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm rounded-lg;
+  }
+
+  /* Clean card styles with subtle shadows and hover effects */
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all duration-200 hover:shadow-md;
+  }
+
+  /* Simplified container */
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Section spacing */
+  .section {
+    @apply py-16 md:py-24;
+  }
+
+  /* Gradient backgrounds with reduced intensity */
+  .gradient-bg {
+    @apply bg-gradient-to-br from-primary-600/90 to-secondary-700/90;
+  }
+  
+  /* Modern form elements */
+  .form-input {
+    @apply w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-opacity-50 focus:border-primary-400 transition-all;
+  }
+  
+  .form-select {
+    @apply w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-opacity-50 focus:border-primary-400 transition-all;
+  }
+  
+  .form-checkbox {
+    @apply rounded text-primary-500 focus:ring-primary-400 focus:ring-opacity-50;
+  }
+  
+  /* Tab navigation */
+  .tab-nav {
+    @apply inline-flex rounded-xl bg-gray-100 p-1;
+  }
+  
+  .tab-item {
+    @apply px-4 py-2 text-sm font-medium rounded-lg transition-colors;
+  }
+  
+  .tab-item-active {
+    @apply bg-white text-primary-600 shadow-sm;
+  }
+  
+  .tab-item-inactive {
+    @apply text-gray-600 hover:text-gray-800;
+  }
+  
+  /* Badge styles */
+  .badge {
+    @apply px-2.5 py-1 text-xs font-medium rounded-full;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-700;
+  }
+  
+  .badge-secondary {
+    @apply bg-secondary-100 text-secondary-700;
+  }
+  
+  .badge-accent {
+    @apply bg-accent-100 text-accent-700;
+  }
+  
+  /* Tooltip */
+  .tooltip {
+    @apply invisible absolute z-10 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:visible group-hover:opacity-100;
+  }
+  
+  /* Reusable glassmorphism class */
+  .glass-panel {
+    @apply backdrop-blur-lg bg-white/80 shadow-lg border border-white/20 rounded-2xl;
+  }
+  
+  /* Enhanced card styles */
+  .feature-card {
+    @apply rounded-2xl p-6 transition-all duration-300 shadow-sm hover:shadow-xl hover:translate-y-[-6px] bg-gradient-to-b from-white to-gray-50 border border-gray-100;
+  }
+  
+  /* Enhanced badge styles */
+  .glow-badge {
+    @apply relative overflow-hidden;
+  }
+  
+  .glow-badge::before {
+    @apply content-[''] absolute top-0 left-[-100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent transform transition-all duration-1500;
+  }
+  
+  .glow-badge:hover::before {
+    @apply left-[100%];
+  }
+
+  /* Voice button animations */
+  .pulse-ring {
+    @apply before:absolute before:inset-0 before:rounded-full before:border-2 before:border-red-500 before:animate-ping;
+  }
+}
+
+/* Typing animation for AI assistant */
+.typing-animation {
+  display: flex;
+  align-items: center;
+}
+
+.typing-animation span {
+  height: 8px;
+  width: 8px;
+  margin: 0 1px;
+  background-color: #6366f1;
+  border-radius: 50%;
+  display: block;
+  opacity: 0.4;
+}
+
+.typing-animation span:nth-child(1) {
+  animation: pulse 1s infinite ease-in-out;
+}
+
+.typing-animation span:nth-child(2) {
+  animation: pulse 1s infinite ease-in-out 0.2s;
+}
+
+.typing-animation span:nth-child(3) {
+  animation: pulse 1s infinite ease-in-out 0.4s;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Animation utilities */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -1000px 0;
+  }
+  to {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0), 
+    rgba(255,255,255,0.4), 
+    rgba(255,255,255,0)
+  );
+  background-size: 1000px 100%;
+}
+
+/* Microphone pulse animation */
+@keyframes mic-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.animate-mic-pulse {
+  animation: mic-pulse 1.5s infinite;
+}
+
+/* Clean scrollbar for better UX */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full transition-colors;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Card hover effects */
+.hover-lift {
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Clean, modern focus styles */
+:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-opacity-50;
+}
+
+/* No-scrollbar utility class */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glass card effects */
+.glass-card {
+  @apply backdrop-blur-xl bg-white/70 border border-white/20 shadow-xl;
+}
+
+/* Micro-interactions */
+.hover-scale {
+  @apply transition-transform duration-200;
+}
+
+.hover-scale:hover {
+  @apply transform scale-105;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-secondary-500 inline-block;
+}
+
+.gradient-text-accent {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-accent-500 inline-block;
+}
+
+/* Fancy dividers */
+.fancy-divider {
+  @apply relative h-0.5 w-24 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-full my-6 mx-auto overflow-visible;
+}
+
+.fancy-divider::before {
+  content: "";
+  @apply absolute -top-1 -left-1 w-3 h-3 rounded-full bg-primary-400;
+}
+
+.fancy-divider::after {
+  content: "";
+  @apply absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary-400;
+}
+
+/* Animated underline effect */
+.animated-underline {
+  @apply relative inline-block;
+}
+
+.animated-underline::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary-400 to-secondary-500 transition-all duration-300 ease-out;
+}
+
+.animated-underline:hover::after {
+  @apply w-full;
+}
+
+/* Frosted glass panels */
+.frosted-panel {
+  @apply backdrop-blur-xl bg-white/60 shadow-xl border border-white/20 rounded-2xl;
+}
+
+/* Responsive images */
+.responsive-image img {
+  @apply w-full h-auto object-cover rounded-xl transition-all duration-300;
+}
+
+.responsive-image:hover img {
+  @apply shadow-xl scale-[1.02];
+}
+
+/* 3D Card Effect */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  @apply rounded-2xl overflow-hidden;
+}
+
+.card-3d:hover {
+  transform: rotateX(5deg) rotateY(5deg);
+  @apply shadow-xl;
+}
+
+.card-3d-content {
+  backface-visibility: hidden;
+}

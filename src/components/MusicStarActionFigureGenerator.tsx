@@ -188,7 +188,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                Music Star
+                Music Archetype
               </label>
               <button 
                 onClick={() => setShowAllCharacters(!showAllCharacters)}
@@ -201,7 +201,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
               {(showAllCharacters ? musicPrompts : musicPrompts.slice(0, 8)).map((prompt, index) => (
                 <div
-                  key={prompt.title}
+                  key={prompt.archetype}
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedPrompt === index 
                       ? 'ring-2 ring-purple-500 shadow-md' 
@@ -225,7 +225,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
                     </div>
                   </div>
                   <div className="p-1 text-center">
-                    <p className="text-xs font-medium truncate">{prompt.title.split(' ')[0]}</p>
+                    <p className="text-xs font-medium truncate">{prompt.archetype.split(' ')[0]}</p>
                   </div>
                 </div>
               ))}
@@ -462,7 +462,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h4 className="font-medium mb-2 flex items-center">
               <Box className="w-4 h-4 text-purple-600 mr-1" />
-              Selected Star: {getCurrentPrompt().title}
+              Selected Archetype: {getCurrentPrompt().archetype}
             </h4>
             <p className="text-sm text-gray-600 mb-3">
               {getCurrentPrompt().basePrompt}
@@ -483,7 +483,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
               <ul className="text-sm space-y-1">
                 <li className="flex items-center">
                   <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
-                  Music Star: <span className="font-medium ml-1">{getCurrentPrompt().title}</span>
+                  Music Archetype: <span className="font-medium ml-1">{getCurrentPrompt().archetype}</span>
                 </li>
                 {selectedPose && (
                   <li className="flex items-center">
@@ -529,11 +529,11 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-medium text-blue-700 flex items-center mb-2">
               <Lightbulb className="w-4 h-4 mr-1" />
-              Music Star Action Figures
+            Music Star Action Figure Archetypes
             </h4>
             <p className="text-sm text-blue-700">
               Music star action figures became popular collectibles in the 80s and 90s, with bands like KISS, The Beatles, and later pop stars getting their own toy lines. These figures often featured iconic stage outfits, instruments, and packaging that reflected album art or concert aesthetics.
-            </p>
+            Music star action figures became popular collectibles in the 80s and 90s, featuring iconic stage outfits, instruments, and packaging that reflected album art or concert aesthetics. These archetypes capture the essence of different musical genres and eras.
           </div>
         </div>
       </div>

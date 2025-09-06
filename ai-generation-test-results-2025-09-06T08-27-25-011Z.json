@@ -1,0 +1,54 @@
+{
+  "timestamp": "2025-09-06T08:27:25.011Z",
+  "totalTests": 4,
+  "successfulTests": 4,
+  "failedTests": 0,
+  "successRate": "100.0%",
+  "estimatedTotalCost": 0.16,
+  "results": [
+    {
+      "collection": "Music Stars",
+      "title": "Rock Legend Figure",
+      "promptLength": 479,
+      "hasVisualDetails": true,
+      "hasProblematicContent": false,
+      "isTooLong": false,
+      "wouldSucceed": true,
+      "estimatedCost": 4,
+      "mockImageUrl": "https://picsum.photos/seed/Rock%20Legend%20Figure/1024/1024"
+    },
+    {
+      "collection": "TV Shows",
+      "title": "Sci-Fi Captain Figure",
+      "promptLength": 436,
+      "hasVisualDetails": true,
+      "hasProblematicContent": false,
+      "isTooLong": false,
+      "wouldSucceed": true,
+      "estimatedCost": 4,
+      "mockImageUrl": "https://picsum.photos/seed/Sci-Fi%20Captain%20Figure/1024/1024"
+    },
+    {
+      "collection": "Wrestling",
+      "title": "Showman Champion Figure",
+      "promptLength": 457,
+      "hasVisualDetails": true,
+      "hasProblematicContent": false,
+      "isTooLong": false,
+      "wouldSucceed": true,
+      "estimatedCost": 4,
+      "mockImageUrl": "https://picsum.photos/seed/Showman%20Champion%20Figure/1024/1024"
+    },
+    {
+      "collection": "Retro",
+      "title": "Superhero Figure",
+      "promptLength": 268,
+      "hasVisualDetails": true,
+      "hasProblematicContent": false,
+      "isTooLong": false,
+      "wouldSucceed": true,
+      "estimatedCost": 4,
+      "mockImageUrl": "https://picsum.photos/seed/Superhero%20Figure/1024/1024"
+    }
+  ]
+}

@@ -11,7 +11,7 @@ interface TVShowActionFigureGeneratorProps {
   onImageGenerated: (imageUrl: string) => void;
 }
 
-const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = ({ tokens, onImageGenerated }) => {
+const RetroActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = ({ tokens, onImageGenerated }) => {
   const [selectedPrompt, setSelectedPrompt] = useState(0);
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
@@ -541,5 +541,5 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
   );
 };
 
-export default TVShowActionFigureGenerator;
-export { TVShowActionFigureGenerator };
+export default RetroActionFigureGenerator;
+export { RetroActionFigureGenerator };

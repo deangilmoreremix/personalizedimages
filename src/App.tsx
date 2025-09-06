@@ -29,6 +29,7 @@ import FontsPage from './pages/FontsPage';
 import TokensPanel from './pages/TokensPanel';
 import GeminiDocs from './pages/GeminiDocs';
 import EdgeFunctionDebugging from './pages/EdgeFunctionDebugging';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Component for conditionally rendering footer and other components
 const AppLayout = () => {
@@ -65,6 +66,7 @@ const AppLayout = () => {
         </Routes>
       </main>
       {isHomePage && <Footer />}
+      <PWAInstallPrompt />
     </>
   );
 };

@@ -38,6 +38,11 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
   const [imageStyle, setImageStyle] = useState<string>('photography');
   const [inputImage, setInputImage] = useState<string | null>(null);
+
+  // DALL-E 3 specific options
+  const [dalleSize, setDalleSize] = useState<'1024x1024' | '1792x1024' | '1024x1792'>('1024x1024');
+  const [dalleQuality, setDalleQuality] = useState<'standard' | 'hd'>('standard');
+  const [dalleStyle, setDalleStyle] = useState<'natural' | 'vivid'>('natural');
   
   // Help panels
   const [showPromptGuide, setShowPromptGuide] = useState(false);
@@ -141,7 +146,12 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
       onComplete: (imageUrl) => {
         setIsStreamingActive(false);
         generateRealImage();
-      }
+      },
+      dalleOptions: selectedProvider === 'openai' ? {
+        size: dalleSize,
+        quality: dalleQuality,
+        style: dalleStyle
+      } : undefined
     });
   };
 
@@ -178,8 +188,12 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
           case 'gpt-image-1':
             imageUrl = await generateImageWithGptImage(enhancedPrompt);
             break;
-          default: // openai
-            imageUrl = await generateImageWithDalle(enhancedPrompt);
+          default: // openai - DALL-E 3 with enhanced options
+            imageUrl = await generateImageWithDalle(enhancedPrompt, {
+              size: dalleSize,
+              quality: dalleQuality,
+              style: dalleStyle
+            });
         }
         
         console.log('✅ Successfully generated image');
@@ -435,7 +449,100 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
           {showAdvancedOptions && (
             <div className="mb-4 p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-sm mb-2">Advanced Options</h4>
-              
+
+              {/* DALL-E 3 Specific Options */}
+              {selectedProvider === 'openai' && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h5 className="font-medium text-sm text-blue-800 mb-3 flex items-center">
+                    <Zap className="w-4 h-4 mr-2" />
+                    DALL-E 3 Advanced Features
+                  </h5>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">
+                        Image Size
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { value: '1024x1024', label: 'Square (1:1)' },
+                          { value: '1792x1024', label: 'Landscape (16:9)' },
+                          { value: '1024x1792', label: 'Portrait (9:16)' }
+                        ].map((size) => (
+                          <button
+                            key={size.value}
+                            className={`py-1 px-2 text-xs rounded ${
+                              dalleSize === size.value
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-gray-300 text-gray-700'
+                            }`}
+                            onClick={() => setDalleSize(size.value as any)}
+                          >
+                            {size.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">
+                        Quality
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          className={`py-1 px-2 text-xs rounded ${
+                            dalleQuality === 'standard'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-gray-300 text-gray-700'
+                          }`}
+                          onClick={() => setDalleQuality('standard')}
+                        >
+                          Standard
+                        </button>
+                        <button
+                          className={`py-1 px-2 text-xs rounded ${
+                            dalleQuality === 'hd'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-gray-300 text-gray-700'
+                          }`}
+                          onClick={() => setDalleQuality('hd')}
+                        >
+                          HD (Higher quality)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">
+                        Style
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          className={`py-1 px-2 text-xs rounded ${
+                            dalleStyle === 'natural'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-gray-300 text-gray-700'
+                          }`}
+                          onClick={() => setDalleStyle('natural')}
+                        >
+                          Natural
+                        </button>
+                        <button
+                          className={`py-1 px-2 text-xs rounded ${
+                            dalleStyle === 'vivid'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-gray-300 text-gray-700'
+                          }`}
+                          onClick={() => setDalleStyle('vivid')}
+                        >
+                          Vivid
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mb-3">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Aspect Ratio
@@ -762,9 +869,11 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
             <ul className="list-disc list-inside mt-1">
               {selectedProvider === 'openai' && (
                 <>
-                  <li>High-resolution images (1024x1024)</li>
-                  <li>Ability to follow complex and detailed prompts</li>
-                  <li>Photorealistic outputs with accurate text rendering</li>
+                  <li>Multiple image sizes: 1024×1024, 1792×1024, 1024×1792</li>
+                  <li>Quality options: Standard or HD (higher detail)</li>
+                  <li>Style options: Natural or Vivid rendering</li>
+                  <li>Advanced prompt understanding and text rendering</li>
+                  <li>Image variations and editing capabilities</li>
                 </>
               )}
               {selectedProvider === 'imagen' && (
@@ -803,11 +912,11 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
       
       {showPromptHelper && (
         <div className="mt-4">
-          <PromptHelper 
-            basePrompt={prompt} 
-            onPromptSelect={handlePromptSelect} 
+          <PromptHelper
+            basePrompt={prompt}
+            onPromptSelect={handlePromptSelect}
             tokens={tokens}
-            provider={selectedProvider}
+            provider={selectedProvider === 'gemini2flash' ? 'gemini' : selectedProvider === 'gpt-image-1' ? 'openai' : selectedProvider}
           />
         </div>
       )}

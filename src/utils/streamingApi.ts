@@ -243,12 +243,13 @@ At the end of your response include a marker with feature IDs like this: FEATURE
  * Stream real-time generation status for image generation
  */
 export function streamImageGeneration({
-  prompt, 
+  prompt,
   onStatusUpdate,
   onProgress,
   onComplete,
   provider = 'gemini',
-  steps = 10
+  steps = 10,
+  dalleOptions = {}
 }: {
   prompt: string;
   onStatusUpdate?: (message: string) => void;
@@ -256,6 +257,11 @@ export function streamImageGeneration({
   onComplete?: (imageUrl: string) => void;
   provider?: string;
   steps?: number;
+  dalleOptions?: {
+    size?: '1024x1024' | '1792x1024' | '1024x1792';
+    quality?: 'standard' | 'hd';
+    style?: 'natural' | 'vivid';
+  };
 }) {
   // Simulated generation steps for now - in a real implementation, this would connect to the API
   let currentStep = 0;
@@ -300,7 +306,7 @@ export function streamImageGeneration({
       setTimeout(() => {
         // Generate the actual image based on the provider
         if (provider === 'openai') {
-          generateImageWithDalle(prompt)
+          generateImageWithDalle(prompt, dalleOptions)
             .then(imageUrl => onComplete?.(imageUrl))
             .catch(error => console.error('Error generating image:', error));
         } else if (provider === 'gemini') {

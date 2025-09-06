@@ -74,20 +74,40 @@ export async function generateImageDescriptionWithAI(tokens: Record<string, stri
 }
 
 /**
- * Generate an image with DALL-E (OpenAI)
+ * Generate an image with DALL-E (OpenAI) - Enhanced with all DALL-E 3 features
  */
-export async function generateImageWithDalle(prompt: string): Promise<string> {
+export async function generateImageWithDalle(
+  prompt: string,
+  options: {
+    size?: '1024x1024' | '1792x1024' | '1024x1792';
+    quality?: 'standard' | 'hd';
+    style?: 'natural' | 'vivid';
+    n?: number;
+  } = {}
+): Promise<string> {
   try {
-    console.log('🖼️ Generating image with DALL-E');
-    
+    console.log('🖼️ Generating image with DALL-E 3 (Enhanced)');
+
+    // Set defaults for DALL-E 3 features
+    const {
+      size = '1024x1024',
+      quality = 'standard',
+      style = 'natural',
+      n = 1
+    } = options;
+
     // Try edge function first
     if (isSupabaseConfigured()) {
       try {
         const result = await callEdgeFunction('image-generation', {
           provider: 'openai',
-          prompt
+          prompt,
+          size,
+          quality,
+          style,
+          n
         });
-        
+
         if (result && result.imageUrl) {
           return result.imageUrl;
         }
@@ -96,15 +116,15 @@ export async function generateImageWithDalle(prompt: string): Promise<string> {
         // Continue to direct API fallback
       }
     }
-    
+
     // Fall back to direct API call
     const apiKey = getOpenAIApiKey();
     if (!apiKey) {
       console.warn('No OpenAI API key available, returning placeholder image');
       // Return a placeholder image from a service like picsum
-      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/1024/1024`;
+      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/${size.split('x')[0]}/${size.split('x')[1]}`;
     }
-    
+
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
@@ -114,30 +134,178 @@ export async function generateImageWithDalle(prompt: string): Promise<string> {
       body: JSON.stringify({
         model: "dall-e-3",
         prompt: prompt,
-        n: 1,
-        size: "1024x1024"
+        n: n,
+        size: size,
+        quality: quality,
+        style: style
       }),
     });
-    
+
     if (!response.ok) {
       let errorMessage = `${response.status} `;
-      
+
       try {
         const errorData = await response.json();
         errorMessage += errorData.error?.message || 'Unknown error';
       } catch {
         errorMessage += 'Unknown error';
       }
-      
+
       throw new Error(errorMessage);
     }
-    
+
     const data = await response.json();
     return data.data[0].url;
   } catch (error) {
     console.error('Error generating image with DALL-E:', error);
     // Return a placeholder image as a fallback
     return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/1024/1024`;
+  }
+}
+
+/**
+ * Generate image variations with DALL-E
+ */
+export async function generateImageVariations(
+  imageUrl: string,
+  options: {
+    n?: number;
+    size?: '1024x1024' | '1792x1024' | '1024x1792';
+  } = {}
+): Promise<string[]> {
+  try {
+    console.log('🔄 Generating image variations with DALL-E');
+
+    const { n = 1, size = '1024x1024' } = options;
+
+    const apiKey = getOpenAIApiKey();
+    if (!apiKey) {
+      console.warn('No OpenAI API key available, returning placeholder images');
+      return Array(n).fill(null).map((_, i) =>
+        `https://picsum.photos/seed/${encodeURIComponent(imageUrl.substring(0, 30))}_${i}/1024/1024`
+      );
+    }
+
+    // First, fetch the image and convert to base64
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error('Failed to fetch reference image');
+    }
+
+    const imageBlob = await imageResponse.blob();
+    const base64Data = await blobToBase64(imageBlob);
+
+    const response = await fetch('https://api.openai.com/v1/images/variations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: new URLSearchParams({
+        image: base64Data,
+        n: n.toString(),
+        size: size
+      })
+    });
+
+    if (!response.ok) {
+      let errorMessage = `${response.status} `;
+
+      try {
+        const errorData = await response.json();
+        errorMessage += errorData.error?.message || 'Unknown error';
+      } catch {
+        errorMessage += 'Unknown error';
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.data.map((item: any) => item.url);
+  } catch (error) {
+    console.error('Error generating image variations:', error);
+    // Return placeholder images as fallback
+    return Array(options.n || 1).fill(null).map((_, i) =>
+      `https://picsum.photos/seed/${encodeURIComponent(imageUrl.substring(0, 30))}_${i}/1024/1024`
+    );
+  }
+}
+
+/**
+ * Edit image with DALL-E (inpainting/outpainting)
+ */
+export async function editImageWithDalle(
+  imageUrl: string,
+  maskUrl: string,
+  prompt: string,
+  options: {
+    size?: '1024x1024' | '1792x1024' | '1024x1792';
+  } = {}
+): Promise<string> {
+  try {
+    console.log('✏️ Editing image with DALL-E');
+
+    const { size = '1024x1024' } = options;
+
+    const apiKey = getOpenAIApiKey();
+    if (!apiKey) {
+      console.warn('No OpenAI API key available, returning original image');
+      return imageUrl;
+    }
+
+    // Fetch and convert images to base64
+    const [imageResponse, maskResponse] = await Promise.all([
+      fetch(imageUrl),
+      fetch(maskUrl)
+    ]);
+
+    if (!imageResponse.ok || !maskResponse.ok) {
+      throw new Error('Failed to fetch image or mask');
+    }
+
+    const [imageBlob, maskBlob] = await Promise.all([
+      imageResponse.blob(),
+      maskResponse.blob()
+    ]);
+
+    const [imageBase64, maskBase64] = await Promise.all([
+      blobToBase64(imageBlob),
+      blobToBase64(maskBlob)
+    ]);
+
+    const response = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: new URLSearchParams({
+        image: imageBase64,
+        mask: maskBase64,
+        prompt: prompt,
+        n: '1',
+        size: size
+      })
+    });
+
+    if (!response.ok) {
+      let errorMessage = `${response.status} `;
+
+      try {
+        const errorData = await response.json();
+        errorMessage += errorData.error?.message || 'Unknown error';
+      } catch {
+        errorMessage += 'Unknown error';
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.data[0].url;
+  } catch (error) {
+    console.error('Error editing image with DALL-E:', error);
+    // Return original image as fallback
+    return imageUrl;
   }
 }
 

@@ -7,18 +7,30 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { isMobile } from './utils/deviceDetection';
 import { preloadCommonFonts } from './services/FontService';
-import { MultipleDndProvider } from 'react-dnd-multi-backend';
-import { HTML5toTouch } from 'rdndmb-html5-to-touch';
 import DragLayer from './components/DragLayer.tsx';
 import { AuthProvider } from './auth/AuthContext.tsx';
 import { AiAssistantProvider } from './components/ui/AiAssistantProvider.tsx';
 import { BrowserRouter } from 'react-router-dom';
+import { registerServiceWorker, setupNetworkListeners } from './utils/pwaUtils';
 
 // Preload commonly used fonts
 preloadCommonFonts();
 
 // Choose the appropriate backend based on the device
 const backend = isMobile() ? TouchBackend : HTML5Backend;
+
+// Register service worker and setup PWA features
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    registerServiceWorker();
+  });
+}
+
+// Setup network listeners for offline/online detection
+setupNetworkListeners(
+  () => console.log('Network: Back online'),
+  () => console.log('Network: Gone offline')
+);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

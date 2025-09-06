@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Tv } from 'lucide-react';
 import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
-import retroPrompts from '../data/retroActionFigures';
+import tvPrompts from '../data/tvShowActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
 
-interface RetroActionFigureGeneratorProps {
+interface TVShowActionFigureGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
 }
 
-const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({ tokens, onImageGenerated }) => {
+const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = ({ tokens, onImageGenerated }) => {
   const [selectedPrompt, setSelectedPrompt] = useState(0);
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
@@ -27,14 +27,14 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
 
   // Initialize with first prompt
   useEffect(() => {
-    if (retroPrompts.length > 0) {
+    if (tvPrompts.length > 0) {
       setSelectedPrompt(0);
-      setSelectedPose(retroPrompts[0].poses[0] || '');
+      setSelectedPose(tvPrompts[0].poses[0] || '');
     }
   }, []);
 
   const getCurrentPrompt = () => {
-    return retroPrompts[selectedPrompt] || retroPrompts[0];
+    return tvPrompts[selectedPrompt] || tvPrompts[0];
   };
 
   const generateCompletePrompt = () => {
@@ -72,17 +72,17 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
     }
     
     // Add professional quality instructions
-    finalPrompt += " Create a professional product photo of this retro action figure toy with studio lighting, high detail, and authentic toy packaging design.";
+    finalPrompt += " Create a professional product photo of this TV show action figure toy with studio lighting, high detail, and authentic toy packaging design.";
     
     return finalPrompt;
   };
 
   const handleRandomize = () => {
     // Select a random prompt
-    const randomPromptIndex = Math.floor(Math.random() * retroPrompts.length);
+    const randomPromptIndex = Math.floor(Math.random() * tvPrompts.length);
     setSelectedPrompt(randomPromptIndex);
     
-    const randomPrompt = retroPrompts[randomPromptIndex];
+    const randomPrompt = tvPrompts[randomPromptIndex];
     
     // Select random additions (0-2)
     const numAdditions = Math.floor(Math.random() * 3);
@@ -114,7 +114,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
       // Generate the full prompt
       const finalPrompt = generateCompletePrompt();
       
-      console.log(`🤖 Generating retro action figure with ${selectedProvider}:`, { 
+      console.log(`🤖 Generating TV show action figure with ${selectedProvider}:`, { 
         prompt: finalPrompt,
         hasReferenceImage: !!referenceImage
       });
@@ -122,14 +122,14 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
       // Call the API to generate the figure
       const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
       
-      console.log('✅ Successfully generated retro action figure');
+      console.log('✅ Successfully generated TV show action figure');
       setGeneratedFigure(imageUrl);
       
       if (onImageGenerated) {
         onImageGenerated(imageUrl);
       }
     } catch (err) {
-      console.error('❌ Failed to generate retro action figure:', err);
+      console.error('❌ Failed to generate TV show action figure:', err);
       setError(`Failed to generate action figure: ${err instanceof Error ? err.message : 'Unknown error'}`);
       
       // Fallback to a placeholder image for better UX
@@ -172,34 +172,39 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
-      <h3 className="text-xl font-bold mb-4 flex items-center">
-        <Box className="h-6 w-6 text-indigo-500 mr-2" />
-        80s & 90s Retro Action Figure Generator
-      </h3>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-bold flex items-center">
+          <Tv className="h-6 w-6 text-blue-500 mr-2" />
+          TV Show Action Figure Generator
+        </h3>
+        <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+          {tvPrompts.length} TV Characters
+        </div>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          {/* Character Gallery */}
+          {/* TV Character Gallery */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                Action Figure Archetype
+                TV Show Character
               </label>
               <button 
                 onClick={() => setShowAllCharacters(!showAllCharacters)}
-                className="text-xs text-indigo-600 hover:text-indigo-800"
+                className="text-xs text-blue-600 hover:text-blue-800"
               >
                 {showAllCharacters ? "Show Less" : "Show All Characters"}
               </button>
             </div>
             
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
-              {(showAllCharacters ? retroPrompts : retroPrompts.slice(0, 8)).map((prompt, index) => (
+              {(showAllCharacters ? tvPrompts : tvPrompts.slice(0, 8)).map((prompt, index) => (
                 <div
-                  key={prompt.archetype}
+                  key={prompt.title}
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedPrompt === index 
-                      ? 'ring-2 ring-indigo-500 shadow-md' 
+                      ? 'ring-2 ring-blue-500 shadow-md' 
                       : 'border border-gray-200'
                   } rounded-lg overflow-hidden`}
                   onClick={() => {
@@ -212,15 +217,15 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                   <div className="aspect-square bg-gray-100 flex items-center justify-center">
                     {/* Placeholder for character image - in a real app, you'd have preview images */}
                     <div className={`w-full h-full flex items-center justify-center ${
-                      selectedPrompt === index ? 'bg-indigo-50' : 'bg-gray-50'
+                      selectedPrompt === index ? 'bg-blue-50' : 'bg-gray-50'
                     }`}>
-                      <Box className={`w-8 h-8 ${
-                        selectedPrompt === index ? 'text-indigo-500' : 'text-gray-400'
+                      <Tv className={`w-8 h-8 ${
+                        selectedPrompt === index ? 'text-blue-500' : 'text-gray-400'
                       }`} />
                     </div>
                   </div>
                   <div className="p-1 text-center">
-                    <p className="text-xs font-medium truncate">{prompt.archetype.split(' ')[0]}</p>
+                    <p className="text-xs font-medium truncate">{prompt.title.split(' ')[0]}</p>
                   </div>
                 </div>
               ))}
@@ -236,7 +241,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               placeholder="Add custom details or modifications to the action figure..."
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               onDrop={handleTokenDrop}
               rows={2}
             />
@@ -250,7 +255,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <button
                 className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-indigo-600 text-white' 
+                  ? 'bg-blue-600 text-white' 
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
@@ -258,7 +263,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               </button>
               <button
                 className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-indigo-600 text-white' 
+                  ? 'bg-blue-600 text-white' 
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
@@ -276,7 +281,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               onImageSelected={(url) => setReferenceImage(url)}
               currentImage={referenceImage}
               onClearImage={() => setReferenceImage(null)}
-              category="retro-figure"
+              category="tv-figure"
               showHistory={true}
             />
           </div>
@@ -285,7 +290,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
           <div>
             <button
               onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-              className="text-xs text-gray-600 hover:text-indigo-600 flex items-center"
+              className="text-xs text-gray-600 hover:text-blue-600 flex items-center"
             >
               <SlidersHorizontal className="w-3 h-3 mr-1" />
               {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
@@ -304,7 +309,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                         key={addition}
                         className={`py-1 px-2 text-xs rounded ${
                           selectedAdditions.includes(addition)
-                            ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
                             : 'bg-white border border-gray-300 text-gray-700'
                         }`}
                         onClick={() => toggleAddition(addition)}
@@ -326,7 +331,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                         key={removal}
                         className={`py-1 px-2 text-xs rounded ${
                           selectedRemovals.includes(removal)
-                            ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
                             : 'bg-white border border-gray-300 text-gray-700'
                         }`}
                         onClick={() => toggleRemoval(removal)}
@@ -348,7 +353,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                         key={pose}
                         className={`py-1 px-2 text-xs rounded ${
                           selectedPose === pose
-                            ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
                             : 'bg-white border border-gray-300 text-gray-700'
                         }`}
                         onClick={() => setSelectedPose(pose)}
@@ -362,14 +367,14 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                 {referenceImage && (
                   <div className="p-3 bg-green-50 rounded-lg">
                     <p className="text-xs text-green-700">
-                      <span className="font-medium">Reference Image Active:</span> Your uploaded image will be used as inspiration for the retro action figure.
+                      <span className="font-medium">Reference Image Active:</span> Your uploaded image will be used as inspiration for the TV show action figure.
                     </p>
                   </div>
                 )}
                 
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-xs text-blue-700">
-                    <span className="font-medium">Retro Figure Tip:</span> For best results, choose characters with distinctive features and iconic poses. The AI will create a toy-like version with authentic retro packaging.
+                    <span className="font-medium">TV Show Figure Tip:</span> For best results, choose a character with distinctive features and iconic poses from classic TV shows. The AI will create a toy-like version with authentic packaging.
                   </p>
                 </div>
               </div>
@@ -420,14 +425,13 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
             {generatedFigure ? (
               <img 
                 src={generatedFigure} 
-                alt="Generated Retro Action Figure" 
+                alt="Generated TV Show Action Figure" 
                 className="max-w-full max-h-[400px] object-contain" 
               />
             ) : (
               <div className="text-center p-6">
-                <Box className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Your retro action figure will appear here</p>
-                <p className="text-sm text-gray-400 mt-2">Select a character and click Generate</p>
+                <Tv className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Your TV show action figure will appear here</p>
               </div>
             )}
           </div>
@@ -445,7 +449,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               
               <a
                 href={generatedFigure}
-                download="retro-action-figure.png"
+                download="tv-show-action-figure.png"
                 className="btn btn-primary flex-1 flex items-center justify-center"
               >
                 <Download className="w-4 h-4 mr-2" />
@@ -457,8 +461,8 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
           {/* Character Info */}
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h4 className="font-medium mb-2 flex items-center">
-              <Box className="w-4 h-4 text-indigo-600 mr-1" />
-              Selected Archetype: {getCurrentPrompt().archetype}
+              <Box className="w-4 h-4 text-blue-600 mr-1" />
+              Selected Character: {getCurrentPrompt().title}
             </h4>
             <p className="text-sm text-gray-600 mb-3">
               {getCurrentPrompt().basePrompt}
@@ -471,25 +475,25 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
           
           {/* Generated Figure Details */}
           {generatedFigure && (
-            <div className="bg-indigo-50 p-4 rounded-lg">
-              <h4 className="font-medium text-indigo-700 flex items-center mb-2">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-700 flex items-center mb-2">
                 <Sparkles className="w-4 h-4 mr-1" />
                 Figure Details
               </h4>
               <ul className="text-sm space-y-1">
                 <li className="flex items-center">
-                  <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
-                  Archetype: <span className="font-medium ml-1">{getCurrentPrompt().archetype}</span>
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  TV Character: <span className="font-medium ml-1">{getCurrentPrompt().title}</span>
                 </li>
                 {selectedPose && (
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
                     Pose: <span className="font-medium ml-1">{selectedPose}</span>
                   </li>
                 )}
                 {selectedAdditions.length > 0 && (
                   <li className="flex items-start">
-                    <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2 mt-1.5"></span>
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-1.5"></span>
                     <div>
                       Added accessories: 
                       <span className="font-medium ml-1">{selectedAdditions.join(', ')}</span>
@@ -498,7 +502,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                 )}
                 {selectedRemovals.length > 0 && (
                   <li className="flex items-start">
-                    <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2 mt-1.5"></span>
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-1.5"></span>
                     <div>
                       Removed elements: 
                       <span className="font-medium ml-1">{selectedRemovals.join(', ')}</span>
@@ -507,13 +511,13 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                 )}
                 {tokens['FIRSTNAME'] && (
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
                     Personalized for: <span className="font-medium ml-1">{tokens['FIRSTNAME']}</span>
                   </li>
                 )}
                 {referenceImage && (
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
                     Using reference image for inspiration
                   </li>
                 )}
@@ -521,14 +525,14 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
             </div>
           )}
           
-          {/* Retro Nostalgia Info */}
+          {/* TV Show Nostalgia Info */}
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-medium text-blue-700 flex items-center mb-2">
               <Lightbulb className="w-4 h-4 mr-1" />
-              Retro Action Figure Archetypes
+              TV Show Action Figures
             </h4>
             <p className="text-sm text-blue-700">
-              These archetypes represent the distinctive styles and packaging aesthetics of 80s and 90s action figures, with customizable features, bright colors, and unique accessories. Each archetype can be personalized with your own characters and company branding.
+              TV show action figures have been hugely popular collectibles since the 1980s, with iconic toy lines featuring stars from sitcoms, dramas, and animated series. These figures featured authentic outfits, signature props, and packaging that referenced the shows.
             </p>
           </div>
         </div>
@@ -537,5 +541,5 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
   );
 };
 
-export default RetroActionFigureGenerator;
-export { RetroActionFigureGenerator };
+export default TVShowActionFigureGenerator;
+export { TVShowActionFigureGenerator };

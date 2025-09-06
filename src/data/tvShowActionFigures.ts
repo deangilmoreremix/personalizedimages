@@ -72,3 +72,5 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
     }
     
     finalPrompt += " Create a professional product photo of this TV show action figure toy with studio lighting, high detail, and authentic toy packaging design.";
+  }
+}

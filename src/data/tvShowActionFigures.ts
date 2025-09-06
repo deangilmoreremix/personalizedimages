@@ -1,251 +1,545 @@
-interface TVShowActionFigurePrompt {
-  archetype: string;
-  basePrompt: string;
-  additions: string[];
-  removals: string[];
-  poses: string[];
-  packaging: string;
+import React, { useState, useEffect } from 'react';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Tv } from 'lucide-react';
+import { generateActionFigure } from '../utils/api';
+import DroppableTextArea from './DroppableTextArea';
+import { TokenDragItem } from '../types/DragTypes';
+import tvPrompts from '../data/tvShowActionFigures';
+import ReferenceImageUploader from './ReferenceImageUploader';
+
+interface TVShowActionFigureGeneratorProps {
+  tokens: Record<string, string>;
+  onImageGenerated: (imageUrl: string) => void;
 }
 
-const tvPrompts: TVShowActionFigurePrompt[] = [
-  {
-    archetype: "High School Heartthrob Figure",
-    basePrompt: "Create a pastel clamshell package for a high school heartthrob action figure in a colorful polo and acid-washed jeans, holding a giant brick cell phone and standing in front of a locker-lined hallway. Includes time-freeze pose feature. Professional toy photography with 90s aesthetic lighting.",
-    additions: ["School yearbook", "Detention slip prop"],
-    removals: ["Phone", "Backpack"],
-    poses: ["Finger point", "Cell phone lean", "Locker lean"],
-    packaging: "Pastel clamshell with quotes and zig-zag borders"
-  },
-  {
-    archetype: "Paranormal Agent Figure",
-    basePrompt: "Create a dark government-issue packaging for a trench-coat wearing FBI agent with briefcase and flashlight, posed mid-investigation with a flying saucer silhouette behind. Includes alien skull and poster accessory. Professional photography with mysterious lighting.",
-    additions: ["Files folder", "Secret vault backdrop"],
-    removals: ["Flashlight", "Poster"],
-    poses: ["Flashlight crouch", "Holding badge", "Looking up at light"],
-    packaging: "Dark government-issue packaging with foil stamp and secret message liner"
-  },
-  {
-    archetype: "Fresh Prince Style Figure",
-    basePrompt: "Create a graffiti-sprayed flip box for a stylish 90s teen in neon streetwear, posed with a tilted cap and boom box accessory on a graffiti wall base. Features expressive facial stickers and poseable dance limbs. Professional photography with urban street lighting.",
-    additions: ["Basketball", "DJ accessory"],
-    removals: ["Boom box", "Jacket"],
-    poses: ["Jump pose", "One-arm mic move", "Side lean chill"],
-    packaging: "Graffiti-sprayed flip box with bold sticker sheet"
-  },
-  {
-    archetype: "Coffee Shop Fashionista Figure",
-    basePrompt: "Create a sitcom-style stage set box for a 90s fashionista figure with layered haircut and coffee tray, posed behind a coffee shop sofa backdrop with chalkboard specials wall. Includes changeable waitress and casual outfits. Professional toy photography.",
-    additions: ["Coffee cup", "Quote banner"],
-    removals: ["Tray", "Apron"],
-    poses: ["Serving pose", "Talking on phone", "Hand on hip smile"],
-    packaging: "Sitcom-style stage set box with pop-out quote bubbles and couch stand"
-  },
-  {
-    archetype: "Lifeguard Figure",
-    basePrompt: "Create a wave-washed box for an action-ready lifeguard figure in red swimsuit and whistle, posed on a sandy beach base with lifeguard tower backdrop. Features splash effects and slow-motion running stance. Professional photography with beach lighting.",
-    additions: ["Rescue float", "Binoculars"],
-    removals: ["Whistle", "Logo patch"],
-    poses: ["Running stance", "Lifeguard stand wave", "Kneeling rescue pose"],
-    packaging: "Wave-washed box with transparent ocean texture and iconic 90s title bar"
-  },
-  {
-    archetype: "Cool Uncle Rocker Figure",
-    basePrompt: "Create a 90s sitcom box for a cool uncle figure with flowing hair, leather jacket, and guitar accessory, posed in front of a suburban townhouse with a soft pink sky. Includes motorcycle and motivational sign. Professional photography with sitcom lighting.",
-    additions: ["Drumsticks", "Baby backpack"],
-    removals: ["Guitar", "Sunglasses"],
-    poses: ["Finger point", "Mic croon", "Family hug pose"],
-    packaging: "90s sitcom box with family photo cutout and soft glow filter"
-  },
-  {
-    archetype: "Nerd Icon Figure",
-    basePrompt: "Create a checkerboard clamshell for a quirky nerd figure in suspenders, thick glasses, and high-waisted pants, posed mid-snort with science kit and family house background. Includes interchangeable 'cool' variant. Professional toy photography.",
-    additions: ["Beaker", "Hover boots"],
-    removals: ["Suspenders", "Glasses"],
-    poses: ["Did I do that? pose", "Point and laugh", "Nose push"],
-    packaging: "Checkerboard clamshell with pop quiz stickers and catchphrases"
-  },
-  {
-    archetype: "Vampire Slayer Figure",
-    basePrompt: "Create a graveyard gate box for a high school slayer figure with wooden stake, crossbow, and leather jacket, posed on a dark cemetery base with crypt lights. Includes vampire dust effects and library accessories. Professional photography with gothic lighting.",
-    additions: ["Pointy stake", "Grimoire"],
-    removals: ["Crossbow", "Jacket"],
-    poses: ["Mid-kick stake", "Defensive cross pose", "Library research"],
-    packaging: "Graveyard gate box with gothic text and embossed stake emblems"
-  },
-  {
-    archetype: "Dance Icon Figure",
-    basePrompt: "Create a family mansion diorama for a stylish cousin in sweater vest and bowtie posed doing his iconic dance move in a luxury foyer set. Includes dance radio, trophy case backdrop, and piano stand. Professional photography with mansion lighting.",
-    additions: ["Dance boom box", "Family photo"],
-    removals: ["Sweater vest", "Radio"],
-    poses: ["Dance move", "Jazz hands", "Clap and spin"],
-    packaging: "Family mansion diorama with pop-out floor rug and disco overlay"
-  },
-  {
-    archetype: "Teenage Witch Figure",
-    basePrompt: "Create a mystical purple box for a teen witch figure in sparkly top with spell book and black cat, posed in front of her living room with magic portal base. Includes bubbling cauldron and wand. Professional photography with magical lighting.",
-    additions: ["Talking cat", "Magic journal"],
-    removals: ["Cauldron", "Wand"],
-    poses: ["Wand cast pose", "Smirk with book", "Floating meditation"],
-    packaging: "Mystical purple box with star shimmer and cauldron bubble textures"
-  },
-  {
-    archetype: "Couch Potato Figure",
-    basePrompt: "Create a faded family living room box for a grumpy dad figure in dress shirt and tie sitting on a cracked living room couch with TV remote and football. Includes newspaper and receipt props. Professional toy photography.",
-    additions: ["Shoe box", "High school jersey"],
-    removals: ["Remote", "Shoes"],
-    poses: ["Couch recline", "Facepalm", "Football throw"],
-    packaging: "Faded family living room box with remote flap and sarcastic banner"
-  },
-  {
-    archetype: "Sci-Fi Analyst Figure",
-    basePrompt: "Create an X-Files black and white slipcase for a sharp-suited FBI figure with medical folder and glowing file, standing against a lab background with alien outline shadow. Includes gun holster and flashlight. Professional photography with sci-fi lighting.",
-    additions: ["X-ray slide", "Alien handprint"],
-    removals: ["Flashlight", "Medical file"],
-    poses: ["Holding evidence", "File open", "Pistol stance"],
-    packaging: "Black and white slipcase with mysterious symbols and seal cutout"
-  },
-  {
-    archetype: "Actor Wannabe Figure",
-    basePrompt: "Create a studio apartment box for a laid-back figure with leather jacket and pizza box, posed mid-greeting with camera light base. Includes soap opera script and sandwich add-ons. Professional photography with apartment lighting.",
-    additions: ["Stuffed penguin", "Soap script"],
-    removals: ["Pizza box", "Jacket"],
-    poses: ["How you doin?", "Overacting stare", "Thumbs-up nod"],
-    packaging: "Studio apartment box with cheesy spotlight overlay and pizza scent panel"
-  },
-  {
-    archetype: "Improv Survivalist Figure",
-    basePrompt: "Create a utility case box for a resourceful agent in mullet hairstyle, leather jacket, and tool belt, surrounded by random objects turned inventions. Includes wire-cutting pose and explosion backdrop. Professional toy photography.",
-    additions: ["Swiss army knife", "Toothpick"],
-    removals: ["Jacket", "Duct tape roll"],
-    poses: ["Trap build", "Escape crawl", "Thinking pose"],
-    packaging: "Utility case box with blueprint inserts and mystery object bag"
-  },
-  {
-    archetype: "Radio Shrink Figure",
-    basePrompt: "Create a radio booth backdrop box for a classy figure in blazer with coffee cup and psychology book, posed mid-rant in front of a talk-radio mic. Includes wine bottle prop and studio chair. Professional photography with radio studio lighting.",
-    additions: ["Sherry glass", "Call-in light"],
-    removals: ["Coffee", "Book"],
-    poses: ["Finger in air", "Relaxed monologue", "Coffee lean"],
-    packaging: "Radio booth backdrop box with Seattle skyline and mini cameo"
-  },
-  {
-    archetype: "Cartoon Father Figure",
-    basePrompt: "Create a cartoon background box for a yellow cartoon father figure in white shirt and blue pants, holding a pink donut and beverage can. Background features living room couch and TV set. Professional toy photography with cartoon lighting.",
-    additions: ["Nuclear plant badge", "Saxophone"],
-    removals: ["Beverage can", "Donut"],
-    poses: ["D'oh face", "Donut drool", "Strangling pose"],
-    packaging: "Cartoon background box with cloud shape window and character silhouettes"
-  },
-  {
-    archetype: "Starfleet Commander",
-    basePrompt: "Create a Federation-style slipcase for a bald starship captain figure in red and black uniform, seated in captain's chair with phaser and communicator badge. Backdrop shows bridge view of space with stars. Professional photography with sci-fi lighting.",
-    additions: ["Tea cup", "Command console"],
-    removals: ["Phaser", "Chair"],
-    poses: ["Engage point", "Make it so stance", "Facepalm"],
-    packaging: "Federation-style slipcase with transporter effect window and tech specs"
-  },
-  {
-    archetype: "Entrance Specialist Figure",
-    basePrompt: "Create an apartment door cardboard cutout for a tall lanky neighbor figure with wild hair, colorful vintage shirt, and exaggerated gestures. Features spring-loaded door-slide action and apartment backdrop. Professional toy photography.",
-    additions: ["Coffee table book", "Lobster bib"],
-    removals: ["Apartment door", "Vintage shirt"],
-    poses: ["Door slide", "Hair push", "Elaborate gesture"],
-    packaging: "Apartment door cardboard cutout with peephole viewer and bassline button"
-  },
-  {
-    archetype: "Pity Fool Commando",
-    basePrompt: "Create a van box for a muscular action hero figure with mohawk, gold chains, and camo pants. Includes van accessory and motivational sound chip when squeezed. Professional photography with action lighting.",
-    additions: ["Gold van", "Tool belt"],
-    removals: ["Chains", "Mohawk"],
-    poses: ["Fist-up stance", "Grimace face", "Pointing pose"],
-    packaging: "Van box with metallic gold trim and explosion effects"
-  },
-  {
-    archetype: "Paleontology Prof Figure",
-    basePrompt: "Create a museum display case for a nerdy scientist figure in tweed jacket holding fossil and pointing at dinosaur chart. Features 'pivot' sound button and museum display backdrop. Professional photography with museum lighting.",
-    additions: ["Mini couch", "Leather pants"],
-    removals: ["Fossil", "Chart"],
-    poses: ["Pivot pose", "Professor lecture", "Emotional outburst"],
-    packaging: "Museum display case with foldout dinosaur diorama and friend group photo"
-  },
-  {
-    archetype: "Sarcasm Master Figure",
-    basePrompt: "Create an office cubicle box for a 90s office worker figure in vest and tie with sarcastic expression and briefcase. Includes office cubicle backdrop and comic speech bubble attachments. Professional toy photography.",
-    additions: ["Recliner", "Duck and chick pets"],
-    removals: ["Briefcase", "Office backdrop"],
-    poses: ["Could I BE any more...?", "Dance awkward", "Sarcastic point"],
-    packaging: "Office cubicle box with sarcastic quips and magnets for speech bubbles"
-  },
-  {
-    archetype: "Clean Freak Chef",
-    basePrompt: "Create a kitchen backdrop box for a perfectionist chef figure with spatula and chef hat in spotless kitchen backdrop. Includes cleaning supplies and miniature thanksgiving turkey. Professional photography with kitchen lighting.",
-    additions: ["Cooking timer", "Recipe cards"],
-    removals: ["Chef hat", "Cleaning supplies"],
-    poses: ["Cooking stance", "Competitive point", "Cleaning frenzy"],
-    packaging: "Kitchen backdrop box with real recipe cards and miniature apron"
-  },
-  {
-    archetype: "Eccentric Musician",
-    basePrompt: "Create a coffee shop stage for a quirky bohemian figure with acoustic guitar and flowing dress, posed mid-song in coffee shop. Includes lyric sheet and street performer case. Professional photography with coffee shop lighting.",
-    additions: ["Massage table", "Triplet babies"],
-    removals: ["Guitar", "Coffee shop backdrop"],
-    poses: ["Guitar strum", "Surprised face", "Running weird"],
-    packaging: "Coffee shop stage with musical note border and cat stickers"
-  },
-  {
-    archetype: "Chemistry Teacher",
-    basePrompt: "Create a chemistry lab box for a chemistry teacher figure in green apron and glasses with lab equipment and RV backdrop. Features removable hat and color-changing features. Professional toy photography with lab lighting.",
-    additions: ["Gas mask", "Blue crystal prop"],
-    removals: ["Glasses", "Lab equipment"],
-    poses: ["Say my name stance", "Lab work", "Hat adjustment"],
-    packaging: "Chemistry lab box with periodic table background and warning labels"
-  },
-  {
-    archetype: "Psychic Girl Figure",
-    basePrompt: "Create an 80s-style blister pack for a young girl figure with shaved head, hospital gown, and nosebleed effect. Features light-up eyes and telekinetic hand pose with floating objects. Professional photography with supernatural lighting.",
-    additions: ["Waffle prop", "Sensory tank"],
-    removals: ["Hospital gown", "Nosebleed effect"],
-    poses: ["Telekinetic stance", "Staring intensely", "Running scared"],
-    packaging: "80s-style blister pack with flickering Christmas lights border and alphabet wall"
-  },
-  {
-    archetype: "Strategic Advisor",
-    basePrompt: "Create an Iron Throne backdrop box for a diminutive noble figure in medieval tunic with goblet and scroll, posed with knowing smirk beside castle table map. Includes advisor pin. Professional photography with medieval lighting.",
-    additions: ["Throne mini", "Crossbow prop"],
-    removals: ["Goblet", "Scroll"],
-    poses: ["Drinking stance", "Strategic planning", "Court statement"],
-    packaging: "Iron Throne backdrop box with House sigil banners and medieval scroll text"
-  },
-  {
-    archetype: "Dragon Queen",
-    basePrompt: "Create an Iron and dragonscale box for a silver-haired royal figure in blue dress with dragon on shoulder and chain accessory. Features flame light effects and rocky throne base. Professional photography with fantasy lighting.",
-    additions: ["Dragon eggs", "Ancient weapon"],
-    removals: ["Dragon", "Throne"],
-    poses: ["Conquest stance", "Dragon command", "Queen's address"],
-    packaging: "Iron and dragonscale box with map and fire effect backdrop"
-  },
-  {
-    archetype: "Winter Warden",
-    basePrompt: "Create a Castle Black wall display for a brooding warrior figure in black fur cloak with sword and direwolf companion, posed on snowy castle wall backdrop. Includes Night's Watch accessories. Professional photography with winter lighting.",
-    additions: ["Dragonglass dagger", "Wildling companion"],
-    removals: ["Direwolf", "Sword"],
-    poses: ["Sword stance", "Brooding look", "Battle ready"],
-    packaging: "Castle Black wall display with icy effect window and falling snow accents"
-  },
-  {
-    archetype: "Assistant Manager",
-    basePrompt: "Create an office supply clamshell for a serious office figure in short-sleeve shirt and tie with glasses and briefcase. Includes farm backdrop and removable mustard-colored shirt. Professional toy photography.",
-    additions: ["Bobblehead mini", "Farming tools"],
-    removals: ["Glasses", "Briefcase"],
-    poses: ["Karate stance", "Fact declaration", "Office presentation"],
-    packaging: "Office supply clamshell with Dunder Mifflin logo and desk accessory set"
-  },
-  {
-    archetype: "World's Best Boss",
-    basePrompt: "Create an office diorama for a clueless manager figure with coffee mug, suit with too-short tie, and motivational voice box. Features conference room backdrop. Professional photography with office lighting.",
-    additions: ["Bandana", "Award"],
-    removals: ["Coffee mug", "Tie"],
-    poses: ["Finger guns", "Dynamic presentation", "Awkward dancing"],
-    packaging: "Office diorama with pull-out quotes and character photo wall"
-  }
-];
+const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = ({ tokens, onImageGenerated }) => {
+  const [selectedPrompt, setSelectedPrompt] = useState(0);
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('gemini');
+  const [error, setError] = useState<string | null>(null);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [selectedAdditions, setSelectedAdditions] = useState<string[]>([]);
+  const [selectedRemovals, setSelectedRemovals] = useState<string[]>([]);
+  const [selectedPose, setSelectedPose] = useState<string>('');
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [showAllCharacters, setShowAllCharacters] = useState(false);
+
+  // Initialize with first prompt
+  useEffect(() => {
+    if (tvPrompts.length > 0) {
+      setSelectedPrompt(0);
+      setSelectedPose(tvPrompts[0].poses[0] || '');
+    }
+  }, []);
+
+  const getCurrentPrompt = () => {
+    return tvPrompts[selectedPrompt] || tvPrompts[0];
+  };
+
+  const generateCompletePrompt = () => {
+    const currentPrompt = getCurrentPrompt();
+    
+    // Start with the base prompt
+    let finalPrompt = currentPrompt.basePrompt;
+    
+    // Add selected additions
+    if (selectedAdditions.length > 0) {
+      finalPrompt += ` Additional accessories include: ${selectedAdditions.join(', ')}.`;
+    }
+    
+    // Add removals
+    if (selectedRemovals.length > 0) {
+      finalPrompt += ` Remove these elements: ${selectedRemovals.join(', ')}.`;
+    }
+    
+    // Add selected pose
+    if (selectedPose) {
+      finalPrompt += ` The figure is posed in a ${selectedPose} position.`;
+    }
+    
+    // Add packaging details
+    finalPrompt += ` The packaging is ${currentPrompt.packaging}.`;
+    
+    // Add any custom prompt additions
+    if (customPrompt) {
+      finalPrompt += ` ${customPrompt}`;
+    }
+    
+    // Add personalization if FIRSTNAME token is available
+    if (tokens['FIRSTNAME']) {
+      finalPrompt += ` The action figure has a personalized name tag for ${tokens['FIRSTNAME']}.`;
+    }
+    
+    // Add professional quality instructions
+    finalPrompt += " Create a professional product photo of this TV show action figure toy with studio lighting, high detail, and authentic toy packaging design.";
+    
+    return finalPrompt;
+  };
+
+  const handleRandomize = () => {
+    // Select a random prompt
+    const randomPromptIndex = Math.floor(Math.random() * tvPrompts.length);
+    setSelectedPrompt(randomPromptIndex);
+    
+    const randomPrompt = tvPrompts[randomPromptIndex];
+    
+    // Select random additions (0-2)
+    const numAdditions = Math.floor(Math.random() * 3);
+    const randomAdditions = [...randomPrompt.additions]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, numAdditions);
+    setSelectedAdditions(randomAdditions);
+    
+    // Select random removals (0-1)
+    const numRemovals = Math.floor(Math.random() * 2);
+    const randomRemovals = [...randomPrompt.removals]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, numRemovals);
+    setSelectedRemovals(randomRemovals);
+    
+    // Select random pose
+    const randomPose = randomPrompt.poses[Math.floor(Math.random() * randomPrompt.poses.length)];
+    setSelectedPose(randomPose);
+    
+    // Clear custom prompt
+    setCustomPrompt('');
+  };
+
+  const handleGenerateActionFigure = async () => {
+    try {
+      setIsGenerating(true);
+      setError(null);
+      
+      // Generate the full prompt
+      const finalPrompt = generateCompletePrompt();
+      
+      console.log(`🤖 Generating TV show action figure with ${selectedProvider}:`, { 
+        prompt: finalPrompt,
+        hasReferenceImage: !!referenceImage
+      });
+      
+      // Call the API to generate the figure
+      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      
+      console.log('✅ Successfully generated TV show action figure');
+      setGeneratedFigure(imageUrl);
+      
+      if (onImageGenerated) {
+        onImageGenerated(imageUrl);
+      }
+    } catch (err) {
+      console.error('❌ Failed to generate TV show action figure:', err);
+      setError(`Failed to generate action figure: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      
+      // Fallback to a placeholder image for better UX
+      const placeholderUrl = `https://placehold.co/800/333/FFF?text=Generation+Failed`;
+      setGeneratedFigure(placeholderUrl);
+      
+      if (onImageGenerated) {
+        onImageGenerated(placeholderUrl);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  // Handle token drop on the prompt textarea
+  const handleTokenDrop = (item: TokenDragItem, position: number) => {
+    const newText = customPrompt.substring(0, position) + 
+                  item.tokenDisplay + 
+                  customPrompt.substring(position);
+    setCustomPrompt(newText);
+  };
+
+  // Toggle an addition
+  const toggleAddition = (addition: string) => {
+    if (selectedAdditions.includes(addition)) {
+      setSelectedAdditions(selectedAdditions.filter(item => item !== addition));
+    } else {
+      setSelectedAdditions([...selectedAdditions, addition]);
+    }
+  };
+
+  // Toggle a removal
+  const toggleRemoval = (removal: string) => {
+    if (selectedRemovals.includes(removal)) {
+      setSelectedRemovals(selectedRemovals.filter(item => item !== removal));
+    } else {
+      setSelectedRemovals([...selectedRemovals, removal]);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-bold flex items-center">
+          <Tv className="h-6 w-6 text-blue-500 mr-2" />
+          TV Show Action Figure Generator
+        </h3>
+        <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+          {tvPrompts.length} TV Characters
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          {/* TV Character Gallery */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                TV Show Character
+              </label>
+              <button 
+                onClick={() => setShowAllCharacters(!showAllCharacters)}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                {showAllCharacters ? "Show Less" : "Show All Characters"}
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
+              {(showAllCharacters ? tvPrompts : tvPrompts.slice(0, 8)).map((prompt, index) => (
+                <div
+                  key={prompt.title}
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedPrompt === index 
+                      ? 'ring-2 ring-blue-500 shadow-md' 
+                      : 'border border-gray-200'
+                  } rounded-lg overflow-hidden`}
+                  onClick={() => {
+                    setSelectedPrompt(index);
+                    setSelectedPose(prompt.poses[0] || '');
+                    setSelectedAdditions([]);
+                    setSelectedRemovals([]);
+                  }}
+                >
+                  <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                    {/* Placeholder for character image - in a real app, you'd have preview images */}
+                    <div className={`w-full h-full flex items-center justify-center ${
+                      selectedPrompt === index ? 'bg-blue-50' : 'bg-gray-50'
+                    }`}>
+                      <Tv className={`w-8 h-8 ${
+                        selectedPrompt === index ? 'text-blue-500' : 'text-gray-400'
+                      }`} />
+                    </div>
+                  </div>
+                  <div className="p-1 text-center">
+                    <p className="text-xs font-medium truncate">{prompt.title.split(' ')[0]}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Custom Prompt Addition */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Custom Additions (Optional)
+            </label>
+            <DroppableTextArea
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="Add custom details or modifications to the action figure..."
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onDrop={handleTokenDrop}
+              rows={2}
+            />
+          </div>
+          
+          {/* Model Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              AI Model
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('openai')}
+              >
+                DALL-E 3
+              </button>
+              <button
+                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini')}
+              >
+                Gemini AI
+              </button>
+            </div>
+          </div>
+          
+          {/* Reference Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Reference Image (Optional)
+            </label>
+            <ReferenceImageUploader
+              onImageSelected={(url) => setReferenceImage(url)}
+              currentImage={referenceImage}
+              onClearImage={() => setReferenceImage(null)}
+              category="tv-figure"
+              showHistory={true}
+            />
+          </div>
+          
+          {/* Advanced Options */}
+          <div>
+            <button
+              onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+              className="text-xs text-gray-600 hover:text-blue-600 flex items-center"
+            >
+              <SlidersHorizontal className="w-3 h-3 mr-1" />
+              {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
+            </button>
+            
+            {showAdvancedOptions && (
+              <div className="mt-3 p-4 bg-gray-50 rounded-lg space-y-4">
+                {/* Accessories */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Add Accessories
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {getCurrentPrompt().additions.map((addition) => (
+                      <button
+                        key={addition}
+                        className={`py-1 px-2 text-xs rounded ${
+                          selectedAdditions.includes(addition)
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-white border border-gray-300 text-gray-700'
+                        }`}
+                        onClick={() => toggleAddition(addition)}
+                      >
+                        {addition}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Removals */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Remove Elements
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {getCurrentPrompt().removals.map((removal) => (
+                      <button
+                        key={removal}
+                        className={`py-1 px-2 text-xs rounded ${
+                          selectedRemovals.includes(removal)
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-white border border-gray-300 text-gray-700'
+                        }`}
+                        onClick={() => toggleRemoval(removal)}
+                      >
+                        {removal}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Pose Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Figure Pose
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {getCurrentPrompt().poses.map((pose) => (
+                      <button
+                        key={pose}
+                        className={`py-1 px-2 text-xs rounded ${
+                          selectedPose === pose
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-white border border-gray-300 text-gray-700'
+                        }`}
+                        onClick={() => setSelectedPose(pose)}
+                      >
+                        {pose}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {referenceImage && (
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs text-green-700">
+                      <span className="font-medium">Reference Image Active:</span> Your uploaded image will be used as inspiration for the TV show action figure.
+                    </p>
+                  </div>
+                )}
+                
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    <span className="font-medium">TV Show Figure Tip:</span> For best results, choose a character with distinctive features and iconic poses from classic TV shows. The AI will create a toy-like version with authentic packaging.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Show error messages */}
+          {error && (
+            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleRandomize}
+              className="btn btn-outline flex-1 flex items-center justify-center"
+              disabled={isGenerating}
+            >
+              <Dices className="w-4 h-4 mr-2" />
+              Randomize
+            </button>
+            
+            <button
+              onClick={handleGenerateActionFigure}
+              disabled={isGenerating}
+              className="btn btn-primary flex-1 flex items-center justify-center"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 mr-2" />
+                  Generate Figure
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex flex-col space-y-4">
+          {/* Preview Image Area */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: "300px" }}>
+            {generatedFigure ? (
+              <img 
+                src={generatedFigure} 
+                alt="Generated TV Show Action Figure" 
+                className="max-w-full max-h-[400px] object-contain" 
+              />
+            ) : (
+              <div className="text-center p-6">
+                <Tv className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Your TV show action figure will appear here</p>
+              </div>
+            )}
+          </div>
+          
+          {/* Download Buttons */}
+          {generatedFigure && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.open(generatedFigure)}
+                className="btn btn-outline flex-1 flex items-center justify-center"
+              >
+                <ImageIcon className="w-4 h-4 mr-2" />
+                View Full Size
+              </button>
+              
+              <a
+                href={generatedFigure}
+                download="tv-show-action-figure.png"
+                className="btn btn-primary flex-1 flex items-center justify-center"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </a>
+            </div>
+          )}
+          
+          {/* Character Info */}
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h4 className="font-medium mb-2 flex items-center">
+              <Box className="w-4 h-4 text-blue-600 mr-1" />
+              Selected Character: {getCurrentPrompt().title}
+            </h4>
+            <p className="text-sm text-gray-600 mb-3">
+              {getCurrentPrompt().basePrompt}
+            </p>
+            
+            <div className="text-xs text-gray-500">
+              <p><strong>Packaging:</strong> {getCurrentPrompt().packaging}</p>
+            </div>
+          </div>
+          
+          {/* Generated Figure Details */}
+          {generatedFigure && (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-700 flex items-center mb-2">
+                <Sparkles className="w-4 h-4 mr-1" />
+                Figure Details
+              </h4>
+              <ul className="text-sm space-y-1">
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  TV Character: <span className="font-medium ml-1">{getCurrentPrompt().title}</span>
+                </li>
+                {selectedPose && (
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    Pose: <span className="font-medium ml-1">{selectedPose}</span>
+                  </li>
+                )}
+                {selectedAdditions.length > 0 && (
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-1.5"></span>
+                    <div>
+                      Added accessories: 
+                      <span className="font-medium ml-1">{selectedAdditions.join(', ')}</span>
+                    </div>
+                  </li>
+                )}
+                {selectedRemovals.length > 0 && (
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 mt-1.5"></span>
+                    <div>
+                      Removed elements: 
+                      <span className="font-medium ml-1">{selectedRemovals.join(', ')}</span>
+                    </div>
+                  </li>
+                )}
+                {tokens['FIRSTNAME'] && (
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    Personalized for: <span className="font-medium ml-1">{tokens['FIRSTNAME']}</span>
+                  </li>
+                )}
+                {referenceImage && (
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    Using reference image for inspiration
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          
+          {/* TV Show Nostalgia Info */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-700 flex items-center mb-2">
+              <Lightbulb className="w-4 h-4 mr-1" />
+              TV Show Action Figures
+            </h4>
+            <p className="text-sm text-blue-700">
+              TV show action figures have been hugely popular collectibles since the 1980s, with iconic toy lines featuring stars from sitcoms, dramas, and animated series. These figures featured authentic outfits, signature props, and packaging that referenced the shows.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TVShowActionFigureGenerator;
+export { TVShowActionFigureGenerator };

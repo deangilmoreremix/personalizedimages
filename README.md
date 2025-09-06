@@ -59,11 +59,21 @@
 
     This application integrates with multiple AI providers to offer a wide range of creative tools:
 
-    -   **OpenAI (DALL-E)**: For text-to-image generation.
+    -   **OpenAI (DALL-E)**: For text-to-image generation with optimized prompts.
+    -   **OpenAI (GPT Models)**: For prompt polishing and enhancement using GPT-4o, GPT-4, or GPT-3.5-turbo.
     -   **Google Gemini**: For image generation, editing, analysis, and advanced multimodal capabilities.
     -   **Ideogram AI**: (Potentially integrated via Edge Functions) For image generation with precise text rendering.
     -   **Giphy**: For GIF-related functionalities.
     -   **Leonardo.ai**: For additional image generation options.
+
+    ### GPT Prompt Polisher
+
+    The application includes an AI-powered prompt polisher that enhances your image generation prompts:
+
+    - **Model Selection**: Choose from GPT-4o (recommended), GPT-4, or GPT-3.5-turbo
+    - **Smart Enhancement**: Automatically adds professional terminology, lighting details, and artistic elements
+    - **DALL-E Optimization**: Tailored specifically for DALL-E 3's strengths and best practices
+    - **Real-time Integration**: Seamlessly improves prompts before sending to image generation
 
     ## ⚙️ Supabase Integration
 

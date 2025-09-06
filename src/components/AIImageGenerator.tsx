@@ -12,6 +12,7 @@ import {
 import { streamImageGeneration, streamAIReasoning } from '../utils/streamingApi';
 import ImagenPromptGuide from './ImagenPromptGuide';
 import PromptHelper from './PromptHelper';
+import PromptPolisher from './PromptPolisher';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import VideoGenerationButton from './VideoGenerationButton';
@@ -421,6 +422,13 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               placeholder="Describe the image you want to generate with specific details..."
               className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px]"
               onDrop={handlePromptTokenDrop}
+            />
+
+            {/* AI Prompt Polisher */}
+            <PromptPolisher
+              currentPrompt={prompt}
+              onPromptUpdate={setPrompt}
+              disabled={isGenerating}
             />
           </div>
           

@@ -3,7 +3,7 @@ import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersH
 import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
-import wrestlingPrompts from '../data/wrestlingActionFigures';
+import { wrestlingActionFigurePrompts as wrestlingPrompts } from '../data/wrestlingActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
 
 interface WrestlingActionFigureGeneratorProps {

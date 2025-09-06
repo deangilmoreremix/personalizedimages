@@ -5,6 +5,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import DroppableInput from './DroppableInput';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import ghibliConfig from '../data/ghibliStyles';
 
 interface GhibliImageGeneratorProps {
   tokens: Record<string, string>;
@@ -26,43 +27,14 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [customCharacterName, setCustomCharacterName] = useState('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
-  // Scene type options
-  const sceneOptions = [
-    'Nature Landscape', 'Small Town', 'Magical Forest', 
-    'Ocean View', 'Floating Castle', 'Mountain Village', 
-    'Train Journey', 'Countryside', 'Ancient Temple'
-  ];
+  // Use configuration data
+  const sceneOptions = ghibliConfig.scenes.map(scene => scene.label);
+  const characterOptions = ghibliConfig.characters.map(char => char.label);
+  const timeOptions = ghibliConfig.timesOfDay.map(time => time.label);
+  const weatherOptions = ghibliConfig.weatherEffects.map(weather => weather.label);
 
-  // Character type options
-  const characterOptions = [
-    'Human Child', 'Human Adult', 'Magical Creature', 
-    'Spirit', 'Animal Companion', 'Transformed Being',
-    'Forest Spirit', 'Witch/Wizard', 'None'
-  ];
-
-  // Time of day options
-  const timeOptions = [
-    'Dawn', 'Day', 'Sunset', 'Night', 'Magical Hour'
-  ];
-
-  // Weather effect options
-  const weatherOptions = [
-    'Clear Sky', 'Gentle Rain', 'Heavy Storm', 
-    'Falling Leaves', 'Cherry Blossoms', 'Snow', 
-    'Magical Particles', 'Foggy'
-  ];
-
-  // Ghibli elements that can be added to images
-  const ghibliElementsOptions = [
-    { name: 'Magic Dust', icon: <Sparkles className="w-3 h-3" /> },
-    { name: 'Wind Swirls', icon: <Wind className="w-3 h-3" /> },
-    { name: 'Floating Islands', icon: <Cloud className="w-3 h-3" /> },
-    { name: 'Gentle Creatures', icon: <Leaf className="w-3 h-3" /> },
-    { name: 'Mysterious Shadows', icon: <Droplets className="w-3 h-3" /> },
-    { name: 'Glowing Plants', icon: <Sun className="w-3 h-3" /> },
-    { name: 'Ancient Ruins', icon: <Mountain className="w-3 h-3" /> },
-    { name: 'Lanterns', icon: <Lightbulb className="w-3 h-3" /> },
-  ];
+  // Use magical elements from configuration
+  const ghibliElementsOptions = ghibliConfig.magicalElements;
   
   const [selectedGhibliElements, setSelectedGhibliElements] = useState<string[]>([]);
 
@@ -80,60 +52,66 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
     if (includePersonalization) {
       characterName = customCharacterName || tokens['FIRSTNAME'] || '';
     }
-    
-    // Create scene description
-    let sceneDescription = sceneType.toLowerCase();
-    
-    // Add weather and time of day
-    sceneDescription += ` during ${timeOfDay.toLowerCase()}`;
-    if (weatherEffect.toLowerCase() !== 'clear sky') {
-      sceneDescription += ` with ${weatherEffect.toLowerCase()}`;
+
+    // Get scene, character, time, and weather from config
+    const sceneData = ghibliConfig.scenes.find(s => s.label === sceneType);
+    const characterData = ghibliConfig.characters.find(c => c.label === characterType);
+    const timeData = ghibliConfig.timesOfDay.find(t => t.label === timeOfDay);
+    const weatherData = ghibliConfig.weatherEffects.find(w => w.label === weatherEffect);
+
+    // Build scene description
+    let sceneDescription = sceneData ? sceneData.prompt : sceneType.toLowerCase();
+
+    // Add time of day
+    if (timeData) {
+      sceneDescription += ` ${timeData.prompt}`;
     }
-    
+
     // Add character if not "None"
     let characterDescription = '';
-    if (characterType.toLowerCase() !== 'none') {
-      characterDescription = characterName 
-        ? `featuring ${characterName} as a ${characterType.toLowerCase()}`
-        : `featuring a ${characterType.toLowerCase()}`;
+    if (characterType.toLowerCase() !== 'none' && characterData) {
+      characterDescription = characterName
+        ? `, featuring ${characterName} as ${characterData.prompt.substring(characterData.prompt.indexOf('with') + 5)}`
+        : `, ${characterData.prompt}`;
     }
-    
+
     // Add Ghibli elements
     let elementsDescription = '';
     if (selectedGhibliElements.length > 0) {
-      elementsDescription = ` with ${selectedGhibliElements.join(', ')}`;
+      const elementPrompts = selectedGhibliElements.map(elementName => {
+        const element = ghibliConfig.magicalElements.find(e => e.name === elementName);
+        return element ? element.prompt : elementName;
+      });
+      elementsDescription = ` ${elementPrompts.join(', ')}`;
     }
-    
+
     // Build final prompt
-    const basePrompt = `A Studio Ghibli style illustration of a ${sceneDescription}${
-      characterDescription ? ', ' + characterDescription : ''
-    }${elementsDescription}. The image should capture the whimsical, magical atmosphere characteristic of Hayao Miyazaki's films, with soft colors, detailed backgrounds, and a sense of wonder.`;
-    
+    const basePrompt = `A Studio Ghibli style illustration of ${sceneDescription}${characterDescription}${elementsDescription}. The image should capture the whimsical, magical atmosphere characteristic of Hayao Miyazaki's films, with soft colors, detailed backgrounds, and a sense of wonder.`;
+
     setPrompt(basePrompt);
     return basePrompt;
   };
 
   const generateRandomPrompt = () => {
-    // Randomly select options
-    const randomScene = sceneOptions[Math.floor(Math.random() * sceneOptions.length)];
-    const randomCharacter = characterOptions[Math.floor(Math.random() * characterOptions.length)];
-    const randomTime = timeOptions[Math.floor(Math.random() * timeOptions.length)];
-    const randomWeather = weatherOptions[Math.floor(Math.random() * weatherOptions.length)];
-    
+    // Randomly select options from config
+    const randomScene = ghibliConfig.scenes[Math.floor(Math.random() * ghibliConfig.scenes.length)];
+    const randomCharacter = ghibliConfig.characters[Math.floor(Math.random() * ghibliConfig.characters.length)];
+    const randomTime = ghibliConfig.timesOfDay[Math.floor(Math.random() * ghibliConfig.timesOfDay.length)];
+    const randomWeather = ghibliConfig.weatherEffects[Math.floor(Math.random() * ghibliConfig.weatherEffects.length)];
+
     // Randomly select 1-3 Ghibli elements
     const numElements = Math.floor(Math.random() * 3) + 1;
-    const shuffledElements = [...ghibliElementsOptions]
-      .map(item => item.name)
+    const shuffledElements = [...ghibliConfig.magicalElements]
       .sort(() => 0.5 - Math.random());
-    const selectedElements = shuffledElements.slice(0, numElements);
-    
+    const selectedElements = shuffledElements.slice(0, numElements).map(e => e.name);
+
     // Update state
-    setSceneType(randomScene);
-    setCharacterType(randomCharacter);
-    setTimeOfDay(randomTime);
-    setWeatherEffect(randomWeather);
+    setSceneType(randomScene.label);
+    setCharacterType(randomCharacter.label);
+    setTimeOfDay(randomTime.label);
+    setWeatherEffect(randomWeather.label);
     setSelectedGhibliElements(selectedElements);
-    
+
     // Generate and set the prompt with the new random selections
     setTimeout(() => {
       const newPrompt = generatePrompt();
@@ -197,14 +175,10 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
     }
   }, [sceneType, characterType, timeOfDay, weatherEffect, selectedGhibliElements, includePersonalization, customCharacterName, tokens]);
 
-  // Example Ghibli-style prompts for inspiration
-  const examplePrompts = [
-    "A young girl standing on a grassy hill overlooking a small town, with a gentle wind blowing her hair and magical dust particles floating in the air",
-    "A magical forest with glowing plants, strange forest spirits, and a mysterious abandoned shrine",
-    "A seaside town with boats bobbing in the harbor, laundry hanging between buildings, and a flying castle in the distance",
-    "A steam-powered flying machine soaring through clouds during sunset, with a young adventurer at the controls",
-    "A child and a large, furry forest spirit sleeping under a massive tree with stars twinkling above"
-  ];
+  // Example Ghibli-style prompts from configuration
+  const examplePrompts = ghibliConfig.scenes.slice(0, 5).map(scene =>
+    `A Studio Ghibli style ${scene.prompt.toLowerCase()}`
+  );
 
   const getStyleTip = () => {
     switch(selectedProvider) {
@@ -618,21 +592,3 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
 
 export default GhibliImageGenerator;
 export { GhibliImageGenerator };
-
-// Dummy Wind Component for ghibliElementsOptions
-const Wind = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>;
-
-// Dummy Cloud Component for ghibliElementsOptions
-const Cloud = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>;
-
-// Dummy Leaf Component for ghibliElementsOptions
-const Leaf = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>;
-
-// Dummy Droplets Component for ghibliElementsOptions
-const Droplets = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M7 16.3c2.2 0 4-1.8 4-4a4 4 0 0 0-4-4c-2.3 0-4 1.8-4 4a4 4 0 0 0 4 4Z"/><path d="M7 16.3c-1.3 0-2.4-.5-3-1.3"/><path d="M17 11.8c1.3 0 2.4-.5 3-1.2"/><path d="M17 11.8c-2.2 0-4-1.8-4-4a4 4 0 0 1 4-4c2.2 0 4 1.8 4 4a4 4 0 0 1-4 4Z"/></svg>;
-
-// Dummy Sun Component for ghibliElementsOptions
-const Sun = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>;
-
-// Dummy Mountain Component for ghibliElementsOptions
-const Mountain = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>;

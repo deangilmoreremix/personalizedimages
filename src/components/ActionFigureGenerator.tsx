@@ -4,6 +4,10 @@ import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import { actionFigureTemplates, generateActionFigurePrompt } from '../data/actionFigureTemplates';
+import { wrestlingActionFigurePrompts } from '../data/wrestlingActionFigures';
+import { musicStarActionFigurePrompts } from '../data/musicStarActionFigures';
+import { retroActionFigurePrompts } from '../data/retroActionFigures';
 
 interface ActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -24,144 +28,31 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const [selectedStyleOption, setSelectedStyleOption] = useState(0); // Track selected style from dropdown
   const [showAllStyles, setShowAllStyles] = useState(false); // Control visibility of all styles
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'general' | 'wrestling' | 'music' | 'retro'>('general');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Example predefined accessories
-  const accessoryOptions = [
-    'Sword', 'Shield', 'Helmet', 'Cape', 'Armor', 'Staff', 
-    'Bow', 'Wand', 'Jetpack', 'Robot Arm', 'Laser Gun', 'Utility Belt'
-  ];
+  // Use accessories from templates
+  const accessoryOptions = Array.from(new Set(actionFigureTemplates.flatMap(template => template.accessories || [])));
 
-  // Example predefined themes
-  const themeOptions = [
-    'Superhero', 'Fantasy', 'Sci-Fi', 'Post-Apocalyptic', 
-    'Steampunk', 'Cyberpunk', 'Medieval', 'Space Explorer'
-  ];
+  // Simple theme options for fallback
+  const themeOptions = ['Superhero', 'Fantasy', 'Sci-Fi', 'Modern'];
 
-  // Full styles array (30 styles total)
-  const styles = [
-    {
-      label: 'AI Collectible Card',
-      prompt: `A trading card of a futuristic warrior character, holographic design, stats and abilities listed, glowing edges, inspired by Pokémon/Yu-Gi-Oh, centered with floating pose`,
-    },
-    {
-      label: 'Boxed Toy Mockup',
-      prompt: `Ultra-detailed action figure in plastic packaging with logo, price tag, and collector's label, 3D render, dramatic lighting, similar to Hot Toys or Marvel Legends`,
-    },
-    {
-      label: '3D Turntable Character',
-      prompt: `A full-body 3D rendered action figure on a spinning turntable base, glossy finish, white studio backdrop, toy store collectible display`,
-    },
-    {
-      label: 'Game Character Selection Screen',
-      prompt: `Fighting game character select screen, 6 stylized fighters with portraits, name, health bar, abilities, neon lighting, Mortal Kombat meets Fortnite aesthetic`,
-    },
-    {
-      label: 'Stylized Vinyl Toy',
-      prompt: `Cute vinyl figure with oversized head and tiny body, clean plastic style, standing on display base, inspired by Funko Pop and Kubrick toys, bright studio lighting`,
-    },
-    {
-      label: 'Mecha Figure (Gundam Style)',
-      prompt: `Robotic action figure with mechanical joints and weapons, painted armor, posed like a Gundam model kit, 3D render with dramatic shadows`,
-    },
-    {
-      label: 'Fashion Figure Doll',
-      prompt: `Barbie-style fashion doll in pastel packaging, sparkles and accessories, posed with stylish outfit and shoes, pink store shelf background`,
-    },
-    {
-      label: 'Superhero Toy Series',
-      prompt: `Superhero action figure posed inside a branded collector's box, dramatic comic book shading, cape and muscle suit, "Limited Edition" sticker included`,
-    },
-    {
-      label: 'Fictional Brand Mascot',
-      prompt: `Cartoon-style brand mascot character, oversized features, posed like a collectible figure, bright colors, inspired by Kool-Aid Man and Michelin Man`,
-    },
-    {
-      label: 'Cereal Box Character Design',
-      prompt: `Retro cereal box with cartoon mascot in front, name of cereal in bold letters, colorful sugary background, '90s kid marketing style`,
-    },
-    {
-      label: 'Arcade Prize Wall Toy',
-      prompt: `Plastic action figure hanging on arcade prize wall, neon lighting, other toys blurred in background, claw machine or ticket redemption booth setting`,
-    },
-    {
-      label: 'Fake Retro Console Game Box',
-      prompt: `Old-school video game box with pixel-style artwork, fake game title, Sega Genesis or SNES cartridge visible, '90s nostalgia aesthetic`,
-    },
-    {
-      label: 'Villain Collectors Pack',
-      prompt: `Evil villain action figure in sharp armor with red eyes, boxed packaging labeled "Nemesis Series," dark lighting with glowing elements`,
-    },
-    {
-      label: 'Character Arcade Poster',
-      prompt: `Arcade splash poster with fighting character in dynamic pose, "Insert Coin" text, neon FX, motion lines, vintage Street Fighter style`,
-    },
-    {
-      label: 'Fantasy Miniature Box Set',
-      prompt: `Dungeons & Dragons style miniatures posed inside boxed set, stone bases and fantasy weapons, branded as "Heroic Legends Collection"`,
-    },
-    {
-      label: 'Mad Scientist Experiment',
-      prompt: `Weird creature in glowing containment tube, mutant hybrid experiment, hazmat label, background: secret lab with test equipment`,
-    },
-    {
-      label: 'Food-Themed Fighter',
-      prompt: `Action figure designed like a food item with weapon and attitude, packaging styled like fast food branding, vibrant and absurd`,
-    },
-    {
-      label: '8-Bit Pixel Action Sprite',
-      prompt: `8-bit pixel character sprite standing on a CRT monitor screen, old-school arcade vibes`,
-    },
-    {
-      label: 'Alien Species Exhibit',
-      prompt: `Strange alien figure displayed in a museum-style glass case, label includes species name and danger level, sci-fi background like a spaceship`,
-    },
-    {
-      label: 'Zombie Survival Kit',
-      prompt: `Zombie apocalypse survivor action figure with backpack, weapons, and gear, dusty packaging marked "Doomsday Edition," post-apocalyptic backdrop`,
-    },
-    {
-      label: 'Mythical Creatures Diorama',
-      prompt: `Stylized mythological creature posed in a detailed mini-diorama (e.g. forest, cave), dragon or minotaur figure with nameplate`,
-    },
-    {
-      label: 'Heaven vs Hell Series',
-      prompt: `Two-pack of angelic and demonic action figures, metallic and red foil packaging, "The Eternal Battle Begins" tagline`,
-    },
-    {
-      label: 'Time Traveler Pack',
-      prompt: `Action figure with steampunk goggles, ancient scrolls, and futuristic weapons, packaging includes gears and time travel portal`,
-    },
-    {
-      label: 'Magic School Starter Kit',
-      prompt: `School of wizardry figure in student robe, wand and books included, boxed with spell cards and fake "Year 1" badge, Harry Potter parody style`,
-    },
-    {
-      label: 'Fake Celebrity Action Figure',
-      prompt: `Stylized action figure of a fictional pop star with glitter mic, shades, branded stage accessories, fan club badge included, viral pop culture look`,
-    },
-    {
-      label: 'Monster Mashup Mutant',
-      prompt: `Hybrid creature combining multiple animal features, glowing weapon accessories, packaged in radioactive-looking collector's box`,
-    },
-    {
-      label: 'Wrestling Superstar Toy',
-      prompt: `Wrestling action figure posed in a ring-style box, complete with entrance robe and title belt, background: cheering crowd, packaging says "WrestleMaster Champion Series"`,
-    },
-    {
-      label: 'Haunted House Figurine',
-      prompt: `Ghostly character figure with glow-in-the-dark effects, standing in front of a haunted mansion background, spooky packaging with cobwebs, Halloween-themed toy design`,
-    },
-    {
-      label: 'Cyberpunk Hacker Kit',
-      prompt: `Futuristic hacker action figure with glowing keyboard, visor, and USB gadgets, boxed in a neon-accented tech case, background: digital city skyline`,
-    },
-    {
-      label: 'Kaiju Monster Battle Pack',
-      prompt: `Giant Kaiju creature with destructive pose, broken buildings in packaging background, labeled "Monster Clash Edition," styled like Godzilla toys`,
-    },
-  ];
+  // Use templates based on selected category
+  const getCurrentTemplates = () => {
+    switch (selectedCategory) {
+      case 'wrestling':
+        return wrestlingActionFigurePrompts;
+      case 'music':
+        return musicStarActionFigurePrompts;
+      case 'retro':
+        return retroActionFigurePrompts;
+      default:
+        return actionFigureTemplates;
+    }
+  };
+
+  const styles = getCurrentTemplates();
 
   // Example predefined styles (simplified list from the 30 styles)
   const styleOptions = [
@@ -174,11 +65,11 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   ];
 
   useEffect(() => {
-    // Initialize with first template
+    // Initialize with first template when category changes
     if (styles.length > 0) {
       setSelectedStyleOption(0);
     }
-  }, []);
+  }, [selectedCategory, styles]);
 
   const toggleAccessory = (accessory: string) => {
     if (figureAccessories.includes(accessory)) {
@@ -191,44 +82,47 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const generatePrompt = () => {
     // Apply personalization from tokens
     const name = tokens['FIRSTNAME'] || customName || 'the character';
-    
-    let accessories = '';
-    if (figureAccessories.length > 0) {
-      accessories = ` with ${figureAccessories.join(', ')}`;
-    }
-    
-    // If we're using a style from the dropdown, use that prompt
+
+    // If we're using a style from the dropdown, use that template
     if (selectedStyleOption !== null && styles[selectedStyleOption]) {
-      const stylePrompt = styles[selectedStyleOption].prompt;
-      const personalizedPrompt = `${stylePrompt.replace('character', name)}${accessories}, action figure, detailed, professional product shot, toy photography, 8k resolution, dramatic lighting, photorealistic rendering`;
-      setPrompt(personalizedPrompt);
-      return personalizedPrompt;
+      const template = styles[selectedStyleOption];
+
+      // Handle different template formats
+      if (selectedCategory === 'general') {
+        // Original format
+        const templateId = (template as any).id || (template as any).name || (template as any).title || 'unknown';
+        const personalizedPrompt = generateActionFigurePrompt(templateId, {
+          NAME: name,
+          COMPANY: tokens['COMPANY'] || 'your company'
+        });
+        setPrompt(personalizedPrompt);
+        return personalizedPrompt;
+      } else {
+        // New format with direct prompt
+        let promptText = (template as any).prompt || (template as any).basePrompt;
+
+        // Replace [NAME] token if present
+        if (name && name !== 'the character') {
+          promptText = promptText.replace(/\[NAME\]/g, name);
+        }
+
+        setPrompt(promptText);
+        return promptText;
+      }
     } else {
       // Fallback to the original prompt construction
-      const basePrompt = `A highly detailed ${figureStyle.toLowerCase()} style action figure of ${name} in a ${figureTheme.toLowerCase()} theme${accessories}. The figure should have realistic details, joints, packaging, and accessories like a real commercial toy product. Professional toy photography style, high resolution.`;
+      const basePrompt = `A highly detailed ${figureStyle.toLowerCase()} style action figure of ${name} in a ${figureTheme.toLowerCase()} theme. The figure should have realistic details, joints, packaging, and accessories like a real commercial toy product. Professional toy photography style, high resolution.`;
       setPrompt(basePrompt);
       return basePrompt;
     }
   };
 
   const generateRandomPrompt = () => {
-    // Select a random style from the full styles array
+    // Select a random template from the styles array
     const randomStyleIndex = Math.floor(Math.random() * styles.length);
     setSelectedStyleOption(randomStyleIndex);
-    
-    // Select random accessories
-    const randomAccessories = [];
-    
-    // Pick 1-3 random accessories
-    const numAccessories = Math.floor(Math.random() * 3) + 1;
-    const shuffledAccessories = [...accessoryOptions].sort(() => 0.5 - Math.random());
-    for (let i = 0; i < numAccessories; i++) {
-      randomAccessories.push(shuffledAccessories[i]);
-    }
-    
-    setFigureAccessories(randomAccessories);
-    
-    // Generate and set the prompt with the new random selections
+
+    // Generate and set the prompt with the new random selection
     setTimeout(() => {
       const newPrompt = generatePrompt();
       setPrompt(newPrompt);
@@ -278,7 +172,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
 
   // Create the prompt based on the selected options
   useEffect(() => {
-    if (styles.length > 0 || (figureStyle && figureTheme)) {
+    if (actionFigureTemplates.length > 0 || (figureStyle && figureTheme)) {
       generatePrompt();
     }
   }, [selectedStyleOption, figureStyle, figureTheme, figureAccessories, tokens, customName]);
@@ -352,6 +246,67 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
             </div>
           </div>
 
+          {/* Category Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Action Figure Category
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <button
+                className={`py-2 px-3 text-sm rounded ${
+                  selectedCategory === 'general'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+                onClick={() => {
+                  setSelectedCategory('general');
+                  setSelectedStyleOption(0);
+                }}
+              >
+                General
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${
+                  selectedCategory === 'wrestling'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+                onClick={() => {
+                  setSelectedCategory('wrestling');
+                  setSelectedStyleOption(0);
+                }}
+              >
+                Wrestling
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${
+                  selectedCategory === 'music'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+                onClick={() => {
+                  setSelectedCategory('music');
+                  setSelectedStyleOption(0);
+                }}
+              >
+                Music Stars
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${
+                  selectedCategory === 'retro'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+                onClick={() => {
+                  setSelectedCategory('retro');
+                  setSelectedStyleOption(0);
+                }}
+              >
+                Retro Toys
+              </button>
+            </div>
+          </div>
+
           {/* Reference Image Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -396,7 +351,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                   {/* Display either first 10 styles or all 30 based on showAllStyles state */}
                   {(showAllStyles ? styles : styles.slice(0, 10)).map((style, index) => (
                     <option key={index} value={index}>
-                      {style.label}
+                      {(style as any).name || (style as any).title}
                     </option>
                   ))}
                 </select>
@@ -566,7 +521,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 </li>
                 <li className="flex items-center">
                   <span className="w-2 h-2 bg-primary-500 rounded-full mr-2"></span>
-                  Style: <span className="font-medium ml-1">{styles[selectedStyleOption]?.label || figureStyle}</span>
+                  Style: <span className="font-medium ml-1">{(styles[selectedStyleOption] as any)?.name || (styles[selectedStyleOption] as any)?.title || figureStyle}</span>
                 </li>
                 <li className="flex items-center">
                   <span className="w-2 h-2 bg-primary-500 rounded-full mr-2"></span>
@@ -609,14 +564,15 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {(showAllStyles ? styles : styles.slice(0, 6)).map((style, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`p-2 rounded-lg cursor-pointer text-center ${
                     selectedStyleOption === index ? 'bg-primary-100 border border-primary-300' : 'bg-white border border-gray-200'
                   }`}
                   onClick={() => setSelectedStyleOption(index)}
                 >
-                  <div className="text-xs font-medium mb-1 truncate">{style.label}</div>
+                  <div className="text-xs font-medium mb-1 truncate">{(style as any).name || (style as any).title}</div>
+                  <div className="text-xs text-gray-500 truncate">{(style as any).description}</div>
                 </div>
               ))}
             </div>

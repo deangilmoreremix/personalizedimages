@@ -115,8 +115,7 @@ export async function generateImageWithDalle(prompt: string): Promise<string> {
         model: "dall-e-3",
         prompt: prompt,
         n: 1,
-        size: "1024x1024",
-        quality: "standard"
+        size: "1024x1024"
       }),
     });
     
@@ -181,11 +180,10 @@ export async function generateImageWithGptImage(prompt: string): Promise<string>
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-image-1",
+        model: "dall-e-3",
         prompt: prompt,
         n: 1,
-        size: "1024x1024",
-        quality: "standard"
+        size: "1024x1024"
       }),
     });
     
@@ -782,10 +780,10 @@ export async function getPromptRecommendations(basePrompt: string, tokens: Recor
       }
     }
     
-    // Fall back to direct API call to Gemini
-    const apiKey = getGeminiApiKey();
+    // Fall back to direct API call to OpenAI
+    const apiKey = getOpenAIApiKey();
     if (!apiKey) {
-      console.warn('No Gemini API key available, returning basic recommendations');
+      console.warn('No OpenAI API key available, returning basic recommendations');
       // Return some fallback recommendations
       return [
         `${basePrompt} with detailed lighting and high-quality finish`,
@@ -793,36 +791,37 @@ export async function getPromptRecommendations(basePrompt: string, tokens: Recor
         `${basePrompt} in a photorealistic style with dramatic lighting`
       ];
     }
-    
+
     // Format tokens for the API request
     const tokenString = Object.entries(tokens)
       .map(([key, value]) => `${key}: ${value}`)
       .join(', ');
-    
-    const prompt = `Based on this prompt: "${basePrompt}" and personalization tokens (${tokenString}), generate 3 enhanced prompt variations for ${modelName} style image generation. Make them detailed and specific, following best practices for image generation. Format as a JSON array of strings.`;
-    
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+
+    const prompt = `Based on this prompt: "${basePrompt}" and personalization tokens (${tokenString}), generate 3 enhanced prompt variations for ${modelName} style image generation. Make them detailed and specific, following best practices for DALL-E 3 image generation. Format as a JSON array of strings.`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.8,
-          topK: 40
-        }
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 1024,
       }),
     });
-    
+
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
+    const responseText = data.choices?.[0]?.message?.content || '';
+
     let recommendations;
-    
+
     try {
       // Try to parse the response as JSON
       recommendations = JSON.parse(responseText);
@@ -830,7 +829,7 @@ export async function getPromptRecommendations(basePrompt: string, tokens: Recor
       // If parsing fails, extract strings from the text
       const matches = responseText.match(/"([^"]+)"/g);
       if (matches) {
-        recommendations = matches.map(match => match.replace(/"/g, ''));
+        recommendations = matches.map((match: string) => match.replace(/"/g, ''));
       } else {
         throw new Error('Failed to parse recommendations from response');
       }

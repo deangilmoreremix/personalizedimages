@@ -14,7 +14,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "classic-blister",
     name: "Classic Blister Pack",
     description: "The classic action figure packaging with a clear plastic bubble and colorful cardboard backing.",
-    prompt: "Create an image of an action figure toy – [NAME] from [COMPANY] in an unopened blister pack. The figure is wearing a professional suit with company-branded accessories including a laptop, smartphone, and briefcase. The packaging should be [COMPANY] brand colors, styled like a retro blister pack with bold typography and a clear window displaying the figure and accessories. Professional product photography with studio lighting.",
+    prompt:
+      "Create a studio packshot of a collectible action figure — [NAME] from [COMPANY] — sealed in an unopened retro blister pack. The figure wears a sharp professional suit with subtle [COMPANY]-colored accents and company-themed accessories including a laptop, smartphone, and briefcase arranged in molded plastic. Card back art features bold retro typography, ability callouts, stat bars, a miniature lineup grid, and a subtle faux-shelf-wear edge for authenticity. The clear blister should have soft reflections and realistic plastic thickness; include a hanging tab, barcode, safety icons, and a tiny 'Ages 14+ Collector Item' badge. Clean, photorealistic toy photography on a neutral gradient, balanced studio lighting, shallow depth of field, crisp edges, accurate shadows, high detail.",
     packaging: "Blister Pack",
     accessories: ["Laptop", "Smartphone", "Briefcase"],
     style: "classic",
@@ -24,7 +25,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "deluxe-boxed",
     name: "Deluxe Boxed Edition",
     description: "Premium window box packaging with special features and multiple accessories.",
-    prompt: "Create an image of a deluxe boxed action figure – [NAME] from [COMPANY] in premium window box packaging. The figure is posed heroically and comes with multiple accessories: a company logo shield, industry-specific tools, and a display stand. Box has specialty printing with foil accents in [COMPANY] colors, product features listed on the side panel, and 'COLLECTOR EDITION' seal. Professional product photography with dramatic lighting on a store shelf.",
+    prompt:
+      "Create a premium window-box product photo of [NAME] from [COMPANY]. The figure is posed heroically with interchangeable hands and multiple accessories (brand-colored shield, role-specific tools, display stand) secured in a vac-tray. The box uses [COMPANY] palette with subtle metallic accents, side-panel feature callouts, icon badges for articulation points, and a 'Collector Edition' emblem. Add a diorama-style inner card with depth, a glossy PET window with realistic reflections, legal text, barcode, hanging tab notch, and a numbered series seal. Dramatic rim lighting and soft fill to reveal contours, photorealistic materials, gentle table reflection, shelf-ready composition, high detail.",
     packaging: "Deluxe Box",
     accessories: ["Company Logo Shield", "Industry Tools", "Display Stand"],
     style: "premium",
@@ -34,7 +36,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "vintage-cardback",
     name: "Vintage Cardback",
     description: "Retro-style packaging with nostalgic design elements from the 80s-90s.",
-    prompt: "Create an image of a vintage-style action figure – [NAME] from [COMPANY] on a cardback. The figure is wearing business attire customized with action features. Accessories include a briefcase that opens, a tiny laptop, and industry-specific gadgets. The cardback is in [COMPANY] colors with a retro 80s grid background, product lineup shown on the back, and an 'ACTION FEATURE' callout. Styled like a toy from the 1980s with slightly worn packaging edges for authenticity. Professional product photography.",
+    prompt:
+      "Create a nostalgic carded figure of [NAME] from [COMPANY] mounted on a vintage cardback. The figure wears business attire with playful 'action' flourishes; accessories include an opening briefcase, miniature laptop, and role-specific gadgets arranged on the tray. The card design uses [COMPANY] colors, a retro grid with sunburst shapes, an 'ACTION FEATURE' burst star, a checklist of other figures on back, and faux offset-print dots for period charm. Add a peggable punch hole, barcode, safety seal, and a limited-series number. Photograph as a realistic packshot with neutral backdrop, soft highlights on the blister, and slightly worn edges for authenticity; high detail, crisp packaging edges.",
     packaging: "Cardback",
     accessories: ["Opening Briefcase", "Tiny Laptop", "Industry Gadgets"],
     style: "retro",
@@ -44,7 +47,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "collectors-display",
     name: "Collector's Display Case",
     description: "Premium display case packaging for serious collectors.",
-    prompt: "Create an image of a high-end collector's edition action figure – [NAME] from [COMPANY] in a premium display case packaging. The highly-detailed figure wears tailored business attire with fabric textures and has 30+ points of articulation. The display case has a clear acrylic window, die-cast metal base with engraved nameplate, LED lighting effects, and reflective backdrop with [COMPANY] logo. Accessories include interchangeable hands, industry tools, and a scale replica of company products. Professional product photography with museum-quality display lighting.",
+    prompt:
+      "Create a museum-grade display presentation of [NAME] from [COMPANY] housed in a clear acrylic-style case. The figure features fabric-textured tailoring, realistic stitching, polished shoes, and 30+ articulation points. The base is die-cast with an engraved nameplate; add a mirrored backdrop with a tasteful [COMPANY] motif, subtle LED-like rim glow, and a premium placard detailing features. Arrange accessories (interchangeable hands, specialty tools, miniature product replicas) on a velvet-like tray. Photorealistic glassy reflections, controlled studio lighting, clean tabletop reflection, calm luxury aesthetic, high detail.",
     packaging: "Display Case",
     accessories: ["Interchangeable Hands", "Industry Tools", "Company Product Replicas"],
     style: "collector",
@@ -54,7 +58,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "trading-card",
     name: "Collectible Card",
     description: "Trading card style with character stats and special abilities.",
-    prompt: "Create an image of a collectible trading card featuring [NAME] from [COMPANY]. The card has a holographic foil border in [COMPANY] colors, portrait-style artwork of the character in professional pose, and stat blocks showing 'Leadership,' 'Innovation,' and 'Expertise' ratings. The card includes special ability text related to their role at [COMPANY] and a unique collector's number. The design mimics premium trading card games with foil stamping, textured printing effects, and slight light refraction. Professional product photography on dark surface with subtle lighting to show holographic elements.",
+    prompt:
+      "Create a premium foil trading card featuring [NAME] from [COMPANY]. The card shows a portrait pose, stat blocks for Leadership, Innovation, and Expertise, a special ability blurb tied to their role at [COMPANY], a collector number, and micro-text authenticity lines. The border is holographic in [COMPANY] colors with prismatic diffraction; include subtle emboss effects, a matte-vs-gloss interplay, and a faint texture in the print. Photograph the card at a slight angle on a dark surface to catch foil shimmer; include soft bokeh highlights, crisp typography, realistic corner radius, and tiny print details; high detail.",
     packaging: "Trading Card",
     accessories: [],
     style: "card",
@@ -64,7 +69,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "2pack-battle",
     name: "2-Pack Battle Set",
     description: "Double figure set showing characters in action.",
-    prompt: "Create an image of a 2-pack action figure battle set featuring [NAME] and a teammate from [COMPANY]. Both figures are in dynamic poses wearing styled business attire with action features. The packaging is a wide window box in [COMPANY] colors with 'TEAMWORK EDITION' banner and action scene backdrop. Accessories include office furniture pieces, tiny laptops, industry tools, and a display base with [COMPANY] logo. Side panel shows other figures in the collection. Professional product photography with dramatic lighting to emphasize the action poses.",
+    prompt:
+      "Create a wide window-box two-pack featuring [NAME] and a teammate from [COMPANY] posed in dynamic, complementary stances. The interior backdrop shows a dramatic action scene; accessories include micro office furniture, tiny laptops, role tools, and a shared display base with a subtle [COMPANY] insignia. The box uses [COMPANY] palette with a 'TEAMWORK EDITION' banner, side character bios, icon badges for accessories, and a numbered series seal. Photorealistic packaging with glossy window reflections, precise tray shaping, clean shelf presentation, dramatic yet balanced lighting, crisp detail.",
     packaging: "2-Pack Box",
     accessories: ["Office Furniture", "Laptops", "Industry Tools", "Display Base"],
     style: "action",
@@ -74,7 +80,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "bobblehead",
     name: "Desktop Bobblehead",
     description: "Fun office desk bobblehead with oversized head.",
-    prompt: "Create an image of a desktop bobblehead figure of [NAME] from [COMPANY]. The figure has an oversized head with caricatured but recognizable features, standing on a branded base with the [COMPANY] logo. The figure is wearing business attire appropriate for their industry with exaggerated proportions. The packaging is an open window box designed to display the figure while still in package. The box has [COMPANY] colors and 'DESKTOP BUDDY SERIES' branding. Professional product photography showing slight motion blur on the bobbling head.",
+    prompt:
+      "Create a charming desktop bobblehead of [NAME] from [COMPANY] with an oversized head, simplified features, and a friendly expression. The figure stands on a branded base with a small [COMPANY] emblem and a subtle spring visible at the neck. Package it in an open window box designed for desk display with [COMPANY] color blocking and 'DESKTOP BUDDY SERIES' branding. Capture slight motion blur to imply bobble movement; add shelf-ready details like barcode, safety icons, and series number. Clean studio product shot, soft fill light, crisp edges, gentle shadow, high detail.",
     packaging: "Window Box",
     accessories: ["Branded Base"],
     style: "bobblehead",
@@ -84,7 +91,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "vinyl-pop",
     name: "Vinyl Collectible",
     description: "Stylized vinyl figure with simplified features and oversized head.",
-    prompt: "Create an image of a vinyl pop collectible figure of [NAME] from [COMPANY]. The figure has the iconic stylized design with oversized head, simplified body, and characteristic black round eyes. Wearing professional attire appropriate for [COMPANY] with one signature accessory related to their role. Packaged in a windowed square box with distinct [COMPANY] branding, figure number, and series information. The packaging matches Pop! figure style with character name prominently displayed. Professional product photography showing the figure both in box and with a closeup of the unboxed figure.",
+    prompt:
+      "Create a stylized vinyl collectible of [NAME] from [COMPANY]: simplified body, oversized head, clean facial features, and one signature role accessory. Package it in a square window box with [COMPANY]-themed palette, a large character name panel, figure number, and series label. Show the boxed figure plus a closeup of the unboxed figure for clarity. Studio product photography with soft gradients, gentle reflections on the PET window, neat corner folds, and crisp print detail; high fidelity.",
     packaging: "Square Window Box",
     accessories: ["Role-Specific Accessory"],
     style: "vinyl-pop",
@@ -94,7 +102,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "buildable-set",
     name: "Buildable Mini Figure",
     description: "Brick-compatible mini figure with building blocks accessories.",
-    prompt: "Create an image of a buildable mini figure set featuring [NAME] from [COMPANY]. The figure is in the style of popular brick building toys with modular parts and characteristic cylindrical head. The set includes the figure in business attire with [COMPANY] colors and micro-build office furniture pieces. Packaged in a small box with building instructions showing assembled figure and furniture. Box art features the [COMPANY] logo and indicates piece count. Professional product photography with macro lens focus on the small detailed pieces.",
+    prompt:
+      "Create a buildable mini figure set featuring [NAME] from [COMPANY]. The character has modular parts and a cylindrical-head silhouette; attire is printed in [COMPANY] colors. Include micro-build office furniture pieces and a small display base. Package in a compact box with an exploded diagram, piece count, and simple step illustrations. Macro product photo with crisp focus on printed elements, precise plastic sheen, realistic carton texture, and a clean white sweep background; high detail.",
     packaging: "Small Box",
     accessories: ["Office Furniture Set", "Building Instructions"],
     style: "building-block",
@@ -104,7 +113,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "action-roleplay",
     name: "Roleplaying Set",
     description: "Children's costume and roleplay accessories set.",
-    prompt: "Create an image of a children's roleplay set based on [NAME] from [COMPANY]. The packaging shows a child wearing a costume version of professional attire with [COMPANY] colors and logo patches. The set includes a costume jacket/outfit, toy accessories specific to [NAME]'s role, and an ID badge with [COMPANY] branding. The packaging is a hanging blister card with try-me features and 'BE LIKE [NAME]!' text prominently displayed. Package back shows all included items and play possibilities. Professional product photography in toy store shelf setting.",
+    prompt:
+      "Create a children's roleplay set themed around [NAME] from [COMPANY]. The hanging blister card shows a costume jacket/outfit in [COMPANY] colors, logo patches, toy role accessories, and an ID badge. Include try-me cutouts, safety icons, age grade, and a back-of-card layout showing included items and imaginative play scenes. Photograph on a realistic retail shelf with bright, family-friendly colors, neat shadows, and crisp plastic reflections; high detail.",
     packaging: "Hanging Blister Card",
     accessories: ["Costume Outfit", "Role Accessories", "ID Badge"],
     style: "costume",
@@ -114,7 +124,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "digital-avatar",
     name: "Digital Game Character",
     description: "Video game style character selection screen.",
-    prompt: "Create an image of a video game character selection screen featuring [NAME] from [COMPANY] as a playable character. The character is rendered in a modern 3D game style, wearing stylized professional attire with [COMPANY] colors and exaggerated proportions. The interface shows character stats for 'Leadership,' 'Technical Skill,' and 'Teamwork.' The screen includes the game title '[COMPANY] CHAMPIONS' with options to select/customize the character. The character pose is dynamic with slight animation effect and dramatic lighting. Professional digital art in the style of modern fighting or adventure games.",
+    prompt:
+      "Create a modern 3D character select screen featuring [NAME] from [COMPANY] as a playable character. Stylized proportions, professional attire tinted with [COMPANY] palette, dynamic idle animation posture. UI shows stats (Leadership, Technical Skill, Teamwork), a clean title header '[COMPANY] CHAMPIONS,' and a customization panel. Include soft volumetric lighting, subtle particle motes, and a glossy UI finish; sharp typography, crisp interface elements, high detail.",
     packaging: "Digital",
     accessories: [],
     style: "digital",
@@ -124,7 +135,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "chibi-style",
     name: "Chibi Art Style",
     description: "Cute Japanese chibi style with oversized head and tiny body.",
-    prompt: "Create an image of a chibi-style figure of [NAME] from [COMPANY]. The figure has super-deformed proportions with oversized head (about 1/3 of total height), tiny body, and exaggerated cute features including large expressive eyes. Wearing professional attire appropriate for [COMPANY] but with adorable stylized details. The figure comes in a small window box with kawaii design elements, Japanese-inspired packaging text, and [COMPANY] branding adapted to match the cute aesthetic. Professional product photography with soft, colorful lighting to enhance the cute character design.",
+    prompt:
+      "Create a chibi-style collectible of [NAME] from [COMPANY] with a super-deformed body, oversized head (about one-third of total height), large expressive eyes, and adorable proportions. Outfit reflects [COMPANY] aesthetic with cute stitching and tiny details. Package in a small window box with kawaii patterns, pastel accents, and adapted [COMPANY] branding. Soft, colorful studio lighting, delicate shadows, and a clean background; photorealistic packaging and figure materials, high detail.",
     packaging: "Small Window Box",
     accessories: [],
     style: "chibi",
@@ -134,7 +146,8 @@ export const actionFigureTemplates: ActionFigureTemplate[] = [
     id: "lego-minifig",
     name: "Building Block Minifigure",
     description: "LEGO-style minifigure with compatible pieces and accessories.",
-    prompt: "Create an image of a building block minifigure of [NAME] from [COMPANY] in the style of LEGO. The figure has the classic minifigure proportions with cylindrical head, blocky body, and c-grip hands. Wearing printed professional attire in [COMPANY] colors with detailed face printing. The figure comes with tiny accessories related to their role mounted on a display base with [COMPANY] logo brick. Packaged in a small blister pack with building block aesthetics and 'COLLECTIBLE MINIFIGURE SERIES' branding. Professional product photography with macro lens detail of the figure's printed elements.",
+    prompt:
+      "Create a building-block style minifigure of [NAME] from [COMPANY] with cylindrical head, blocky body, c-grip hands, and printed attire in [COMPANY] colors. Include tiny role-specific accessories mounted on a small display base with a subtle logo brick. Package in a small blister with block-inspired graphics and a 'Collectible Mini Figure Series' header. Macro packshot with precise plastic shine, sharp print alignment, realistic blister curvature, barcode and safety text; high detail.",
     packaging: "Blister Pack",
     accessories: ["Role-Specific Pieces", "Display Base"],
     style: "building-block",

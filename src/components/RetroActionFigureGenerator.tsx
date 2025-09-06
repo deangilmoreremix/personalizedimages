@@ -3,7 +3,7 @@ import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sp
 import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
-import retroPrompts from '../data/retroActionFigures';
+import { retroActionFigurePrompts as retroPrompts } from '../data/retroActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
 
 interface RetroActionFigureGeneratorProps {

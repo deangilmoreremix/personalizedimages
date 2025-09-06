@@ -7,6 +7,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { FontSelector } from './ui/FontSelector';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
 
 interface MemeGeneratorProps {
   tokens: Record<string, string>;
@@ -37,69 +38,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   const [aiEnhancementPrompt, setAiEnhancementPrompt] = useState('');
   const [textTransform, setTextTransform] = useState('uppercase');
   
-  // Sample template images
-  const templates = [
-    {
-      id: 'distracted-boyfriend',
-      name: 'Distracted Boyfriend',
-      url: 'https://i.imgflip.com/1ur9b0.jpg'
-    },
-    {
-      id: 'two-buttons',
-      name: 'Two Buttons',
-      url: 'https://i.imgflip.com/1g8my4.jpg'
-    },
-    {
-      id: 'drake',
-      name: 'Drake Hotline Bling',
-      url: 'https://i.imgflip.com/30b1gx.jpg'
-    },
-    {
-      id: 'change-my-mind',
-      name: 'Change My Mind',
-      url: 'https://i.imgflip.com/24y43o.jpg'
-    },
-    {
-      id: 'expanding-brain',
-      name: 'Expanding Brain',
-      url: 'https://i.imgflip.com/1jwhww.jpg'
-    },
-    {
-      id: 'balloon',
-      name: 'Running Away Balloon',
-      url: 'https://i.imgflip.com/261o3j.jpg'
-    },
-    {
-      id: 'pikachu',
-      name: 'Surprised Pikachu',
-      url: 'https://i.imgflip.com/2kbn1e.jpg'
-    },
-    {
-      id: 'one-does-not-simply',
-      name: 'One Does Not Simply',
-      url: 'https://i.imgflip.com/1bij.jpg'
-    },
-    {
-      id: 'doge',
-      name: 'Buff Doge vs. Cheems',
-      url: 'https://i.imgflip.com/43a45p.png'
-    },
-    {
-      id: 'woman-cat',
-      name: 'Woman Yelling At Cat',
-      url: 'https://i.imgflip.com/345v97.jpg'
-    },
-    {
-      id: 'handshake',
-      name: 'Epic Handshake',
-      url: 'https://i.imgflip.com/28j0te.jpg'
-    },
-    {
-      id: 'always-has-been',
-      name: 'Always Has Been',
-      url: 'https://i.imgflip.com/43jiyu.jpg'
-    },
-  ];
+  // Use templates from configuration
+  const templates = getAllTemplates();
 
   useEffect(() => {
     // Initialize with first template
@@ -263,34 +203,28 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
     return result;
   };
 
-  const applyMemeTemplate = (template: string) => {
-    switch (template) {
-      case 'success':
-        setTopText("When [FIRSTNAME] finally");
-        setBottomText("Gets that promotion");
-        break;
-      case 'birthday':
-        setTopText("Happy Birthday");
-        setBottomText("[FIRSTNAME]!");
-        setTextColor('#FFFF00');
-        setStrokeColor('#FF0000');
-        setStrokeWidth(3);
-        break;
-      case 'welcome':
-        setTopText("Welcome to the team");
-        setBottomText("[FIRSTNAME] from [COMPANY]");
-        break;
-      case 'motivational':
-        setTopText("When people say you can't");
-        setBottomText("[FIRSTNAME] knows YOU CAN!");
-        setTextColor('#FFFFFF');
-        setStrokeColor('#000000');
-        setStrokeWidth(2);
-        break;
-      case 'custom':
-      default:
-        // Just keep current text
-        break;
+  const applyMemeTemplate = (templateId: string) => {
+    const template = getQuickTemplate(templateId);
+    if (template) {
+      setTopText(template.topText);
+      setBottomText(template.bottomText);
+
+      // Apply some default styling based on template type
+      switch (templateId) {
+        case 'birthday':
+          setTextColor('#FFFF00');
+          setStrokeColor('#FF0000');
+          setStrokeWidth(3);
+          break;
+        case 'motivational':
+          setTextColor('#FFFFFF');
+          setStrokeColor('#000000');
+          setStrokeWidth(2);
+          break;
+        default:
+          // Keep current styling
+          break;
+      }
     }
   };
   
@@ -507,13 +441,14 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
             <h4 className="font-medium text-gray-700 mb-3">Quick Text Templates</h4>
             <div className="flex flex-wrap gap-2">
-              {['success', 'birthday', 'welcome', 'motivational'].map(template => (
+              {memeConfig.quickTemplates.map(template => (
                 <button
-                  key={template}
+                  key={template.id}
                   className="px-3 py-1.5 bg-white border border-gray-200 rounded-md text-sm hover:bg-gray-50"
-                  onClick={() => applyMemeTemplate(template)}
+                  onClick={() => applyMemeTemplate(template.id)}
+                  title={template.description}
                 >
-                  {template.charAt(0).toUpperCase() + template.slice(1)}
+                  {template.name}
                 </button>
               ))}
             </div>

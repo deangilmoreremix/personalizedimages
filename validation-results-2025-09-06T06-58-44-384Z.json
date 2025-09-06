@@ -1,0 +1,70 @@
+{
+  "total": 122,
+  "passed": 92,
+  "failed": 30,
+  "collections": {
+    "Music Stars": {
+      "total": 30,
+      "passed": 26,
+      "failed": 4,
+      "errors": []
+    },
+    "TV Shows": {
+      "total": 30,
+      "passed": 29,
+      "failed": 1,
+      "errors": []
+    },
+    "Wrestling": {
+      "total": 31,
+      "passed": 31,
+      "failed": 0,
+      "errors": []
+    },
+    "Retro": {
+      "total": 31,
+      "passed": 6,
+      "failed": 25,
+      "errors": []
+    }
+  },
+  "errors": [
+    "Failed to parse object in src/data/musicStarActionFigures.ts: Expected ',' or '}' after property value in JSON at position 292 (line 3 column 253)",
+    "Failed to parse object in src/data/musicStarActionFigures.ts: Expected ',' or '}' after property value in JSON at position 195 (line 3 column 149)",
+    "Failed to parse object in src/data/musicStarActionFigures.ts: Expected ',' or '}' after property value in JSON at position 99 (line 3 column 57)",
+    "Music Stars[6]: Missing specific visual details",
+    "Music Stars[10]: May trigger AI safety filters",
+    "Music Stars[12]: May trigger AI safety filters",
+    "Music Stars[20]: May trigger AI safety filters",
+    "Failed to parse object in src/data/tvShowActionFigures.ts: Expected ',' or '}' after property value in JSON at position 229 (line 3 column 193)",
+    "Failed to parse object in src/data/tvShowActionFigures.ts: Expected ',' or '}' after property value in JSON at position 99 (line 3 column 57)",
+    "TV Shows[0]: May trigger AI safety filters",
+    "Retro[1]: Missing specific visual details",
+    "Retro[2]: Missing specific visual details",
+    "Retro[4]: Missing specific visual details",
+    "Retro[5]: Missing specific visual details",
+    "Retro[6]: Missing specific visual details",
+    "Retro[9]: Missing specific visual details",
+    "Retro[10]: Missing specific visual details",
+    "Retro[11]: Missing specific visual details",
+    "Retro[12]: Missing specific visual details",
+    "Retro[13]: Missing specific visual details",
+    "Retro[14]: Missing specific visual details",
+    "Retro[15]: Missing specific visual details",
+    "Retro[16]: Missing specific visual details",
+    "Retro[18]: Missing specific visual details",
+    "Retro[20]: Missing specific visual details",
+    "Retro[21]: Missing specific visual details",
+    "Retro[22]: Missing specific visual details",
+    "Retro[23]: Missing specific visual details",
+    "Retro[24]: Missing specific visual details",
+    "Retro[25]: Missing specific visual details",
+    "Retro[26]: Missing specific visual details",
+    "Retro[27]: Missing specific visual details",
+    "Retro[28]: Missing specific visual details",
+    "Retro[29]: Missing specific visual details",
+    "Retro[30]: Missing specific visual details"
+  ],
+  "warnings": [],
+  "timestamp": "2025-09-06T06:58:44.384Z"
+}

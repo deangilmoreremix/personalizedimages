@@ -73,22 +73,24 @@ deploy_function() {
 echo "Deploying health-check function to validate setup..."
 deploy_function "health-check"
 
-# List of all valid functions to deploy
-FUNCTIONS=(
-  "action-figure"
-  "assistant-stream"
-  "crazy-image"
-  "create-payment-intent"
-  "ghibli-image"
-  "image-analysis"
-  "image-description"
-  "image-enhancement"
-  "image-generation"
-  "image-to-video"
-  "meme-generator"
-  "prompt-recommendations"
-  "reference-image"
-)
+# Automatically discover all valid functions (directories with index.ts)
+echo "Discovering Edge Functions..."
+FUNCTIONS=()
+for dir in supabase/functions/*/; do
+  if [ -d "$dir" ]; then
+    func_name=$(basename "$dir")
+    # Skip non-function files and directories
+    if [ -f "$dir/index.ts" ] && [ "$func_name" != "health-check" ]; then
+      FUNCTIONS+=("$func_name")
+      echo "Found function: $func_name"
+    fi
+  fi
+done
+
+if [ ${#FUNCTIONS[@]} -eq 0 ]; then
+  echo "No valid Edge Functions found to deploy."
+  exit 0
+fi
 
 # Ask user if they want to continue
 read -p "Do you want to continue deploying all other functions? (y/n): " CONTINUE

@@ -7,8 +7,25 @@ export interface PWAAnalytics {
   cacheMisses: number;
 }
 
+// Check if running in StackBlitz WebContainer
+const isStackBlitz = (): boolean => {
+  return (
+    window.location.hostname.includes('stackblitz') ||
+    window.location.hostname.includes('webcontainer') ||
+    navigator.userAgent.includes('StackBlitz') ||
+    // Check for WebContainer-specific indicators
+    (window as any).process?.versions?.webcontainer
+  );
+};
+
 // Service Worker Registration
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
+  // Skip Service Worker registration in StackBlitz WebContainer
+  if (isStackBlitz()) {
+    console.log('Service Worker registration skipped: Running in StackBlitz WebContainer (not supported)');
+    return null;
+  }
+
   if ('serviceWorker' in navigator) {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js', {

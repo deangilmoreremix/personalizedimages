@@ -3,6 +3,7 @@
 
 import { callEdgeFunction, isSupabaseConfigured, supabase } from './supabaseClient';
 import { getGeminiApiKey, getOpenAIApiKey, getGiphyApiKey, hasApiKey, blobToBase64 } from './apiUtils';
+import { generateImageWithGeminiNano as generateImageWithGeminiNanoService, editImageWithGeminiNano as editImageWithGeminiNanoService, generateVariationsWithGeminiNano as generateVariationsWithGeminiNanoService, GeminiNanoConfig, ImageEditOptions, ImageGenerationOptions } from './geminiNanoApi';
 
 /**
  * Generate an image description that can be used for AI image generation
@@ -462,7 +463,7 @@ export async function generateImageWithGemini(prompt: string, aspectRatio: strin
 export async function generateImageWithGemini2Flash(prompt: string): Promise<string> {
   try {
     console.log('🖼️ Generating image with Gemini 2.0 Flash');
-    
+
     // Try edge function first
     if (isSupabaseConfigured()) {
       try {
@@ -470,7 +471,7 @@ export async function generateImageWithGemini2Flash(prompt: string): Promise<str
           provider: 'gemini2flash',
           prompt
         });
-        
+
         if (result && result.imageUrl) {
           return result.imageUrl;
         }
@@ -479,14 +480,14 @@ export async function generateImageWithGemini2Flash(prompt: string): Promise<str
         // Continue to direct API fallback
       }
     }
-    
+
     // Fall back to direct API call
     const apiKey = getGeminiApiKey();
     if (!apiKey) {
       console.warn('No Gemini API key available, returning placeholder image');
       return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
     }
-    
+
     const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -497,13 +498,13 @@ export async function generateImageWithGemini2Flash(prompt: string): Promise<str
         }
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error(`Gemini API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     // Extract the image from the response
     for (const candidate of data.candidates || []) {
       for (const part of candidate.content?.parts || []) {
@@ -512,12 +513,131 @@ export async function generateImageWithGemini2Flash(prompt: string): Promise<str
         }
       }
     }
-    
+
     throw new Error('No image found in Gemini 2.0 Flash response');
   } catch (error) {
     console.error('Error generating image with Gemini 2.0 Flash:', error);
     // Return a placeholder image as a fallback
     return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+  }
+}
+
+/**
+ * Generate an image with Gemini Nano (Optimized for speed and efficiency)
+ */
+export async function generateImageWithGeminiNano(
+  prompt: string,
+  options: ImageGenerationOptions = {},
+  config: GeminiNanoConfig = {}
+): Promise<string> {
+  try {
+    console.log('🚀 Generating image with Gemini Nano (Optimized)');
+
+    // Try edge function first
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await callEdgeFunction('image-generation', {
+          provider: 'gemini-nano',
+          prompt,
+          options,
+          config
+        });
+
+        if (result && result.imageUrl) {
+          return result.imageUrl;
+        }
+      } catch (edgeError) {
+        console.warn('Edge function failed for Gemini Nano image generation:', edgeError);
+        // Continue to direct API fallback
+      }
+    }
+
+    // Fall back to direct API call using Gemini Nano service
+    return await generateImageWithGeminiNanoService(prompt, options, config);
+  } catch (error) {
+    console.error('Error generating image with Gemini Nano:', error);
+    // Return a placeholder image as a fallback
+    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+  }
+}
+
+/**
+ * Edit an image with Gemini Nano
+ */
+export async function editImageWithGeminiNano(
+  imageUrl: string,
+  editOptions: ImageEditOptions,
+  config: GeminiNanoConfig = {}
+): Promise<string> {
+  try {
+    console.log('✏️ Editing image with Gemini Nano');
+
+    // Try edge function first
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await callEdgeFunction('image-editing', {
+          provider: 'gemini-nano',
+          imageUrl,
+          editOptions,
+          config
+        });
+
+        if (result && result.imageUrl) {
+          return result.imageUrl;
+        }
+      } catch (edgeError) {
+        console.warn('Edge function failed for Gemini Nano image editing:', edgeError);
+        // Continue to direct API fallback
+      }
+    }
+
+    // Fall back to direct API call using Gemini Nano service
+    return await editImageWithGeminiNanoService(imageUrl, editOptions, config);
+  } catch (error) {
+    console.error('Error editing image with Gemini Nano:', error);
+    // Return original image as fallback
+    return imageUrl;
+  }
+}
+
+/**
+ * Generate image variations with Gemini Nano
+ */
+export async function generateVariationsWithGeminiNano(
+  imageUrl: string,
+  count: number = 3,
+  config: GeminiNanoConfig = {}
+): Promise<string[]> {
+  try {
+    console.log('🔄 Generating variations with Gemini Nano');
+
+    // Try edge function first
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await callEdgeFunction('image-variations', {
+          provider: 'gemini-nano',
+          imageUrl,
+          count,
+          config
+        });
+
+        if (result && result.imageUrls && Array.isArray(result.imageUrls)) {
+          return result.imageUrls;
+        }
+      } catch (edgeError) {
+        console.warn('Edge function failed for Gemini Nano variations:', edgeError);
+        // Continue to direct API fallback
+      }
+    }
+
+    // Fall back to direct API call using Gemini Nano service
+    return await generateVariationsWithGeminiNanoService(imageUrl, count, config);
+  } catch (error) {
+    console.error('Error generating variations with Gemini Nano:', error);
+    // Return placeholder images as fallback
+    return Array(count).fill(null).map((_, i) =>
+      `https://picsum.photos/seed/${encodeURIComponent(imageUrl.substring(0, 30))}_${i}/800/800`
+    );
   }
 }
 
@@ -733,10 +853,16 @@ export async function generateGhibliStyleImage(prompt: string, provider: string 
       } else {
         return generateImageWithGptImage(enhancedPrompt);
       }
-    } else if (provider === 'gemini' || provider === 'openai') {
-      console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'DALL-E'} API directly for Ghibli-style image`);
-      
-      if (provider === 'gemini') {
+    } else if (provider === 'gemini' || provider === 'gemini-nano' || provider === 'openai') {
+      console.log(`Using ${provider === 'gemini' ? 'Gemini' : provider === 'gemini-nano' ? 'Gemini Nano' : 'DALL-E'} API directly for Ghibli-style image`);
+
+      if (provider === 'gemini-nano') {
+        // Use Gemini Nano for faster generation
+        return generateImageWithGeminiNano(enhancedPrompt, {
+          style: 'ghibli',
+          aspectRatio: '16:9'
+        });
+      } else if (provider === 'gemini') {
         if (referenceImageUrl) {
           return generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl);
         } else {

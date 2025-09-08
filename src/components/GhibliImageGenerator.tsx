@@ -16,7 +16,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('gemini');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini-nano');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [sceneType, setSceneType] = useState<string>('nature');
@@ -182,6 +182,8 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
 
   const getStyleTip = () => {
     switch(selectedProvider) {
+      case 'gemini-nano':
+        return "Gemini Nano is optimized for speed and efficiency while maintaining excellent Ghibli-style quality.";
       case 'gemini':
         return "Gemini AI is excellent at capturing the painterly quality and detailed backgrounds of Ghibli films.";
       case 'openai':
@@ -240,18 +242,26 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                 {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="grid grid-cols-3 gap-2 mb-2">
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-primary-600 text-white' 
+                className={`py-2 px-3 text-xs rounded ${selectedProvider === 'gemini-nano'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini-nano')}
+              >
+                Gemini Nano
+              </button>
+              <button
+                className={`py-2 px-3 text-xs rounded ${selectedProvider === 'gemini'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
                 Gemini AI
               </button>
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-primary-600 text-white' 
+                className={`py-2 px-3 text-xs rounded ${selectedProvider === 'openai'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >

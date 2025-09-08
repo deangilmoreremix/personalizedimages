@@ -65,7 +65,7 @@ export async function loadFont(fontFamily: string): Promise<boolean> {
       try {
         // For variable fonts
         console.log(`Loading variable font: ${fontFamily}`);
-        await import(`@fontsource-variable/${normalizedName}`);
+        await import(/* @vite-ignore */ `@fontsource-variable/${normalizedName}`);
         loadedFonts.add(fontFamily);
         console.log(`✅ Loaded variable font ${fontFamily} from @fontsource-variable package`);
         return true;
@@ -78,7 +78,7 @@ export async function loadFont(fontFamily: string): Promise<boolean> {
       try {
         // For standard fonts
         console.log(`Loading standard font: ${fontFamily}`);
-        await import(`@fontsource/${normalizedName}`);
+        await import(/* @vite-ignore */ `@fontsource/${normalizedName}`);
         loadedFonts.add(fontFamily);
         console.log(`✅ Loaded font ${fontFamily} from @fontsource package`);
         return true;

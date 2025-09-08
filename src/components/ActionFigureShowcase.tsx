@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Box, Camera, Download, Sparkles, Zap, Upload, Image as ImageIcon, Mail, MessageSquare } from 'lucide-react';
+import { ArrowRight, Box, Camera, Download, Sparkles, Zap, Upload, Image as ImageIcon, Mail, MessageSquare, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ActionFigureCarousel } from './ActionFigureCarousel';
+import { generateActionFigure } from '../utils/api';
 
 const ActionFigureShowcase: React.FC = () => {
   const [activeStyle, setActiveStyle] = useState(0);
+  const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
 
   // Action figure style examples with personalization
   const styles = [
@@ -53,6 +56,32 @@ const ActionFigureShowcase: React.FC = () => {
     }
   ];
 
+  // Generate real images for showcase on component mount
+  useEffect(() => {
+    const generateShowcaseImages = async () => {
+      for (const style of styles) {
+        if (!generatedImages[style.id]) {
+          setLoadingStates(prev => ({ ...prev, [style.id]: true }));
+          try {
+            const imageUrl = await generateActionFigure(
+              `${style.name}: ${style.description}`,
+              'openai'
+            );
+            setGeneratedImages(prev => ({ ...prev, [style.id]: imageUrl }));
+          } catch (error) {
+            console.warn(`Failed to generate image for ${style.id}:`, error);
+            // Keep the original Pexels image as fallback
+            setGeneratedImages(prev => ({ ...prev, [style.id]: style.image }));
+          } finally {
+            setLoadingStates(prev => ({ ...prev, [style.id]: false }));
+          }
+        }
+      }
+    };
+
+    generateShowcaseImages();
+  }, []);
+
   return (
     <section className="py-16 bg-gray-50">
       <div className="container-custom">
@@ -96,11 +125,27 @@ const ActionFigureShowcase: React.FC = () => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <img 
-                  src={style.image} 
-                  alt={style.name} 
-                  className="w-full h-auto rounded-xl shadow-lg"
-                />
+                {loadingStates[style.id] ? (
+                  <div className="w-full h-96 bg-gray-100 rounded-xl shadow-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary-500" />
+                      <p className="text-sm text-gray-600">Generating AI image...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={generatedImages[style.id] || style.image}
+                    alt={style.name}
+                    className="w-full h-auto rounded-xl shadow-lg"
+                    onError={(e) => {
+                      // Fallback to original image if generated image fails to load
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== style.image) {
+                        target.src = style.image;
+                      }
+                    }}
+                  />
+                )}
                 
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60 flex flex-col justify-end p-6">
                   <h3 className="text-white text-2xl font-bold mb-2">{style.name}</h3>
@@ -219,24 +264,39 @@ const ActionFigureShowcase: React.FC = () => {
                 label: "Superhero Pack",
                 image: "https://images.pexels.com/photos/8346904/pexels-photo-8346904.jpeg?auto=compress&cs=tinysrgb&w=600"
               }
-            ].map((style, index) => (
-              <motion.div
-                key={`gallery-${index}`}
-                whileHover={{ y: -5, scale: 1.02 }}
-                className="rounded-lg overflow-hidden shadow border border-gray-200"
-              >
-                <div className="aspect-square overflow-hidden">
-                  <img
-                    src={style.image}
-                    alt={style.label}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="bg-white p-2 text-center">
-                  <p className="text-xs font-medium truncate">{style.label}</p>
-                </div>
-              </motion.div>
-            ))}
+            ].map((style, index) => {
+              const styleId = `gallery-${index}`;
+              return (
+                <motion.div
+                  key={styleId}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  className="rounded-lg overflow-hidden shadow border border-gray-200"
+                >
+                  <div className="aspect-square overflow-hidden">
+                    {loadingStates[styleId] ? (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+                      </div>
+                    ) : (
+                      <img
+                        src={generatedImages[styleId] || style.image}
+                        alt={style.label}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== style.image) {
+                            target.src = style.image;
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="bg-white p-2 text-center">
+                    <p className="text-xs font-medium truncate">{style.label}</p>
+                  </div>
+                </motion.div>
+              );
+            })
           </div>
           
           <div className="mt-4 text-center">

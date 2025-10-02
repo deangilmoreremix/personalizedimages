@@ -296,7 +296,7 @@ const ActionFigureShowcase: React.FC = () => {
                   </div>
                 </motion.div>
               );
-            })
+            })}
           </div>
           
           <div className="mt-4 text-center">

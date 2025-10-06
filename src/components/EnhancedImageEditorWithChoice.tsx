@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wand2, Edit3, Sparkles, RefreshCw, Download, Layers, Palette, Zap } from 'lucide-react';
+import { Wand2, CreditCard as Edit3, Sparkles, RefreshCw, Download, Layers, Palette, Zap } from 'lucide-react';
 import { editImageWithGeminiNano, generateVariationsWithGeminiNano } from '../utils/geminiNanoApi';
 
 interface EnhancedImageEditorWithChoiceProps {

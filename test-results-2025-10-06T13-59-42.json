@@ -1,0 +1,92 @@
+{
+  "timestamp": "2025-10-06T13:59:42.364Z",
+  "duration": 126,
+  "summary": {
+    "total": 16,
+    "passed": 10,
+    "failed": 6,
+    "successRate": "62.5%"
+  },
+  "tests": [
+    {
+      "name": "Token System - 88 tokens loaded",
+      "passed": true,
+      "details": "Found 88 tokens"
+    },
+    {
+      "name": "Token System - Categories defined",
+      "passed": true,
+      "details": "7 categories: Personal Information, Auto-Generated, Professional Details, Contact Information, Location Details, Company Information, Date & Time"
+    },
+    {
+      "name": "Token System - Personal tokens",
+      "passed": true,
+      "details": "8 personal tokens"
+    },
+    {
+      "name": "Token System - Professional tokens",
+      "passed": false,
+      "details": "14 professional tokens"
+    },
+    {
+      "name": "Token System - Contact tokens",
+      "passed": true,
+      "details": "10 contact tokens"
+    },
+    {
+      "name": "Token System - Location tokens",
+      "passed": true,
+      "details": "15 location tokens"
+    },
+    {
+      "name": "Token System - Company tokens",
+      "passed": true,
+      "details": "20 company tokens"
+    },
+    {
+      "name": "Token System - Temporal tokens",
+      "passed": false,
+      "details": "19 temporal tokens"
+    },
+    {
+      "name": "Token System - Get specific token",
+      "passed": true,
+      "details": "Found: First Name"
+    },
+    {
+      "name": "Token System - Computed FULLNAME",
+      "passed": true,
+      "details": "FULLNAME: \"John Smith\""
+    },
+    {
+      "name": "Token System - Auto-computed date tokens",
+      "passed": true,
+      "details": "DATE: 2025-10-06, YEAR: 2025"
+    },
+    {
+      "name": "Token System - Email validation",
+      "passed": true,
+      "details": "Email validator working"
+    },
+    {
+      "name": "Supabase - Connection",
+      "passed": false,
+      "details": "supabaseUrl is required."
+    },
+    {
+      "name": "Cloud Gallery - Service",
+      "passed": false,
+      "details": "Cannot find module '/tmp/cc-agent/45731086/project/src/utils/supabaseClient' imported from /tmp/cc-agent/45731086/project/src/services/cloudGalleryService.ts"
+    },
+    {
+      "name": "Prompt Enhancement - Service",
+      "passed": false,
+      "details": "Cannot find module '/tmp/cc-agent/45731086/project/src/utils/apiUtils' imported from /tmp/cc-agent/45731086/project/src/services/promptEnhancementService.ts"
+    },
+    {
+      "name": "Integration - Workflow",
+      "passed": false,
+      "details": "Cannot find module '/tmp/cc-agent/45731086/project/src/utils/supabaseClient' imported from /tmp/cc-agent/45731086/project/src/services/cloudGalleryService.ts"
+    }
+  ]
+}

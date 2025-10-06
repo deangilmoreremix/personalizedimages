@@ -1,0 +1,172 @@
+{
+  "timestamp": "2025-10-06T14:01:15.965Z",
+  "duration": 111,
+  "summary": {
+    "total": 32,
+    "passed": 29,
+    "failed": 3,
+    "successRate": "90.6%"
+  },
+  "tests": [
+    {
+      "name": "Token System - File exists",
+      "passed": true,
+      "details": "src/types/tokens.ts found"
+    },
+    {
+      "name": "Token System - ALL_TOKENS exported",
+      "passed": true,
+      "details": "ALL_TOKENS constant found"
+    },
+    {
+      "name": "Token System - 88 tokens defined",
+      "passed": true,
+      "details": "Found 88 token definitions"
+    },
+    {
+      "name": "Token System - All 6 main categories",
+      "passed": true,
+      "details": "6/6 categories found"
+    },
+    {
+      "name": "Token System - Key tokens present",
+      "passed": true,
+      "details": "12/12 key tokens found"
+    },
+    {
+      "name": "Token System - Validation functions",
+      "passed": true,
+      "details": "Validation infrastructure present"
+    },
+    {
+      "name": "Token System - Computed functions",
+      "passed": true,
+      "details": "Computed token infrastructure present"
+    },
+    {
+      "name": "Token System - Helper functions",
+      "passed": true,
+      "details": "3/3 helpers found"
+    },
+    {
+      "name": "Cloud Gallery - File exists",
+      "passed": true,
+      "details": "Service file found"
+    },
+    {
+      "name": "Cloud Gallery - All methods defined",
+      "passed": true,
+      "details": "24/24 methods found"
+    },
+    {
+      "name": "Cloud Gallery - Type definitions",
+      "passed": true,
+      "details": "5/5 interfaces defined"
+    },
+    {
+      "name": "Cloud Gallery - Supabase integration",
+      "passed": true,
+      "details": "Supabase client usage found"
+    },
+    {
+      "name": "Prompt Enhancement - File exists",
+      "passed": true,
+      "details": "Service file found"
+    },
+    {
+      "name": "Prompt Enhancement - All methods defined",
+      "passed": true,
+      "details": "5/5 methods found"
+    },
+    {
+      "name": "Prompt Enhancement - Type definitions",
+      "passed": true,
+      "details": "Type interfaces defined"
+    },
+    {
+      "name": "Prompt Enhancement - OpenAI integration",
+      "passed": true,
+      "details": "GPT-4 integration found"
+    },
+    {
+      "name": "Prompt Enhancement - Fallback logic",
+      "passed": true,
+      "details": "Fallback system implemented"
+    },
+    {
+      "name": "Migration - Files exist",
+      "passed": true,
+      "details": "Found 9 migration files"
+    },
+    {
+      "name": "Migration - All 8 tables created",
+      "passed": true,
+      "details": "8/8 tables defined"
+    },
+    {
+      "name": "Migration - RLS enabled on all tables",
+      "passed": true,
+      "details": "8/8 tables have RLS"
+    },
+    {
+      "name": "Migration - Security policies created",
+      "passed": false,
+      "details": "28 policies defined"
+    },
+    {
+      "name": "Migration - Performance indexes created",
+      "passed": true,
+      "details": "22 indexes defined"
+    },
+    {
+      "name": "Migration - Helper functions",
+      "passed": true,
+      "details": "Database functions defined"
+    },
+    {
+      "name": "Migration - Automatic triggers",
+      "passed": true,
+      "details": "Update triggers defined"
+    },
+    {
+      "name": "Supabase - Environment variables set",
+      "passed": true,
+      "details": "URL: https://0ec90b57d6e95fcbda1983..."
+    },
+    {
+      "name": "Supabase - Database reachable",
+      "passed": false,
+      "details": "Protected by RLS (expected)"
+    },
+    {
+      "name": "Supabase - All tables accessible",
+      "passed": false,
+      "details": "0/8 tables accessible"
+    },
+    {
+      "name": "Documentation - Enhancement Guide",
+      "passed": true,
+      "details": "15486 bytes"
+    },
+    {
+      "name": "Documentation - Prompt Guide",
+      "passed": true,
+      "details": "16216 bytes"
+    },
+    {
+      "name": "Documentation - Progress Report",
+      "passed": true,
+      "details": "8499 bytes"
+    },
+    {
+      "name": "Documentation - What's New",
+      "passed": true,
+      "details": "9371 bytes"
+    },
+    {
+      "name": "Documentation - All guides created",
+      "passed": true,
+      "details": "4/4 documents found"
+    }
+  ]
+}

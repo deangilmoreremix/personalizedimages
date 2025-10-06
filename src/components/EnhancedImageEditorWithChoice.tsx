@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Wand2, CreditCard as Edit3, Sparkles, RefreshCw, Download, Layers, Palette, Zap } from 'lucide-react';
 import { editImageWithGeminiNano, generateVariationsWithGeminiNano } from '../utils/geminiNanoApi';
+import { editImageWithGPT5, createVariationsWithGPT5 } from '../utils/gpt5ImageEditor';
 
 interface EnhancedImageEditorWithChoiceProps {
   imageUrl: string;
@@ -8,7 +9,7 @@ interface EnhancedImageEditorWithChoiceProps {
   tokens?: Record<string, string>;
 }
 
-type EditorMode = 'gemini-nano' | 'classic';
+type EditorMode = 'gemini-nano' | 'gpt5';
 type EditMode = 'enhance' | 'colorize' | 'stylize' | 'remove_background' | 'blur_background' | 'restore' | 'custom';
 
 const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps> = ({
@@ -84,19 +85,48 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
     }
   };
 
-  const handleClassicEdit = () => {
-    // Apply CSS filters (this is a client-side preview)
-    // In production, you'd want to actually process the image
-    const filters = [
-      `brightness(${brightness}%)`,
-      `contrast(${contrast}%)`,
-      `saturate(${saturation}%)`,
-      `blur(${blur}px)`,
-      `rotate(${rotation}deg)`
-    ].join(' ');
+  const handleGPT5Edit = async () => {
+    try {
+      setIsEditing(true);
+      setError(null);
 
-    // This is a simplified version - in production, you'd use canvas to apply these
-    console.log('Applied filters:', filters);
+      const currentImage = editHistory[historyIndex];
+
+      // Determine edit mode based on settings
+      let mode: 'enhance' | 'adjust' | 'transform' | 'effects' | 'custom' = 'adjust';
+
+      if (editMode === 'enhance') {
+        mode = 'enhance';
+      } else if (editMode === 'stylize') {
+        mode = 'transform';
+      } else if (editMode === 'custom') {
+        mode = 'custom';
+      } else {
+        mode = 'adjust';
+      }
+
+      const result = await editImageWithGPT5(currentImage, {
+        mode,
+        brightness,
+        contrast,
+        saturation,
+        blur,
+        rotation,
+        customPrompt: mode === 'custom' ? customPrompt : undefined
+      });
+
+      // Add to history
+      const newHistory = [...editHistory.slice(0, historyIndex + 1), result.imageUrl];
+      setEditHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+
+      onImageUpdated(result.imageUrl);
+    } catch (err) {
+      console.error('GPT-5 edit error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to edit image with GPT-5');
+    } finally {
+      setIsEditing(false);
+    }
   };
 
   const handleUndo = () => {
@@ -145,15 +175,15 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
             AI Editor
           </button>
           <button
-            onClick={() => setEditorMode('classic')}
+            onClick={() => setEditorMode('gpt5')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              editorMode === 'classic'
+              editorMode === 'gpt5'
                 ? 'bg-white shadow-sm text-indigo-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <Edit3 className="w-4 h-4" />
-            Classic Editor
+            <Zap className="w-4 h-4" />
+            GPT-5 Editor
           </button>
         </div>
       </div>
@@ -241,7 +271,7 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
             </>
           ) : (
             <>
-              {/* Classic Editor Controls */}
+              {/* GPT-5 Editor Controls */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Brightness: {brightness}%
@@ -313,11 +343,21 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
               </div>
 
               <button
-                onClick={handleClassicEdit}
-                className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                onClick={handleGPT5Edit}
+                disabled={isEditing}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
-                <Palette className="w-5 h-5" />
-                Apply Filters
+                {isEditing ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Editing with GPT-5...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5" />
+                    Apply GPT-5 Edit
+                  </>
+                )}
               </button>
             </>
           )}
@@ -359,7 +399,7 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
               alt="Editing"
               className="max-w-full max-h-[500px] rounded-lg shadow-lg"
               style={
-                editorMode === 'classic'
+                editorMode === 'gpt5'
                   ? {
                       filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`,
                       transform: `rotate(${rotation}deg)`

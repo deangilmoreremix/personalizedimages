@@ -83,14 +83,20 @@ const ModernHeader: React.FC = () => {
               {/* Dropdown menu */}
               <div className="absolute left-0 mt-2 w-60 rounded-xl glass-panel opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
                 <div className="py-2">
-                  <DropdownItem 
-                    to="/features/ai-image" 
+                  <DropdownItem
+                    to="/features/gemini-nano-editor"
+                    icon={<Sparkles className="w-4 h-4 text-indigo-600" />}
+                    label="Gemini Nano Editor"
+                    description="AI personalization studio"
+                  />
+                  <DropdownItem
+                    to="/features/ai-image"
                     icon={<Sparkles className="w-4 h-4 text-purple-600" />}
                     label="AI Image Creator"
                     description="Generate custom AI imagery"
                   />
-                  <DropdownItem 
-                    to="/features/action-figures" 
+                  <DropdownItem
+                    to="/features/action-figures"
                     icon={<Zap className="w-4 h-4 text-amber-600" />}
                     label="Action Figure Designer"
                     description="Build custom action figures"

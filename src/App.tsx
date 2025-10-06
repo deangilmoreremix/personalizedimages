@@ -29,6 +29,7 @@ import FontsPage from './pages/FontsPage';
 import TokensPanel from './pages/TokensPanel';
 import GeminiDocs from './pages/GeminiDocs';
 import EdgeFunctionDebugging from './pages/EdgeFunctionDebugging';
+import GeminiNanoEditorPage from './pages/features/GeminiNanoEditorPage';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Component for conditionally rendering footer and other components
@@ -52,6 +53,7 @@ const AppLayout = () => {
           <Route path="/features/cartoon-style" element={<CartoonStylePage />} />
           <Route path="/features/meme-generator" element={<MemeGeneratorPage />} />
           <Route path="/features/ai-image" element={<AIImagePage />} />
+          <Route path="/features/gemini-nano-editor" element={<GeminiNanoEditorPage />} />
           <Route path="/gif-editor" element={<GifEditorDemo />} />
           <Route path="/fonts" element={<FontsPage />} />
           <Route path="/tokens" element={<TokensPanel tokens={{FIRSTNAME: 'User', LASTNAME: 'Example'}} />} />

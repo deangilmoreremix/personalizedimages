@@ -4,6 +4,7 @@ import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import { actionFigureTemplates, generateActionFigurePrompt } from '../data/actionFigureTemplates';
 import { wrestlingActionFigurePrompts } from '../data/wrestlingActionFigures';
 import { musicStarActionFigurePrompts } from '../data/musicStarActionFigures';
@@ -493,7 +494,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
-              
+
               <a
                 href={generatedFigure}
                 download="action-figure.png"
@@ -504,7 +505,23 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
               </a>
             </div>
           )}
-          
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedFigure && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedFigure}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedFigure(newImageUrl);
+                  if (onImageGenerated) {
+                    onImageGenerated(newImageUrl);
+                  }
+                }}
+                tokens={tokens}
+              />
+            </div>
+          )}
+
           {generatedFigure && (
             <div className="bg-primary-50 p-4 rounded-lg">
               <h4 className="font-medium text-primary-700 flex items-center mb-2">

@@ -17,6 +17,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import VideoGenerationButton from './VideoGenerationButton';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 
 interface AIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -762,7 +763,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
-              
+
               <a
                 href={generatedImage}
                 download="ai-generated-image.png"
@@ -771,12 +772,26 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </a>
-              
+
               {/* Video Generation Button */}
-              <VideoGenerationButton 
+              <VideoGenerationButton
                 imageUrl={generatedImage}
                 prompt={prompt}
                 className="flex-1"
+              />
+            </div>
+          )}
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedImage && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedImage}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedImage(newImageUrl);
+                  onImageGenerated(newImageUrl);
+                }}
+                tokens={tokens}
               />
             </div>
           )}

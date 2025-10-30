@@ -42,9 +42,6 @@ export class GeminiNanoService {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || getGeminiNanoApiKey();
-    if (!this.apiKey) {
-      throw new Error('Gemini Nano API key is required');
-    }
   }
 
   /**

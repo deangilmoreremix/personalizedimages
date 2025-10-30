@@ -29,7 +29,6 @@ const initSupabase = () => {
       return false;
     }
   } else {
-    console.warn('Supabase URL or Anon Key is missing or invalid. Check your environment variables.');
     return false;
   }
 };

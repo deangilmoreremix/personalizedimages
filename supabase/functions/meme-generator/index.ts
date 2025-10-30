@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { corsHeaders } from "../_shared/cors.ts"
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
+import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 console.log("Meme Generator Edge Function loaded")
 
@@ -20,6 +20,7 @@ serve(async (req) => {
   try {
     const { topText, bottomText, referenceImageUrl, additionalStyle, provider }: MemeGeneratorRequest = await req.json()
 
+    // Validate and sanitize inputs
     if (!topText && !bottomText) {
       return new Response(
         JSON.stringify({ error: 'At least one of topText or bottomText is required' }),
@@ -27,20 +28,25 @@ serve(async (req) => {
       )
     }
 
-    if (!referenceImageUrl) {
+    const sanitizedTopText = topText ? sanitizeInput(topText) : '';
+    const sanitizedBottomText = bottomText ? sanitizeInput(bottomText) : '';
+    const sanitizedStyle = additionalStyle ? sanitizeInput(additionalStyle) : '';
+
+    if (!referenceImageUrl || !isValidUrl(referenceImageUrl)) {
       return new Response(
-        JSON.stringify({ error: 'Reference image URL is required' }),
+        JSON.stringify({ error: 'Valid reference image URL is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Get API keys from environment
+    // Get and validate API keys
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!openaiKey && !geminiKey) {
+    if ((!openaiKey || !validateApiKey(openaiKey, 'openai')) &&
+        (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
       return new Response(
-        JSON.stringify({ error: 'No API keys configured' }),
+        JSON.stringify({ error: 'Valid API keys not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -64,7 +70,7 @@ serve(async (req) => {
         const base64Data = await blobToBase64(imageBlob)
 
         // Create a prompt for meme generation
-        const memePrompt = `Create a meme using this reference image. Add "${topText}" as top text and "${bottomText}" as bottom text. ${additionalStyle ? `Style: ${additionalStyle}` : ''} Make it humorous and well-formatted.`
+        const memePrompt = `Create a meme using this reference image. Add "${sanitizedTopText}" as top text and "${sanitizedBottomText}" as bottom text. ${sanitizedStyle ? `Style: ${sanitizedStyle}` : ''} Make it humorous and well-formatted.`
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -73,7 +79,7 @@ serve(async (req) => {
             'Authorization': `Bearer ${openaiKey}`
           },
           body: JSON.stringify({
-            model: 'gpt-4-vision-preview',
+            model: 'gpt-4o',
             messages: [
               {
                 role: 'user',
@@ -100,9 +106,11 @@ serve(async (req) => {
         const data = await response.json()
         const description = data.choices?.[0]?.message?.content || ''
 
+        // TODO: Implement actual meme generation using image editing API
         // For now, return the reference image with a note about the description
-        // In production, you'd use an image generation API to create the actual meme
+        // This is a placeholder implementation that should be replaced with proper meme generation
         console.log('Generated meme description:', description)
+        console.warn('Meme generation not fully implemented - returning reference image')
         imageUrl = referenceImageUrl
 
       } catch (error) {
@@ -122,7 +130,7 @@ serve(async (req) => {
         const imageBlob = await imageResponse.blob()
         const base64Data = await blobToBase64(imageBlob)
 
-        const memePrompt = `Create a meme using this reference image. Add "${topText}" as top text and "${bottomText}" as bottom text. ${additionalStyle ? `Style: ${additionalStyle}` : ''} Make it humorous and well-formatted.`
+        const memePrompt = `Create a meme using this reference image. Add "${sanitizedTopText}" as top text and "${sanitizedBottomText}" as bottom text. ${sanitizedStyle ? `Style: ${sanitizedStyle}` : ''} Make it humorous and well-formatted.`
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
           method: 'POST',

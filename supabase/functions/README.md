@@ -4,22 +4,37 @@ This directory contains Edge Functions for the VideoRemix application, providing
 
 ## Function Overview
 
-| Function | Purpose |
-|----------|---------|
-| `action-figure` | Generate action figure images from prompts |
-| `assistant-stream` | Stream AI assistant responses |
-| `crazy-image` | Generate surreal, creative images |
-| `create-payment-intent` | Create Stripe payment intents |
-| `ghibli-image` | Generate Studio Ghibli-style images |
-| `health-check` | Verify Edge Function environment |
-| `image-analysis` | Analyze and extract information from images |
-| `image-description` | Generate descriptions for image generation |
-| `image-enhancement` | Enhance images with AI |
-| `image-generation` | Generate images from text prompts |
-| `image-to-video` | Convert still images to short videos |
-| `meme-generator` | Create personalized memes |
-| `prompt-recommendations` | Generate enhanced prompt suggestions |
-| `reference-image` | Generate images using reference images |
+| Function | Purpose | Status |
+|----------|---------|--------|
+| `action-figure` | Generate action figure images from prompts | ❌ Missing implementation |
+| `assistant-stream` | Stream AI assistant responses | ❌ Missing implementation |
+| `crazy-image` | Generate surreal, creative images | ❌ Missing implementation |
+| `create-payment-intent` | Create Stripe payment intents | ❌ Missing implementation |
+| `ghibli-image` | Generate Studio Ghibli-style images | ✅ Implemented |
+| `health-check` | Verify Edge Function environment | ❌ Missing implementation |
+| `image-analysis` | Analyze and extract information from images | ❌ Missing implementation |
+| `image-description` | Generate descriptions for image generation | ❌ Missing implementation |
+| `image-enhancement` | Enhance images with AI | ❌ Missing implementation |
+| `image-generation` | Generate images from text prompts | ❌ Missing implementation |
+| `image-to-video` | Convert still images to short videos | ❌ Missing implementation |
+| `meme-generator` | Create personalized memes | ⚠️ Partially implemented (placeholder) |
+| `prompt-recommendations` | Generate enhanced prompt suggestions | ❌ Missing implementation |
+| `reference-image` | Generate images using reference images | ❌ Missing implementation |
+
+## Recent Security & Compatibility Updates
+
+### ✅ Completed Fixes
+- **CORS Security**: Replaced wildcard origin (`*`) with environment-based configuration
+- **API Key Validation**: Added validation for OpenAI, Gemini, and Stripe API keys
+- **Input Sanitization**: Implemented comprehensive input validation and sanitization
+- **Model Updates**: Migrated from deprecated `gpt-4-vision-preview` to `gpt-4o`
+- **Deno Updates**: Updated standard library from v0.168.0 to v0.224.0
+- **URL Validation**: Added proper URL validation for reference images
+
+### ⚠️ Remaining Issues
+- **Missing Implementations**: 12 out of 14 functions are placeholders
+- **Error Handling**: Needs standardization across functions
+- **TypeScript Types**: Missing proper typing for Deno runtime
 
 ## Deployment Process
 
@@ -54,6 +69,9 @@ supabase secrets set GEMINI_API_KEY=your_gemini_api_key --project-ref your-proje
 # Set Stripe API key (for payment processing)
 supabase secrets set STRIPE_SECRET_KEY=your_stripe_secret_key --project-ref your-project-ref
 
+# Set CORS allowed origins
+supabase secrets set ALLOWED_ORIGINS=https://yourdomain.com,https://localhost:3000 --project-ref your-project-ref
+
 # Set other API keys if needed
 supabase secrets set LEONARDO_API_KEY=your_leonardo_api_key --project-ref your-project-ref
 supabase secrets set GIPHY_API_KEY=your_giphy_api_key --project-ref your-project-ref
@@ -68,8 +86,8 @@ supabase functions deploy --project-ref your-project-ref
 ### Deploy Individual Functions
 
 ```bash
-supabase functions deploy action-figure --project-ref your-project-ref
-supabase functions deploy image-generation --project-ref your-project-ref
+supabase functions deploy ghibli-image --project-ref your-project-ref
+supabase functions deploy meme-generator --project-ref your-project-ref
 # etc.
 ```
 
@@ -93,27 +111,53 @@ supabase functions deploy image-generation --project-ref your-project-ref
 
 4. Test function with curl:
    ```bash
-   curl -i --location --request POST 'http://localhost:54321/functions/v1/image-generation' \
+   curl -i --location --request POST 'http://localhost:54321/functions/v1/ghibli-image' \
    --header 'Authorization: Bearer YOUR_ANON_KEY' \
    --header 'Content-Type: application/json' \
    --data '{"provider":"gemini","prompt":"A beautiful sunset over mountains"}'
    ```
 
+## Security Best Practices
+
+### CORS Configuration
+- Uses environment variable `ALLOWED_ORIGINS` instead of wildcard
+- Supports multiple comma-separated origins
+- Defaults to localhost for development
+
+### Input Validation
+- All user inputs are sanitized to prevent injection attacks
+- URLs are validated before processing
+- API keys are validated for correct format
+
+### API Key Security
+- Keys are validated for proper prefixes (sk-, AIza, sk_)
+- Functions fail gracefully with invalid keys
+- Keys are never logged or exposed in responses
+
 ## Troubleshooting
 
 Common issues and solutions:
 
-1. **CORS Errors**: Make sure your Edge Functions have proper CORS headers, already included in all function templates.
+1. **CORS Errors**: Ensure `ALLOWED_ORIGINS` environment variable is set correctly.
 
-2. **Missing API Keys**: Verify that all required API keys are set in Supabase secrets.
+2. **API Key Validation Errors**: Verify API keys start with correct prefixes:
+   - OpenAI: `sk-`
+   - Gemini: `AIza`
+   - Stripe: `sk_`
 
-3. **Deployment Errors**: Check for syntax errors in your TypeScript code. Run `tsc --noEmit` to validate.
+3. **Input Validation Errors**: Check that prompts and URLs are properly formatted.
 
-4. **Failed Responses**: Check Supabase Edge Function logs in the dashboard for detailed error messages.
+4. **Missing API Keys**: Verify that all required API keys are set in Supabase secrets.
 
-5. **API Limits**: Some errors may be due to hitting rate limits on third-party APIs.
+5. **Deployment Errors**: Check for syntax errors in your TypeScript code. Run `tsc --noEmit` to validate.
+
+6. **Failed Responses**: Check Supabase Edge Function logs in the dashboard for detailed error messages.
+
+7. **API Limits**: Some errors may be due to hitting rate limits on third-party APIs.
 
 ## Resources
 
 - [Supabase Edge Functions Documentation](https://supabase.com/docs/guides/functions)
 - [Deno Runtime Documentation](https://docs.deno.com/runtime/manual)
+- [OpenAI API Documentation](https://platform.openai.com/docs)
+- [Google Gemini API Documentation](https://ai.google.dev/docs)

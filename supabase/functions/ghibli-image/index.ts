@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { corsHeaders } from "../_shared/cors.ts"
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
+import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 console.log("Ghibli Image Edge Function loaded")
 
@@ -18,26 +18,37 @@ serve(async (req) => {
   try {
     const { prompt, provider, referenceImageUrl }: GhibliImageRequest = await req.json()
 
-    if (!prompt) {
+    // Validate and sanitize input
+    if (!prompt || typeof prompt !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'Prompt is required' }),
+        JSON.stringify({ error: 'Valid prompt is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Get API keys from environment
+    const sanitizedPrompt = sanitizeInput(prompt)
+
+    if (referenceImageUrl && !isValidUrl(referenceImageUrl)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid reference image URL' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Get and validate API keys
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if (!openaiKey && !geminiKey) {
+    if ((!openaiKey || !validateApiKey(openaiKey, 'openai')) &&
+        (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
       return new Response(
-        JSON.stringify({ error: 'No API keys configured' }),
+        JSON.stringify({ error: 'Valid API keys not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Enhance prompt for Ghibli style
-    const enhancedPrompt = `Studio Ghibli style animation: ${prompt}. Soft colors, whimsical atmosphere, detailed backgrounds, watercolor style painting, magical elements, inspired by Hayao Miyazaki's art direction.`
+    const enhancedPrompt = `Studio Ghibli style animation: ${sanitizedPrompt}. Soft colors, whimsical atmosphere, detailed backgrounds, watercolor style painting, magical elements, inspired by Hayao Miyazaki's art direction.`
 
     let imageUrl: string = ''
 

@@ -5,10 +5,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
-import { actionFigureTemplates, generateActionFigurePrompt } from '../data/actionFigureTemplates';
-import { wrestlingActionFigurePrompts } from '../data/wrestlingActionFigures';
-import { musicStarActionFigurePrompts } from '../data/musicStarActionFigures';
-import { retroActionFigurePrompts } from '../data/retroActionFigures';
+import templatesService, { ActionFigureTemplate } from '../services/templatesService';
 
 interface ActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -26,34 +23,43 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const [figureTheme, setFigureTheme] = useState<string>('superhero');
   const [figureAccessories, setFigureAccessories] = useState<string[]>([]);
   const [customName, setCustomName] = useState('');
-  const [selectedStyleOption, setSelectedStyleOption] = useState(0); // Track selected style from dropdown
-  const [showAllStyles, setShowAllStyles] = useState(false); // Control visibility of all styles
+  const [selectedStyleOption, setSelectedStyleOption] = useState(0);
+  const [showAllStyles, setShowAllStyles] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'general' | 'wrestling' | 'music' | 'retro'>('general');
-  
+  const [templates, setTemplates] = useState<ActionFigureTemplate[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Use accessories from templates
-  const accessoryOptions = Array.from(new Set(actionFigureTemplates.flatMap(template => template.accessories || [])));
+  // Load templates from Supabase
+  useEffect(() => {
+    const loadTemplates = async () => {
+      setIsLoadingTemplates(true);
+      try {
+        const data = await templatesService.getActionFigureTemplates(selectedCategory);
+        setTemplates(data);
+        if (data.length > 0) {
+          setSelectedStyleOption(0);
+        }
+      } catch (err) {
+        console.error('Error loading templates:', err);
+        setError('Failed to load templates from database');
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    };
+
+    loadTemplates();
+  }, [selectedCategory]);
+
+  // Use accessories from loaded templates
+  const accessoryOptions = Array.from(new Set(templates.flatMap(template => template.accessories || [])));
 
   // Simple theme options for fallback
   const themeOptions = ['Superhero', 'Fantasy', 'Sci-Fi', 'Modern'];
 
-  // Use templates based on selected category
-  const getCurrentTemplates = () => {
-    switch (selectedCategory) {
-      case 'wrestling':
-        return wrestlingActionFigurePrompts;
-      case 'music':
-        return musicStarActionFigurePrompts;
-      case 'retro':
-        return retroActionFigurePrompts;
-      default:
-        return actionFigureTemplates;
-    }
-  };
-
-  const styles = getCurrentTemplates();
+  const styles = templates;
 
   // Example predefined styles (simplified list from the 30 styles)
   const styleOptions = [
@@ -88,28 +94,14 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
     if (selectedStyleOption !== null && styles[selectedStyleOption]) {
       const template = styles[selectedStyleOption];
 
-      // Handle different template formats
-      if (selectedCategory === 'general') {
-        // Original format
-        const templateId = (template as any).id || (template as any).name || (template as any).title || 'unknown';
-        const personalizedPrompt = generateActionFigurePrompt(templateId, {
-          NAME: name,
-          COMPANY: tokens['COMPANY'] || 'your company'
-        });
-        setPrompt(personalizedPrompt);
-        return personalizedPrompt;
-      } else {
-        // New format with direct prompt
-        let promptText = (template as any).prompt || (template as any).basePrompt;
+      // Use the templates service to generate personalized prompt
+      const personalizedPrompt = templatesService.generateActionFigurePrompt(template, {
+        NAME: name,
+        COMPANY: tokens['COMPANY'] || 'your company'
+      });
 
-        // Replace [NAME] token if present
-        if (name && name !== 'the character') {
-          promptText = promptText.replace(/\[NAME\]/g, name);
-        }
-
-        setPrompt(promptText);
-        return promptText;
-      }
+      setPrompt(personalizedPrompt);
+      return personalizedPrompt;
     } else {
       // Fallback to the original prompt construction
       const basePrompt = `A highly detailed ${figureStyle.toLowerCase()} style action figure of ${name} in a ${figureTheme.toLowerCase()} theme. The figure should have realistic details, joints, packaging, and accessories like a real commercial toy product. Professional toy photography style, high resolution.`;
@@ -151,11 +143,26 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
       
       const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
       console.log('✅ Successfully generated action figure');
-      
+
       setGeneratedFigure(imageUrl);
       if (onImageGenerated) {
         onImageGenerated(imageUrl);
       }
+
+      // Save generated image to database
+      const selectedTemplate = styles[selectedStyleOption];
+      await templatesService.saveGeneratedImage({
+        image_url: imageUrl,
+        prompt: finalPrompt,
+        template_type: 'action_figure',
+        template_id: selectedTemplate?.template_id,
+        provider: selectedProvider,
+        metadata: {
+          category: selectedCategory,
+          hasReferenceImage: !!referenceImage,
+          accessories: figureAccessories
+        }
+      });
     } catch (err) {
       console.error('❌ Failed to generate action figure:', err);
       if (err instanceof Error) {
@@ -174,7 +181,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
 
   // Create the prompt based on the selected options
   useEffect(() => {
-    if (actionFigureTemplates.length > 0 || (figureStyle && figureTheme)) {
+    if (templates.length > 0 || (figureStyle && figureTheme)) {
       generatePrompt();
     }
   }, [selectedStyleOption, figureStyle, figureTheme, figureAccessories, tokens, customName]);

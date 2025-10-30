@@ -121,9 +121,7 @@ export async function generateImageWithDalle(
     // Fall back to direct API call
     const apiKey = getOpenAIApiKey();
     if (!apiKey) {
-      console.warn('No OpenAI API key available, returning placeholder image');
-      // Return a placeholder image from a service like picsum
-      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/${size.split('x')[0]}/${size.split('x')[1]}`;
+      throw new Error('OpenAI API key is required. Please configure VITE_OPENAI_API_KEY in your environment variables.');
     }
 
     const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -159,8 +157,7 @@ export async function generateImageWithDalle(
     return data.data[0].url;
   } catch (error) {
     console.error('Error generating image with DALL-E:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/1024/1024`;
+    throw error;
   }
 }
 
@@ -181,10 +178,7 @@ export async function generateImageVariations(
 
     const apiKey = getOpenAIApiKey();
     if (!apiKey) {
-      console.warn('No OpenAI API key available, returning placeholder images');
-      return Array(n).fill(null).map((_, i) =>
-        `https://picsum.photos/seed/${encodeURIComponent(imageUrl.substring(0, 30))}_${i}/1024/1024`
-      );
+      throw new Error('OpenAI API key is required for image variations. Please configure VITE_OPENAI_API_KEY in your environment variables.');
     }
 
     // First, fetch the image and convert to base64
@@ -225,10 +219,7 @@ export async function generateImageVariations(
     return data.data.map((item: any) => item.url);
   } catch (error) {
     console.error('Error generating image variations:', error);
-    // Return placeholder images as fallback
-    return Array(options.n || 1).fill(null).map((_, i) =>
-      `https://picsum.photos/seed/${encodeURIComponent(imageUrl.substring(0, 30))}_${i}/1024/1024`
-    );
+    throw error;
   }
 }
 
@@ -337,9 +328,9 @@ export async function generateImageWithGptImage(prompt: string): Promise<string>
     // Fall back to direct API call
     const apiKey = getOpenAIApiKey();
     if (!apiKey) {
-      console.warn('No OpenAI API key available, returning placeholder image');
-      // Return a placeholder image from a service like picsum
-      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/1024/1024`;
+      
+
+      throw new Error('API configuration required. Please configure your API keys in environment variables.');
     }
     
     const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -373,8 +364,7 @@ export async function generateImageWithGptImage(prompt: string): Promise<string>
     return data.data[0].url;
   } catch (error) {
     console.error('Error generating image with GPT-4 Vision:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/1024/1024`;
+    throw error;
   }
 }
 
@@ -417,8 +407,8 @@ export async function generateImageWithGemini(prompt: string, aspectRatio: strin
     // Fall back to direct API call
     const apiKey = getGeminiApiKey();
     if (!apiKey) {
-      console.warn('No Gemini API key available, returning placeholder image');
-      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+      
+      throw new Error('API configuration required. Please configure your API keys in environment variables.');
     }
     
     const geminiModel = 'gemini-2.5-flash'; // Or another appropriate model
@@ -452,8 +442,7 @@ export async function generateImageWithGemini(prompt: string, aspectRatio: strin
     throw new Error('No image found in Gemini response');
   } catch (error) {
     console.error('Error generating image with Gemini:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -484,8 +473,8 @@ export async function generateImageWithGemini2Flash(prompt: string): Promise<str
     // Fall back to direct API call
     const apiKey = getGeminiApiKey();
     if (!apiKey) {
-      console.warn('No Gemini API key available, returning placeholder image');
-      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+      
+      throw new Error('API configuration required. Please configure your API keys in environment variables.');
     }
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
@@ -517,8 +506,7 @@ export async function generateImageWithGemini2Flash(prompt: string): Promise<str
     throw new Error('No image found in Gemini 2.0 Flash response');
   } catch (error) {
     console.error('Error generating image with Gemini 2.0 Flash:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -556,8 +544,7 @@ export async function generateImageWithGeminiNano(
     return await generateImageWithGeminiNanoService(prompt, options, config);
   } catch (error) {
     console.error('Error generating image with Gemini Nano:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -634,10 +621,7 @@ export async function generateVariationsWithGeminiNano(
     return await generateVariationsWithGeminiNanoService(imageUrl, count, config);
   } catch (error) {
     console.error('Error generating variations with Gemini Nano:', error);
-    // Return placeholder images as fallback
-    return Array(count).fill(null).map((_, i) =>
-      `https://picsum.photos/seed/${encodeURIComponent(imageUrl.substring(0, 30))}_${i}/800/800`
-    );
+    throw error;
   }
 }
 
@@ -676,8 +660,7 @@ export async function generateImageWithImagen(prompt: string, aspectRatio: strin
     return generateImageWithGemini(enhancedPrompt, aspectRatio);
   } catch (error) {
     console.error('Error generating image with Imagen:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -709,8 +692,8 @@ async function generateImageWithReferenceGemini(prompt: string, referenceImageUr
     // Fall back to direct API call
     const apiKey = getGeminiApiKey();
     if (!apiKey) {
-      console.warn('No Gemini API key available, returning placeholder image');
-      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+      
+      throw new Error('API configuration required. Please configure your API keys in environment variables.');
     }
     
     try {
@@ -769,8 +752,7 @@ async function generateImageWithReferenceGemini(prompt: string, referenceImageUr
     }
   } catch (error) {
     console.error('Error generating image with reference:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -802,8 +784,8 @@ async function generateImageWithReferenceGptImage(prompt: string, referenceImage
     // Fall back to direct API call
     const apiKey = getOpenAIApiKey();
     if (!apiKey) {
-      console.warn('No OpenAI API key available, returning placeholder image');
-      return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+      
+      throw new Error('API configuration required. Please configure your API keys in environment variables.');
     }
     
     // For now, we'll use a modified prompt that references the image
@@ -813,8 +795,7 @@ async function generateImageWithReferenceGptImage(prompt: string, referenceImage
     return generateImageWithGptImage(enhancedPrompt);
   } catch (error) {
     console.error('Error generating image with reference using GPT-4 Vision:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -875,11 +856,10 @@ export async function generateGhibliStyleImage(prompt: string, provider: string 
     
     // If no provider matches, use fallback image
     console.warn('Invalid provider specified, using placeholder image');
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw new Error('API configuration required. Please configure your API keys in environment variables.');
   } catch (error) {
     console.error('Error generating Ghibli-style image:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -939,12 +919,10 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
       }
     }
     
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   } catch (error) {
     console.error('Error generating cartoon-style image:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 
@@ -1040,12 +1018,10 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
       }
     }
     
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   } catch (error) {
     console.error('Error generating action figure:', error);
-    // Return a placeholder image as a fallback
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
+    throw error;
   }
 }
 

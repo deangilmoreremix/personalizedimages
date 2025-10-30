@@ -203,36 +203,25 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
         onImageGenerated(imageUrl);
         setInputImage(imageUrl);
       } catch (err) {
-        console.warn('❌ Failed to generate image via API:', err);
-        // Generate a fallback placeholder image
-        const fallbackUrl = `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/600`;
-        setGeneratedImage(fallbackUrl);
-        onImageGenerated(fallbackUrl);
-        setInputImage(fallbackUrl);
-        
+        console.error('❌ Failed to generate image via API:', err);
+
         // Set an informative error message
         if (err instanceof Error) {
-          if (err.message.includes('API key')) {
-            setError('API key error: Please add your API key to the .env file or try a different model.');
+          if (err.message.includes('API key') || err.message.includes('API configuration')) {
+            setError(`API Configuration Required: ${err.message}\n\nPlease add your API keys to your environment variables and redeploy.`);
           } else {
             setError(`Failed to generate image: ${err.message}`);
           }
         } else {
-          setError(`Failed to generate image: Unknown error. Using placeholder image.`);
+          setError(`Failed to generate image: Unknown error occurred.`);
         }
+        throw err;
       }
-      
+
       setIsGenerating(false);
     } catch (err) {
       console.error('❌ Failed to generate image:', err);
-      
-      // Let's provide a fallback placeholder image for better UX
-      const fallbackUrl = `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/600`;
       setError(`Failed to generate image: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      setGeneratedImage(fallbackUrl);
-      onImageGenerated(fallbackUrl);
-      setInputImage(fallbackUrl);
-      
       setIsGenerating(false);
     }
   };

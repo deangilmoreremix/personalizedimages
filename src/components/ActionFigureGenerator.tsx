@@ -158,13 +158,14 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
       }
     } catch (err) {
       console.error('❌ Failed to generate action figure:', err);
-      setError(`Failed to generate action figure: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      
-      // Fallback to a placeholder image for better UX
-      const placeholderUrl = `https://picsum.photos/seed/${encodeURIComponent(prompt.substring(0, 30))}/800/800`;
-      setGeneratedFigure(placeholderUrl);
-      if (onImageGenerated) {
-        onImageGenerated(placeholderUrl);
+      if (err instanceof Error) {
+        if (err.message.includes('API key') || err.message.includes('API configuration')) {
+          setError(`API Configuration Required: ${err.message}\n\nPlease add your API keys to your environment variables and redeploy.`);
+        } else {
+          setError(`Failed to generate action figure: ${err.message}`);
+        }
+      } else {
+        setError(`Failed to generate action figure: Unknown error occurred.`);
       }
     } finally {
       setIsGenerating(false);

@@ -10,7 +10,7 @@ interface EnhancedImageEditorWithChoiceProps {
 }
 
 type EditorMode = 'gemini-nano' | 'gpt5';
-type EditMode = 'enhance' | 'colorize' | 'stylize' | 'remove_background' | 'blur_background' | 'restore' | 'custom';
+type EditMode = 'enhance' | 'colorize' | 'stylize' | 'remove_background' | 'blur_background' | 'restore' | 'custom' | 'text_render' | 'compose' | 'style_transfer';
 
 const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps> = ({
   imageUrl,
@@ -20,7 +20,12 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
   const [editorMode, setEditorMode] = useState<EditorMode>('gemini-nano');
   const [editMode, setEditMode] = useState<EditMode>('enhance');
   const [customPrompt, setCustomPrompt] = useState('');
+  const [textToRender, setTextToRender] = useState('');
+  const [fontStyle, setFontStyle] = useState('modern');
   const [intensity, setIntensity] = useState(1);
+  const [aspectRatio, setAspectRatio] = useState('1:1');
+  const [responseModalities, setResponseModalities] = useState<('Text' | 'Image')[]>(['Image']);
+  const [secondaryImages, setSecondaryImages] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editHistory, setEditHistory] = useState<string[]>([imageUrl]);
@@ -44,7 +49,12 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
         {
           mode: editMode,
           intensity,
-          customPrompt: editMode === 'custom' ? customPrompt : undefined
+          customPrompt: editMode === 'custom' ? customPrompt : undefined,
+          textToRender: editMode === 'text_render' ? textToRender : undefined,
+          fontStyle: editMode === 'text_render' ? fontStyle : undefined,
+          secondaryImages: (editMode === 'compose' || editMode === 'style_transfer') ? secondaryImages : undefined,
+          aspectRatio,
+          responseModalities
         }
       );
 
@@ -209,6 +219,9 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
                   <option value="remove_background">🔲 Remove Background</option>
                   <option value="blur_background">📷 Blur Background</option>
                   <option value="restore">🔧 Restore/Improve</option>
+                  <option value="text_render">📝 Add Text</option>
+                  <option value="compose">🧩 Compose Multiple Images</option>
+                  <option value="style_transfer">🎭 Style Transfer</option>
                   <option value="custom">⚙️ Custom Edit</option>
                 </select>
               </div>
@@ -226,6 +239,139 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
                   />
                 </div>
               )}
+
+              {editMode === 'text_render' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Text to Add
+                    </label>
+                    <input
+                      type="text"
+                      value={textToRender}
+                      onChange={(e) => setTextToRender(e.target.value)}
+                      placeholder="Enter text to render on the image..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Font Style
+                    </label>
+                    <select
+                      value={fontStyle}
+                      onChange={(e) => setFontStyle(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="modern">Modern</option>
+                      <option value="classic">Classic</option>
+                      <option value="bold">Bold</option>
+                      <option value="script">Script</option>
+                      <option value="minimalist">Minimalist</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {(editMode === 'compose' || editMode === 'style_transfer') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Secondary Images ({secondaryImages.length}/3)
+                  </label>
+                  <div className="space-y-2">
+                    {secondaryImages.map((img, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <img src={img} alt={`Secondary ${index + 1}`} className="w-12 h-12 object-cover rounded" />
+                        <button
+                          onClick={() => setSecondaryImages(secondaryImages.filter((_, i) => i !== index))}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    {secondaryImages.length < 3 && (
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                              const result = e.target?.result as string;
+                              setSecondaryImages([...secondaryImages, result]);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {editMode === 'compose' ? 'Upload additional images to combine into a new composition' : 'Upload reference images for style transfer'}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Output Aspect Ratio
+                </label>
+                <select
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="1:1">Square (1:1)</option>
+                  <option value="4:3">Landscape (4:3)</option>
+                  <option value="3:4">Portrait (3:4)</option>
+                  <option value="16:9">Widescreen (16:9)</option>
+                  <option value="9:16">Tall (9:16)</option>
+                  <option value="2:3">Portrait (2:3)</option>
+                  <option value="3:2">Landscape (3:2)</option>
+                  <option value="21:9">Ultra-wide (21:9)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Response Type
+                </label>
+                <div className="flex gap-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={responseModalities.includes('Image')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setResponseModalities([...responseModalities, 'Image']);
+                        } else {
+                          setResponseModalities(responseModalities.filter(m => m !== 'Image'));
+                        }
+                      }}
+                      className="mr-2"
+                    />
+                    Image Only
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={responseModalities.includes('Text')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setResponseModalities([...responseModalities, 'Text']);
+                        } else {
+                          setResponseModalities(responseModalities.filter(m => m !== 'Text'));
+                        }
+                      }}
+                      className="mr-2"
+                    />
+                    Include Text
+                  </label>
+                </div>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

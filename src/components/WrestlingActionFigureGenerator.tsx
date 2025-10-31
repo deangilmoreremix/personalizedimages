@@ -5,6 +5,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { wrestlingActionFigurePrompts as wrestlingPrompts } from '../data/wrestlingActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 
 interface WrestlingActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -446,7 +447,7 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
-              
+
               <a
                 href={generatedFigure}
                 download="wrestling-action-figure.png"
@@ -455,6 +456,22 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </a>
+            </div>
+          )}
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedFigure && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedFigure}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedFigure(newImageUrl);
+                  if (onImageGenerated) {
+                    onImageGenerated(newImageUrl);
+                  }
+                }}
+                tokens={tokens}
+              />
             </div>
           )}
           

@@ -5,6 +5,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { musicStarActionFigurePrompts as musicPrompts } from '../data/musicStarActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 
 interface MusicStarActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -446,7 +447,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
-              
+
               <a
                 href={generatedFigure}
                 download="music-star-action-figure.png"
@@ -455,6 +456,22 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </a>
+            </div>
+          )}
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedFigure && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedFigure}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedFigure(newImageUrl);
+                  if (onImageGenerated) {
+                    onImageGenerated(newImageUrl);
+                  }
+                }}
+                tokens={tokens}
+              />
             </div>
           )}
           

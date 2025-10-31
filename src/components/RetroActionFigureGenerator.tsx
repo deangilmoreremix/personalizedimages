@@ -5,6 +5,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { retroActionFigurePrompts as retroPrompts } from '../data/retroActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 
 interface RetroActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -442,7 +443,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
-              
+
               <a
                 href={generatedFigure}
                 download="retro-action-figure.png"
@@ -451,6 +452,22 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </a>
+            </div>
+          )}
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedFigure && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedFigure}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedFigure(newImageUrl);
+                  if (onImageGenerated) {
+                    onImageGenerated(newImageUrl);
+                  }
+                }}
+                tokens={tokens}
+              />
             </div>
           )}
           

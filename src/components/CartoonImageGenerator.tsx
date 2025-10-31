@@ -6,6 +6,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 
 interface CartoonImageGeneratorProps {
   tokens: Record<string, string>;
@@ -375,7 +376,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
-              
+
               <a
                 href={generatedImage}
                 download="cartoon-style.png"
@@ -384,6 +385,22 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </a>
+            </div>
+          )}
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedImage && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedImage}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedImage(newImageUrl);
+                  if (onImageGenerated) {
+                    onImageGenerated(newImageUrl);
+                  }
+                }}
+                tokens={tokens}
+              />
             </div>
           )}
           

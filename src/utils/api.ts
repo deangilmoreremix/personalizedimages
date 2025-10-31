@@ -544,7 +544,118 @@ export async function generateImageWithGeminiNano(
     return await generateImageWithGeminiNanoService(prompt, options, config);
   } catch (error) {
     console.error('Error generating image with Gemini Nano:', error);
-    throw error;
+    throw new Error('Invalid provider specified for action figure generation');
+  }
+}
+
+/**
+ * Generate an image with Imagen 4 (Google's high-fidelity model)
+ */
+export async function generateImageWithImagen4(
+  prompt: string,
+  options: {
+    aspectRatio?: string;
+    quality?: 'standard' | 'high';
+    negativePrompt?: string;
+    personGeneration?: 'dont_allow' | 'allow_adult' | 'allow_all';
+    numberOfImages?: number;
+  } = {}
+): Promise<string[]> {
+  try {
+    console.log('🎨 Generating image with Imagen 4');
+
+    const {
+      aspectRatio = '1:1',
+      quality = 'standard',
+      negativePrompt = '',
+      personGeneration = 'allow_adult',
+      numberOfImages = 1
+    } = options;
+
+    // Try edge function first
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await callEdgeFunction('image-generation', {
+          provider: 'imagen-4',
+          prompt,
+          aspectRatio,
+          quality,
+          negativePrompt,
+          personGeneration,
+          numberOfImages
+        });
+
+        if (result && result.imageUrls && Array.isArray(result.imageUrls)) {
+          return result.imageUrls;
+        }
+      } catch (edgeError) {
+        console.warn('Edge function failed for Imagen 4 image generation:', edgeError);
+        // Continue to direct API fallback
+      }
+    }
+
+    // Fall back to direct API call
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      throw new Error('Gemini API key is required for Imagen 4. Please add VITE_GEMINI_API_KEY to your .env file.');
+    }
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        instances: [{
+          prompt: prompt + (negativePrompt ? `. Avoid: ${negativePrompt}` : '')
+        }],
+        parameters: {
+          sampleCount: Math.min(numberOfImages, 4), // Imagen 4 supports up to 4
+          aspectRatio,
+          imageSize: quality === 'high' ? '2K' : '1K',
+          personGeneration
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Imagen 4 API error response:', errorText);
+
+      if (response.status === 403) {
+        throw new Error(
+          'Imagen 4 API access denied. This typically means:\n' +
+          '1. The API key needs proper authentication setup\n' +
+          '2. Imagen 4 requires a Google Cloud project with billing enabled\n' +
+          '3. You may need to use a different image generation provider\n\n' +
+          'For now, please use OpenAI DALL-E or Gemini Nano as your image generation provider.'
+        );
+      }
+
+      throw new Error(`Imagen 4 API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // Extract images from Imagen 4 response
+    const imageUrls: string[] = [];
+    if (data.predictions && Array.isArray(data.predictions)) {
+      for (const prediction of data.predictions) {
+        if (prediction.bytesBase64Encoded) {
+          imageUrls.push(`data:image/png;base64,${prediction.bytesBase64Encoded}`);
+        }
+      }
+    }
+
+    if (imageUrls.length === 0) {
+      throw new Error('No images found in Imagen 4 API response');
+    }
+
+    return imageUrls;
+  } catch (error) {
+    console.error('Error generating image with Imagen 4:', error);
+    throw new Error('Invalid provider specified for cartoon-style image generation');
   }
 }
 

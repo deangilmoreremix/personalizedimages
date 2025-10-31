@@ -5,6 +5,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import DroppableInput from './DroppableInput';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import ghibliConfig from '../data/ghibliStyles';
 
 interface GhibliImageGeneratorProps {
@@ -515,7 +516,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
-              
+
               <a
                 href={generatedImage}
                 download="ghibli-image.png"
@@ -524,6 +525,22 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </a>
+            </div>
+          )}
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedImage && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedImage}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedImage(newImageUrl);
+                  if (onImageGenerated) {
+                    onImageGenerated(newImageUrl);
+                  }
+                }}
+                tokens={tokens}
+              />
             </div>
           )}
           

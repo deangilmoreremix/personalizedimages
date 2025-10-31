@@ -7,6 +7,7 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { FontSelector } from './ui/FontSelector';
 import ReferenceImageUploader from './ReferenceImageUploader';
+import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
 
 interface MemeGeneratorProps {
@@ -483,13 +484,13 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                 Generated Meme
               </h4>
               <div className="flex justify-center">
-                <img 
-                  src={generatedMeme} 
-                  alt="Generated Meme" 
-                  className="max-h-[300px] rounded-lg shadow-md" 
+                <img
+                  src={generatedMeme}
+                  alt="Generated Meme"
+                  className="max-h-[300px] rounded-lg shadow-md"
                 />
               </div>
-              
+
               <div className="mt-4 flex justify-center gap-4">
                 <button
                   className="btn btn-outline flex items-center"
@@ -508,6 +509,22 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                   Download
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Enhanced Image Editor with AI and Classic Options */}
+          {generatedMeme && (
+            <div className="mt-6">
+              <EnhancedImageEditorWithChoice
+                imageUrl={generatedMeme}
+                onImageUpdated={(newImageUrl) => {
+                  setGeneratedMeme(newImageUrl);
+                  if (onMemeGenerated) {
+                    onMemeGenerated(newImageUrl);
+                  }
+                }}
+                tokens={tokens}
+              />
             </div>
           )}
         </div>

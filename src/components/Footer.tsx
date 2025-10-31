@@ -1,5 +1,5 @@
 import React from 'react';
-import { Video, Facebook, Twitter, Instagram, Linkedin, Mail, Heart, ArrowRight, CheckCircle, Globe, MessageSquare, HelpCircle } from 'lucide-react';
+import { Image, Facebook, Twitter, Instagram, Linkedin, Mail, Heart, ArrowRight, CheckCircle, Globe, MessageSquare, HelpCircle } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
           <div>
             <div className="flex items-center mb-6">
               <div className="bg-gradient-to-r from-primary-500 to-secondary-500 p-2 rounded-lg">
-                <Video className="h-8 w-8 text-white" />
+                <Image className="h-8 w-8 text-white" />
               </div>
               <span className="ml-3 text-2xl font-bold gradient-text">
                 VideoRemix

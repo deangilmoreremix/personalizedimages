@@ -10,9 +10,9 @@ interface CTASectionProps {
   buttonLink?: string;
 }
 
-const CTASection: React.FC<CTASectionProps> = ({ 
+const CTASection: React.FC<CTASectionProps> = ({
   title = "Personalize & 9X Your Conversion Rate Now!",
-  description = "Join thousands of marketers who are boosting results with personalized images and videos for every customer.",
+  description = "Join thousands of marketers who are boosting results with personalized images for every customer.",
   buttonText = "Start Personalizing Now!",
   buttonLink = "#signup"
 }) => {

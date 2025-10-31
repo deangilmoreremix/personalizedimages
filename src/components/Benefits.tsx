@@ -166,7 +166,7 @@ const Benefits: React.FC = () => {
             Create unique personalized experiences
           </p>
           <p className="mt-4 text-gray-600">
-            Today's customers expect personalized content tailored just for them. VideoRemix lets you deliver individualized images, videos, emails, product recommendations, cart abandonment reminders, special offers, and personalized birthday wishes for every single customer.
+            Today's customers expect personalized content tailored just for them. VideoRemix lets you deliver individualized images, emails, product recommendations, cart abandonment reminders, special offers, and personalized birthday wishes for every single customer.
           </p>
         </motion.div>
 
@@ -221,7 +221,7 @@ const Benefits: React.FC = () => {
             className="text-center mt-8"
           >
             <p className="text-xl font-semibold text-primary-600">
-              VideoRemix is an easy-to-use platform for image and video personalization.
+              VideoRemix is an easy-to-use platform for image personalization.
             </p>
             <motion.a 
               href="#signup" 
@@ -398,7 +398,7 @@ const Benefits: React.FC = () => {
           className="mt-16 text-center"
         >
           <p className="text-lg text-gray-700 mb-6 max-w-3xl mx-auto">
-            Personalizing images and video content with customer names and information captures attention instantly and leads to higher conversions. Human brains process personalized imagery 60,000 times faster than generic text.
+            Personalizing images with customer names and information captures attention instantly and leads to higher conversions. Human brains process personalized imagery 60,000 times faster than generic text.
           </p>
           <motion.a 
             href="#signup" 

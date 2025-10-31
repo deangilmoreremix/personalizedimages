@@ -15,7 +15,7 @@ interface FAQProps {
 const defaultFaqs: FAQItem[] = [
   {
     question: 'What is the difference between SmartVideo and VideoRemix?',
-    answer: 'SmartVideo is our legacy product focusing primarily on video personalization, while VideoRemix is our comprehensive platform that includes both video and image personalization with advanced features, integrations, and AI capabilities.',
+    answer: 'SmartVideo is our legacy product focusing primarily on video personalization, while VideoRemix is our comprehensive platform that focuses on image personalization with advanced features, integrations, and AI capabilities.',
   },
   {
     question: 'Can I use this for clients?',
@@ -26,12 +26,12 @@ const defaultFaqs: FAQItem[] = [
     answer: 'Absolutely. VideoRemix allows you to create personalized images with dynamic elements like names, custom text, and even personalized visuals that change based on your customer data.',
   },
   {
-    question: 'Do I need to create my own videos?',
-    answer: 'No, you don\'t have to. We provide a library of templates that you can use and customize with your personalization tokens. You can also import videos from YouTube or Vimeo and add personalization layers on top.',
+    question: 'Do I need design skills to create personalized images?',
+    answer: 'No, you don\'t need any design skills. We provide a library of templates that you can use and customize with your personalization tokens. Our AI-powered tools make it easy to create professional personalized images.',
   },
   {
-    question: 'Do I need to host the videos myself?',
-    answer: 'No. All videos and images created with VideoRemix are hosted on our secure servers with high-speed CDN delivery. You can embed them on your website, landing pages, or share them directly via URL.',
+    question: 'Do I need to host the images myself?',
+    answer: 'No. All images created with VideoRemix are hosted on our secure servers with high-speed CDN delivery. You can embed them on your website, landing pages, or share them directly via URL.',
   },
   {
     question: 'Subscription Policy',

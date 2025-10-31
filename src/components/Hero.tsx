@@ -149,13 +149,13 @@ const Hero: React.FC = () => {
               </motion.span>
             </h1>
             
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.9, duration: 0.5 }}
               className="text-lg mb-8 text-gray-700"
             >
-              Your customers expect personalized content, from images to videos to emails. VideoRemix helps you deliver individualized experiences with AI-powered, token-based personalization that transforms generic content into 1:1 connections.
+              Your customers expect personalized content, from images to emails to marketing materials. VideoRemix helps you deliver individualized experiences with AI-powered, token-based personalization that transforms generic content into 1:1 connections.
             </motion.p>
 
             {!showPersonalizedContent ? (

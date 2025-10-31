@@ -18,7 +18,7 @@ const steps = [
     id: 1,
     icon: <Image className="h-8 w-8 text-white" />,
     title: 'Add your personalization content',
-    description: 'Upload your image, video, or reference for AI generation with personalization tokens.',
+    description: 'Upload your image or reference for AI generation with personalization tokens.',
     example: 'image_blank.jpg',
   },
   {
@@ -261,7 +261,7 @@ const HowItWorks: React.FC<HowItWorksProps> = ({
             className="text-center mt-8"
           >
             <p className="text-xl font-semibold gradient-text">
-              VideoRemix is an easy-to-use platform for personalized image and video creation.
+              VideoRemix is an easy-to-use platform for personalized image creation.
             </p>
             <motion.a 
               href="#signup" 

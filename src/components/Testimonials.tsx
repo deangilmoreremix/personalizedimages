@@ -24,7 +24,7 @@ const testimonials = [
     id: 3,
     name: 'Sarah Johnson',
     role: 'Internet Marketer',
-    quote: 'A fascinating account of a phenomenal Internet marketer with 24 years experience. She changed her approach to video marketing, and thanks to VideoRemix, she was able to reach and surpass her monthly revenue target of $3000.',
+    quote: 'A fascinating account of a phenomenal Internet marketer with 24 years experience. She changed her approach to personalized marketing, and thanks to VideoRemix, she was able to reach and surpass her monthly revenue target of $3000.',
     image: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=600',
     rating: 4
   },
@@ -32,7 +32,7 @@ const testimonials = [
     id: 4,
     name: 'David Chen',
     role: 'E-commerce Director',
-    quote: 'The personalized product videos we created with VideoRemix increased our conversion rate by 43%. Our customers love seeing their names on the product demos!',
+    quote: 'The personalized product images we created with VideoRemix increased our conversion rate by 43%. Our customers love seeing their names on the product promotions!',
     image: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=600',
     rating: 5
   },

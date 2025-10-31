@@ -16,7 +16,7 @@ This directory contains Edge Functions for the VideoRemix application, providing
 | `image-description` | Generate descriptions for image generation | ❌ Missing implementation |
 | `image-enhancement` | Enhance images with AI | ❌ Missing implementation |
 | `image-generation` | Generate images from text prompts | ❌ Missing implementation |
-| `image-to-video` | Convert still images to short videos | ❌ Missing implementation |
+| `image-to-video` | Convert still images to short videos | ✅ Implemented (Gemini Veo) |
 | `meme-generator` | Create personalized memes | ⚠️ Partially implemented (placeholder) |
 | `prompt-recommendations` | Generate enhanced prompt suggestions | ❌ Missing implementation |
 | `reference-image` | Generate images using reference images | ❌ Missing implementation |

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Image as ImageIcon, Download, Trash, Plus, Sparkles, Mail, Settings, Copy, CheckSquare, Code } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { useDropzone } from 'react-dropzone';
+import { isValidImageUrl, sanitizeHtml, sanitizeTokenValue } from '../utils/validation';
 
 interface EmailImageEditorProps {
   tokens: Record<string, string>;
@@ -43,6 +44,7 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
   const [linkText, setLinkText] = useState<string>('View Special Offer');
   const [showEmailPreview, setShowEmailPreview] = useState<boolean>(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -71,9 +73,31 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
   const handleImageUpload = (files: File[]) => {
     if (files && files.length > 0) {
       const file = files[0];
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Image file size must be less than 10MB');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImage(e.target?.result as string);
+        const result = e.target?.result as string;
+        if (result && isValidImageUrl(result)) {
+          setImage(result);
+          setError(null);
+        } else {
+          setError('Invalid image file');
+        }
+      };
+      reader.onerror = () => {
+        setError('Failed to read image file');
       };
       reader.readAsDataURL(file);
     }
@@ -187,8 +211,11 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
         // Get the personalized image as data URL
         const personalizedImageUrl = canvas.toDataURL('image/jpeg', 0.9);
         
-        // Generate the HTML email template
-        generateEmailTemplate(personalizedImageUrl);
+        // Sanitize the HTML output
+        const finalHtml = generateEmailTemplate(personalizedImageUrl);
+        if (finalHtml) {
+          setGeneratedHtml(sanitizeHtml(finalHtml));
+        }
         
         // Optional: provide the image to the parent component
         if (onImageGenerated) {
@@ -202,13 +229,20 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
   };
   
   const generateEmailTemplate = (personalizedImageUrl: string) => {
+    // Validate image URL
+    if (!isValidImageUrl(personalizedImageUrl)) {
+      setError('Invalid image URL generated');
+      return;
+    }
+
     // Replace tokens in subject and link text
     let tokenizedSubject = emailSubject;
     let tokenizedLinkText = linkText;
-    
+
     Object.entries(tokens).forEach(([key, value]) => {
-      tokenizedSubject = tokenizedSubject.replace(`[${key.toUpperCase()}]`, value);
-      tokenizedLinkText = tokenizedLinkText.replace(`[${key.toUpperCase()}]`, value);
+      const sanitizedValue = sanitizeTokenValue(value);
+      tokenizedSubject = tokenizedSubject.replace(`[${key.toUpperCase()}]`, sanitizedValue);
+      tokenizedLinkText = tokenizedLinkText.replace(`[${key.toUpperCase()}]`, sanitizedValue);
     });
     
     // Base HTML template structure

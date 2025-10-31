@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Copy, TagIcon, TagIcon as DragIcon } from 'lucide-react';
 import { ItemTypes, TokenDragItem } from '../types/DragTypes';
 import { formatTokenForDisplay } from '../types/personalization';
+import { copyToClipboard } from '../utils/clipboard';
 import classNames from 'classnames';
 import { useTouchDrag } from '../hooks/useTouchDrag';
 import { getEmptyImage } from 'react-dnd-html5-backend';
@@ -102,18 +103,20 @@ const DraggableToken: React.FC<DraggableTokenProps> = ({
   }[variant];
   
   // Handle token copying
-  const handleCopyToken = (e: React.MouseEvent) => {
+  const handleCopyToken = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    
+
     if (onCopy) {
       onCopy(tokenDisplay);
-    } else {
-      navigator.clipboard.writeText(tokenDisplay);
-      
-      // Show copied animation
       setCopyActive(true);
       setTimeout(() => setCopyActive(false), 1500);
+    } else {
+      const success = await copyToClipboard(tokenDisplay);
+      if (success) {
+        setCopyActive(true);
+        setTimeout(() => setCopyActive(false), 1500);
+      }
     }
   };
 

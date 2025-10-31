@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Search, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { 
-  PERSONALIZATION_TOKENS, 
+import {
+  PERSONALIZATION_TOKENS,
   getTokensByCategory,
   formatTokenForDisplay,
   TokenCategory
 } from '../types/personalization';
+import { sanitizeTokenValue } from '../utils/validation';
+import { copyToClipboard } from '../utils/clipboard';
 import DraggableToken from '../components/DraggableToken';
 
 interface TokensPanelProps {
@@ -59,7 +61,7 @@ const TokensPanel: React.FC<TokensPanelProps> = ({
   // Save token value
   const saveTokenValue = () => {
     if (editingToken && onUpdateTokens) {
-      onUpdateTokens(editingToken, editValue);
+      onUpdateTokens(editingToken, sanitizeTokenValue(editValue));
     }
     setEditingToken(null);
   };
@@ -70,8 +72,8 @@ const TokensPanel: React.FC<TokensPanelProps> = ({
   };
   
   // Handle copy token to clipboard
-  const handleCopyToken = (token: string) => {
-    navigator.clipboard.writeText(token);
+  const handleCopyToken = async (token: string) => {
+    await copyToClipboard(token);
   };
   
   // Filter tokens based on search term

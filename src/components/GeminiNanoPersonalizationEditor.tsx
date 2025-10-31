@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Wand2, Image as ImageIcon, Download, Sparkles, Zap, Save, Upload, Layers, Settings, RefreshCw, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { generateImageWithGeminiNano, editImageWithGeminiNano } from '../utils/geminiNanoApi';
 import { PERSONALIZATION_TOKENS, createDefaultTokenValues } from '../types/personalization';
+import { sanitizePrompt, sanitizeTokenValue } from '../utils/validation';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 
@@ -35,17 +36,20 @@ const GeminiNanoPersonalizationEditor: React.FC<GeminiNanoPersonalizationEditorP
   // UI state
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
-  const handleDrop = (item: TokenDragItem, value: string) => {
+  const handleDrop = (item: TokenDragItem, caretPosition: number) => {
     const currentValue = prompt;
-    const newValue = currentValue + (currentValue ? ' ' : '') + `[${item.token}]`;
-    setPrompt(newValue);
+    const tokenText = `[${item.tokenKey}]`;
+    const newValue = currentValue.substring(0, caretPosition) +
+                     tokenText +
+                     currentValue.substring(caretPosition);
+    setPrompt(sanitizePrompt(newValue));
   };
 
   const replaceTokensInPrompt = (promptText: string): string => {
     let result = promptText;
     Object.entries(tokens).forEach(([key, value]) => {
       const tokenPattern = new RegExp(`\\[${key}\\]`, 'g');
-      result = result.replace(tokenPattern, value || `[${key}]`);
+      result = result.replace(tokenPattern, sanitizeTokenValue(value) || `[${key}]`);
     });
     return result;
   };
@@ -207,7 +211,7 @@ const GeminiNanoPersonalizationEditor: React.FC<GeminiNanoPersonalizationEditorP
               </label>
               <DroppableTextArea
                 value={prompt}
-                onChange={setPrompt}
+                onChange={(e) => setPrompt(sanitizePrompt(e.target.value))}
                 onDrop={handleDrop}
                 placeholder="Describe your image... Drag tokens here or type [FIRSTNAME] to personalize"
                 className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { 
-  PERSONALIZATION_TOKENS, 
-  getTokensByCategory,
+import {
   formatTokenForDisplay,
   TokenCategory
 } from '../types/personalization';
+import { sanitizeTokenValue } from '../utils/validation';
+import { copyToClipboard } from '../utils/clipboard';
+import { useVirtualizedTokens } from '../hooks/useVirtualizedTokens';
 import DraggableToken from './DraggableToken';
 
 interface TokensPanelProps {
@@ -42,9 +43,18 @@ const TokensPanel: React.FC<TokensPanelProps> = ({
     basic: true // Open basic category by default
   });
   
-  // Get tokens by category
-  const tokensByCategory = getTokensByCategory();
-  
+  // Use virtualized tokens hook
+  const {
+    visibleTokens: filteredTokens,
+    hasMore,
+    loadMore,
+    searchTokens
+  } = useVirtualizedTokens({
+    searchTerm,
+    showOnlyImplemented,
+    itemsPerPage: 50 // Show more items per page for better UX
+  });
+
   // Toggle a category's expanded state
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => ({
@@ -52,55 +62,22 @@ const TokensPanel: React.FC<TokensPanelProps> = ({
       [category]: !prev[category]
     }));
   };
-  
+
   // Handle copy token to clipboard
-  const handleCopyToken = (token: string) => {
+  const handleCopyToken = async (token: string) => {
     if (onCopyToken) {
       onCopyToken(token);
     } else {
-      navigator.clipboard.writeText(token);
+      await copyToClipboard(token);
     }
   };
-  
-  // Filter tokens based on search term
-  const filterTokens = () => {
-    const results: Record<TokenCategory, typeof PERSONALIZATION_TOKENS> = {
-      basic: [],
-      location: [],
-      company: [],
-      social: [],
-      dates: [],
-      engagement: [],
-      campaign: [],
-      communication: [],
-      dynamic: []
-    };
-    
-    if (!searchTerm) {
-      // Return all tokens or only implemented ones
-      Object.entries(tokensByCategory).forEach(([category, categoryTokens]) => {
-        results[category as TokenCategory] = showOnlyImplemented 
-          ? categoryTokens.filter(token => token.isImplemented)
-          : categoryTokens;
-      });
-    } else {
-      // Filter based on search term
-      PERSONALIZATION_TOKENS.forEach(token => {
-        if (
-          (token.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          token.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          token.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (!showOnlyImplemented || token.isImplemented)
-        ) {
-          results[token.category].push(token);
-        }
-      });
-    }
-    
-    return results;
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    searchTokens(term);
   };
-  
-  const filteredTokens = filterTokens();
 
   // Animation variants
   const containerVariants = {
@@ -160,7 +137,7 @@ const TokensPanel: React.FC<TokensPanelProps> = ({
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search tokens..."
             className="w-full pl-8 pr-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
           />

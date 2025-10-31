@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createDefaultTokenValues } from '../../types/personalization';
+import { sanitizeTokenValue } from '../../utils/validation';
 import GeminiNanoPersonalizationEditor from '../../components/GeminiNanoPersonalizationEditor';
 import TokensContainer from '../../components/ui/TokensContainer';
 
@@ -12,7 +13,7 @@ const GeminiNanoEditorPage: React.FC = () => {
   };
 
   const handleTokenUpdate = (key: string, value: string) => {
-    setTokens({ ...tokens, [key]: value });
+    setTokens({ ...tokens, [key]: sanitizeTokenValue(value) });
   };
 
   return (

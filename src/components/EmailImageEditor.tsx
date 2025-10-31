@@ -1,8 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Image as ImageIcon, Download, Trash, Plus, Sparkles, Mail, Settings, Copy, CheckSquare, Code } from 'lucide-react';
-import { HexColorPicker } from 'react-colorful';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Upload, Plus, Sparkles, Mail, Copy, CheckSquare, Download } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { isValidImageUrl, sanitizeHtml, sanitizeTokenValue } from '../utils/validation';
+import EmailCanvas from './email-editor/EmailCanvas';
+import EmailSettings from './email-editor/EmailSettings';
+import EmailPreview from './email-editor/EmailPreview';
+import TokenManager from './email-editor/TokenManager';
+import TokenList from './email-editor/TokenList';
 
 interface EmailImageEditorProps {
   tokens: Record<string, string>;
@@ -22,12 +26,12 @@ interface PersonalizationToken {
   placeholder?: string;
 }
 
-const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGenerated }) => {
+const EmailImageEditor: React.FC<EmailImageEditorProps> = React.memo(({ tokens, onImageGenerated }) => {
   const [image, setImage] = useState<string | null>(null);
   const [activeToken, setActiveToken] = useState<string | null>(null);
   const [personalizationTokens, setPersonalizationTokens] = useState<PersonalizationToken[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
+  const [showColorPicker, setShowColorPicker] = useState<string | false>(false);
   const [emailTemplate, setEmailTemplate] = useState<string>('centered');
   const [showHtmlCode, setShowHtmlCode] = useState<boolean>(false);
   const [generatedHtml, setGeneratedHtml] = useState<string>('');
@@ -45,7 +49,7 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
   const [showEmailPreview, setShowEmailPreview] = useState<boolean>(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const canvasRef = useRef<HTMLDivElement>(null);
   
   // Sample template images
@@ -61,14 +65,6 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
     setImage(templateImages[0]);
   }, []);
   
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: {
-      'image/*': []
-    },
-    onDrop: (acceptedFiles) => {
-      handleImageUpload(acceptedFiles);
-    }
-  });
   
   const handleImageUpload = (files: File[]) => {
     if (files && files.length > 0) {
@@ -103,7 +99,7 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
     }
   };
   
-  const addTextToken = () => {
+  const addTextToken = useCallback(() => {
     const newToken: PersonalizationToken = {
       id: `token-${Date.now()}`,
       type: 'text',
@@ -116,73 +112,73 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
       opacity: 1,
       fontFamily: 'Arial'
     };
-    
-    setPersonalizationTokens([...personalizationTokens, newToken]);
+
+    setPersonalizationTokens(prev => [...prev, newToken]);
     setActiveToken(newToken.id);
-  };
-  
-  const removeToken = (tokenId: string) => {
-    setPersonalizationTokens(personalizationTokens.filter(token => token.id !== tokenId));
+  }, []);
+
+  const removeToken = useCallback((tokenId: string) => {
+    setPersonalizationTokens(prev => prev.filter(token => token.id !== tokenId));
     setActiveToken(null);
-  };
-  
-  const updateTokenPosition = (tokenId: string, x: number, y: number) => {
-    setPersonalizationTokens(personalizationTokens.map(token => 
+  }, []);
+
+  const updateTokenPosition = useCallback((tokenId: string, x: number, y: number) => {
+    setPersonalizationTokens(prev => prev.map(token =>
       token.id === tokenId ? { ...token, x, y } : token
     ));
-  };
-  
-  const updateTokenProperty = (tokenId: string, property: string, value: any) => {
-    setPersonalizationTokens(personalizationTokens.map(token => 
+  }, []);
+
+  const updateTokenProperty = useCallback((tokenId: string, property: string, value: any) => {
+    setPersonalizationTokens(prev => prev.map(token =>
       token.id === tokenId ? { ...token, [property]: value } : token
     ));
-  };
-  
-  const handleMouseDown = (e: React.MouseEvent, tokenId: string) => {
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent, tokenId: string) => {
     setActiveToken(tokenId);
     setIsDragging(true);
-  };
-  
-  const handleMouseMove = (e: React.MouseEvent) => {
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging || !activeToken || !canvasRef.current) return;
-    
+
     const rect = canvasRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
+
     updateTokenPosition(activeToken, x, y);
-  };
-  
-  const handleMouseUp = () => {
+  }, [isDragging, activeToken, updateTokenPosition]);
+
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
-  
-  const selectTemplate = (templateUrl: string) => {
+  }, []);
+
+  const selectTemplate = useCallback((templateUrl: string) => {
     setImage(templateUrl);
-  };
-  
-  const getActiveTokenById = () => {
+  }, []);
+
+  const activeTokenData = useMemo(() => {
     if (!activeToken) return null;
     return personalizationTokens.find(token => token.id === activeToken);
-  };
+  }, [activeToken, personalizationTokens]);
   
-  const generateEmailHtml = () => {
-    if (!image) return '';
-    
+  const generateEmailHtml = useCallback(() => {
+    if (!image) return;
+
     // Create a canvas to render the personalized image
     const canvas = document.createElement('canvas');
     const img = new Image();
-    
+
     // Set up image onload handler
     img.onload = () => {
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
-      
+
       if (ctx) {
         // Draw the background image
         ctx.drawImage(img, 0, 0);
-        
+
         // Draw personalization tokens
         personalizationTokens.forEach(token => {
           if (token.type === 'text') {
@@ -191,42 +187,39 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
             Object.entries(tokens).forEach(([key, value]) => {
               displayText = displayText.replace(`[${key.toUpperCase()}]`, value);
             });
-            
+
             // Set text styles
             ctx.font = `${token.fontSize}px ${token.fontFamily || 'Arial'}`;
             ctx.fillStyle = token.color || '#ffffff';
             ctx.globalAlpha = token.opacity || 1;
             ctx.textAlign = 'center';
-            
+
             // Calculate position
             const x = (token.x / 100) * canvas.width;
             const y = (token.y / 100) * canvas.height;
-            
+
             // Draw text
             ctx.fillText(displayText, x, y);
             ctx.globalAlpha = 1;
           }
         });
-        
+
         // Get the personalized image as data URL
         const personalizedImageUrl = canvas.toDataURL('image/jpeg', 0.9);
-        
-        // Sanitize the HTML output
-        const finalHtml = generateEmailTemplate(personalizedImageUrl);
-        if (finalHtml) {
-          setGeneratedHtml(sanitizeHtml(finalHtml));
-        }
-        
+
+        // Generate and sanitize the HTML output
+        generateEmailTemplate(personalizedImageUrl);
+
         // Optional: provide the image to the parent component
         if (onImageGenerated) {
           onImageGenerated(personalizedImageUrl);
         }
       }
     };
-    
+
     // Load the image
     img.src = image;
-  };
+  }, [image, personalizationTokens, tokens, onImageGenerated]);
   
   const generateEmailTemplate = (personalizedImageUrl: string) => {
     // Validate image URL
@@ -346,87 +339,23 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
       <h3 className="text-xl font-bold mb-4">Email-Ready Image Editor</h3>
-      
+
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left side - Canvas */}
         <div className="flex-1">
-          {/* Canvas */}
-          <div
-            ref={canvasRef}
-            className="relative bg-gray-100 rounded-lg overflow-hidden mb-4 border-2 border-gray-200"
-            style={{ 
-              height: `${imageHeight}px`, 
-              maxWidth: previewSize === 'mobile' ? '375px' : '100%',
-              margin: previewSize === 'mobile' ? '0 auto' : undefined
-            }}
+          <EmailCanvas
+            image={image}
+            personalizationTokens={personalizationTokens}
+            activeToken={activeToken}
+            imageHeight={imageHeight}
+            previewSize={previewSize}
+            onImageUpload={handleImageUpload}
+            onTokenMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          >
-            {image && (
-              <img
-                src={image}
-                alt="Canvas"
-                className="w-full h-full object-cover"
-              />
-            )}
-            
-            {personalizationTokens.map(token => (
-              <div
-                key={token.id}
-                className={`absolute cursor-move ${activeToken === token.id ? 'ring-2 ring-primary-500' : ''}`}
-                style={{
-                  left: `${token.x}%`,
-                  top: `${token.y}%`,
-                  transform: 'translate(-50%, -50%)',
-                  color: token.color,
-                  fontSize: `${token.fontSize}px`,
-                  fontFamily: token.fontFamily || 'Arial',
-                  opacity: token.opacity,
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.7)',
-                  userSelect: 'none',
-                  zIndex: 10
-                }}
-                onMouseDown={(e) => handleMouseDown(e, token.id)}
-              >
-                {token.value}
-              </div>
-            ))}
-            
-            {/* Drop zone overlay when no image */}
-            {!image && (
-              <div
-                {...getRootProps()}
-                className="absolute inset-0 flex items-center justify-center bg-gray-200 bg-opacity-90 cursor-pointer"
-              >
-                <input {...getInputProps()} />
-                <div className="text-center">
-                  <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-600">Drag & drop or click to add image</p>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Image templates */}
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            {templateImages.map((templateUrl, index) => (
-              <div
-                key={index}
-                className={`relative aspect-video cursor-pointer rounded-md overflow-hidden border-2 ${
-                  image === templateUrl ? 'border-primary-500' : 'border-gray-200'
-                }`}
-                onClick={() => selectTemplate(templateUrl)}
-              >
-                <img
-                  src={templateUrl}
-                  alt={`Template ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-          
+            onSelectTemplate={selectTemplate}
+          />
+
           {/* Controls */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <label className="btn btn-outline flex items-center">
@@ -443,7 +372,7 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
                 className="hidden"
               />
             </label>
-            
+
             <button
               className="btn btn-outline flex items-center"
               onClick={addTextToken}
@@ -451,7 +380,7 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
               <Plus className="w-4 h-4 mr-2" />
               Add Text Token
             </button>
-            
+
             <div className="flex gap-2 ml-auto">
               <button
                 className="btn btn-outline flex items-center"
@@ -460,7 +389,7 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
                 <Mail className="w-4 h-4 mr-2" />
                 {showEmailPreview ? 'Hide' : 'Show'} Email Preview
               </button>
-              
+
               <button
                 className="btn btn-primary flex items-center"
                 onClick={generateEmailHtml}
@@ -471,586 +400,70 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
               </button>
             </div>
           </div>
-          
-          {/* Preview Size Toggle */}
-          {(showEmailPreview || showHtmlCode) && (
-            <div className="mb-4 flex justify-end">
-              <div className="inline-flex rounded-md border border-gray-200 overflow-hidden">
-                <button
-                  className={`px-3 py-1 text-xs ${
-                    previewSize === 'desktop' ? 'bg-primary-100 text-primary-700' : 'bg-white text-gray-700'
-                  }`}
-                  onClick={() => setPreviewSize('desktop')}
-                >
-                  Desktop
-                </button>
-                <button
-                  className={`px-3 py-1 text-xs ${
-                    previewSize === 'mobile' ? 'bg-primary-100 text-primary-700' : 'bg-white text-gray-700'
-                  }`}
-                  onClick={() => setPreviewSize('mobile')}
-                >
-                  Mobile
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Email Preview */}
-          {showEmailPreview && (
-            <div
-              className="mt-4 border border-gray-200 rounded-lg overflow-hidden"
-              style={{ 
-                maxWidth: previewSize === 'mobile' ? '375px' : '100%',
-                margin: previewSize === 'mobile' ? '0 auto' : undefined
-              }}
-            >
-              <div className="bg-gray-100 border-b border-gray-200 p-2 flex justify-between items-center">
-                <div className="text-sm font-medium">Email Preview</div>
-                <div className="text-xs text-gray-500">
-                  {previewSize === 'mobile' ? 'Mobile View (375px)' : 'Desktop View'}
-                </div>
-              </div>
-              
-              <div className="p-2" style={{ backgroundColor: emailBgColor }}>
-                <div
-                  className="mx-auto p-4"
-                  style={{ maxWidth: `${emailWidth}px` }}
-                >
-                  {emailTemplate === 'centered' && (
-                    <div className="text-center">
-                      <h2 className="text-xl font-bold" style={{ color: emailTextColor }}>
-                        Special Offer For {tokens['FIRSTNAME'] || 'You'}
-                      </h2>
-                      <p className="text-gray-600 mb-4">
-                        We have a personalized offer just for you!
-                      </p>
-                      
-                      <div className="mb-4">
-                        {image && (
-                          <img
-                            src={image}
-                            alt="Personalized offer"
-                            className="max-w-full rounded"
-                          />
-                        )}
-                      </div>
-                      
-                      <button
-                        className="px-4 py-2 rounded"
-                        style={{ backgroundColor: emailAccentColor, color: 'white' }}
-                      >
-                        {linkText}
-                      </button>
-                    </div>
-                  )}
-                  
-                  {emailTemplate === 'leftAligned' && (
-                    <div>
-                      <h2 className="text-xl font-bold" style={{ color: emailTextColor }}>
-                        Hey {tokens['FIRSTNAME'] || 'there'}!
-                      </h2>
-                      <p className="text-gray-600 mb-4">
-                        Check out this special offer we've created just for you.
-                      </p>
-                      
-                      <div className="flex flex-col md:flex-row gap-4 mb-4">
-                        <div className="md:w-1/2">
-                          {image && (
-                            <img
-                              src={image}
-                              alt="Personalized offer"
-                              className="max-w-full rounded"
-                            />
-                          )}
-                        </div>
-                        <div className="md:w-1/2">
-                          <h3 className="text-lg font-semibold mb-2" style={{ color: emailTextColor }}>
-                            Limited Time Offer
-                          </h3>
-                          <p className="text-gray-600 mb-4">
-                            This exclusive offer is only available for a limited time. Take advantage before it expires!
-                          </p>
-                          <button
-                            className="px-4 py-2 rounded"
-                            style={{ backgroundColor: emailAccentColor, color: 'white' }}
-                          >
-                            {linkText}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {emailTemplate === 'announcement' && (
-                    <div className="text-center">
-                      <div
-                        className="p-4 rounded-lg mb-4"
-                        style={{ backgroundColor: `${emailAccentColor}10` }}
-                      >
-                        <h2
-                          className="text-xl font-bold"
-                          style={{ color: emailAccentColor }}
-                        >
-                          Important Announcement
-                        </h2>
-                        <p style={{ color: emailAccentColor }}>
-                          For {tokens['FIRSTNAME'] || 'our valued customer'}
-                        </p>
-                      </div>
-                      
-                      <div className="mb-4">
-                        {image && (
-                          <img
-                            src={image}
-                            alt="Personalized announcement"
-                            className="max-w-full rounded"
-                          />
-                        )}
-                      </div>
-                      
-                      <div className="bg-gray-100 p-4 rounded-lg">
-                        <p className="text-gray-700 mb-3">
-                          Please review this important information
-                        </p>
-                        <button
-                          className="px-4 py-2 rounded font-semibold"
-                          style={{ backgroundColor: emailAccentColor, color: 'white' }}
-                        >
-                          {linkText}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="mt-8 pt-4 border-t border-gray-200 text-center text-gray-500 text-xs">
-                    <p>© 2025 Your Company. All rights reserved.</p>
-                    <p>You received this email because you signed up for our newsletter.</p>
-                    <p>
-                      <a href="#" style={{ color: emailAccentColor }}>
-                        Unsubscribe
-                      </a>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Generated HTML Code */}
-          {showHtmlCode && (
-            <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-100 border-b border-gray-200 p-2 flex justify-between items-center">
-                <div className="text-sm font-medium flex items-center">
-                  <Code className="w-4 h-4 mr-1" />
-                  Generated HTML
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    className={`text-xs px-2 py-1 rounded flex items-center ${
-                      copiedToClipboard ? 'bg-green-100 text-green-700' : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
-                    onClick={copyHtmlToClipboard}
-                  >
-                    {copiedToClipboard ? (
-                      <>
-                        <CheckSquare className="w-3 h-3 mr-1" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3 mr-1" />
-                        Copy HTML
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded flex items-center"
-                    onClick={downloadHtml}
-                  >
-                    <Download className="w-3 h-3 mr-1" />
-                    Download HTML
-                  </button>
-                </div>
-              </div>
-              
-              <div className="overflow-auto max-h-[300px] p-2 bg-gray-900 text-gray-100">
-                <pre className="text-xs whitespace-pre-wrap"><code>{generatedHtml}</code></pre>
-              </div>
-            </div>
-          )}
+
+          <EmailPreview
+            showEmailPreview={showEmailPreview}
+            showHtmlCode={showHtmlCode}
+            previewSize={previewSize}
+            emailTemplate={emailTemplate}
+            tokens={tokens}
+            image={image}
+            emailSubject={emailSubject}
+            linkText={linkText}
+            linkUrl={linkUrl}
+            emailBgColor={emailBgColor}
+            emailTextColor={emailTextColor}
+            emailAccentColor={emailAccentColor}
+            emailWidth={emailWidth}
+            generatedHtml={generatedHtml}
+            copiedToClipboard={copiedToClipboard}
+            onTogglePreview={() => setShowEmailPreview(!showEmailPreview)}
+            onPreviewSizeChange={setPreviewSize}
+            onCopyHtml={copyHtmlToClipboard}
+            onDownloadHtml={downloadHtml}
+          />
         </div>
-        
+
         {/* Right side - Settings */}
         <div className="w-full lg:w-80 space-y-4">
-          {/* Email Settings */}
-          <div className="card bg-gray-50">
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium">Email Settings</h4>
-              <button
-                className="text-xs text-primary-600 hover:text-primary-700 flex items-center"
-                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-              >
-                <Settings className="w-3 h-3 mr-1" />
-                {showAdvancedOptions ? 'Basic' : 'Advanced'}
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Template Style
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    className={`p-2 border rounded text-center text-xs ${
-                      emailTemplate === 'centered' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200'
-                    }`}
-                    onClick={() => setEmailTemplate('centered')}
-                  >
-                    Centered
-                  </button>
-                  <button
-                    className={`p-2 border rounded text-center text-xs ${
-                      emailTemplate === 'leftAligned' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200'
-                    }`}
-                    onClick={() => setEmailTemplate('leftAligned')}
-                  >
-                    Left Aligned
-                  </button>
-                  <button
-                    className={`p-2 border rounded text-center text-xs ${
-                      emailTemplate === 'announcement' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200'
-                    }`}
-                    onClick={() => setEmailTemplate('announcement')}
-                  >
-                    Announcement
-                  </button>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Email Subject
-                </label>
-                <input
-                  type="text"
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Enter email subject line"
-                  className="w-full px-2 py-1 border rounded text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Call to Action
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={linkText}
-                    onChange={(e) => setLinkText(e.target.value)}
-                    placeholder="Button text"
-                    className="w-full px-2 py-1 border rounded text-sm"
-                  />
-                  <input
-                    type="url"
-                    value={linkUrl}
-                    onChange={(e) => setLinkUrl(e.target.value)}
-                    placeholder="https://example.com"
-                    className="w-full px-2 py-1 border rounded text-sm"
-                  />
-                </div>
-              </div>
-              
-              {showAdvancedOptions && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Email Width (px)
-                    </label>
-                    <input
-                      type="number"
-                      min="300"
-                      max="800"
-                      step="10"
-                      value={emailWidth}
-                      onChange={(e) => setEmailWidth(Number(e.target.value))}
-                      className="w-full px-2 py-1 border rounded text-sm"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Recommended: 600px (standard for email)
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Image Height (px)
-                    </label>
-                    <input
-                      type="number"
-                      min="200"
-                      max="800"
-                      step="10"
-                      value={imageHeight}
-                      onChange={(e) => setImageHeight(Number(e.target.value))}
-                      className="w-full px-2 py-1 border rounded text-sm"
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <div className="w-1/2">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Background
-                      </label>
-                      <div className="flex">
-                        <div
-                          className="w-8 h-8 rounded-l border-l border-t border-b border-gray-300 cursor-pointer"
-                          style={{ backgroundColor: emailBgColor }}
-                          onClick={() => setShowColorPicker(showColorPicker === 'bg' ? false : 'bg')}
-                        ></div>
-                        <input
-                          type="text"
-                          value={emailBgColor}
-                          onChange={(e) => setEmailBgColor(e.target.value)}
-                          className="flex-1 rounded-r border py-1 px-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="w-1/2">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Text Color
-                      </label>
-                      <div className="flex">
-                        <div
-                          className="w-8 h-8 rounded-l border-l border-t border-b border-gray-300 cursor-pointer"
-                          style={{ backgroundColor: emailTextColor }}
-                          onClick={() => setShowColorPicker(showColorPicker === 'text' ? false : 'text')}
-                        ></div>
-                        <input
-                          type="text"
-                          value={emailTextColor}
-                          onChange={(e) => setEmailTextColor(e.target.value)}
-                          className="flex-1 rounded-r border py-1 px-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Accent Color
-                    </label>
-                    <div className="flex">
-                      <div
-                        className="w-8 h-8 rounded-l border-l border-t border-b border-gray-300 cursor-pointer"
-                        style={{ backgroundColor: emailAccentColor }}
-                        onClick={() => setShowColorPicker(showColorPicker === 'accent' ? false : 'accent')}
-                      ></div>
-                      <input
-                        type="text"
-                        value={emailAccentColor}
-                        onChange={(e) => setEmailAccentColor(e.target.value)}
-                        className="flex-1 rounded-r border py-1 px-2 text-sm"
-                      />
-                    </div>
-                  </div>
-                  
-                  {showColorPicker && (
-                    <div className="mt-2 relative">
-                      <div className="absolute z-10">
-                        <div 
-                          className="fixed inset-0" 
-                          onClick={() => setShowColorPicker(false)}
-                        ></div>
-                        {showColorPicker === 'bg' && (
-                          <HexColorPicker
-                            color={emailBgColor}
-                            onChange={setEmailBgColor}
-                          />
-                        )}
-                        {showColorPicker === 'text' && (
-                          <HexColorPicker
-                            color={emailTextColor}
-                            onChange={setEmailTextColor}
-                          />
-                        )}
-                        {showColorPicker === 'accent' && (
-                          <HexColorPicker
-                            color={emailAccentColor}
-                            onChange={setEmailAccentColor}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="responsiveCheck"
-                      checked={isResponsive}
-                      onChange={(e) => setIsResponsive(e.target.checked)}
-                      className="mr-2"
-                    />
-                    <label htmlFor="responsiveCheck" className="text-xs text-gray-700">
-                      Enable responsive design
-                    </label>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {/* Token Settings */}
-          {activeToken && (
-            <div className="card bg-gray-50">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="font-medium">Token Settings</h4>
-                <button
-                  className="p-1 text-red-600 hover:text-red-800 rounded"
-                  onClick={() => removeToken(activeToken)}
-                  title="Remove token"
-                >
-                  <Trash className="w-4 h-4" />
-                </button>
-              </div>
-              
-              {getActiveTokenById() && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Token Text
-                    </label>
-                    <input
-                      type="text"
-                      value={getActiveTokenById()?.value || ''}
-                      onChange={(e) => updateTokenProperty(activeToken, 'value', e.target.value)}
-                      className="w-full px-2 py-1 border rounded text-sm"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Use <span className="font-mono">[FIRSTNAME]</span>, <span className="font-mono">[LASTNAME]</span>, etc.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Font Size
-                    </label>
-                    <input
-                      type="range"
-                      min="10"
-                      max="72"
-                      value={getActiveTokenById()?.fontSize || 24}
-                      onChange={(e) => updateTokenProperty(activeToken, 'fontSize', Number(e.target.value))}
-                      className="w-full"
-                    />
-                    <div className="text-xs text-center">{getActiveTokenById()?.fontSize}px</div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Font Family
-                    </label>
-                    <select
-                      value={getActiveTokenById()?.fontFamily || 'Arial'}
-                      onChange={(e) => updateTokenProperty(activeToken, 'fontFamily', e.target.value)}
-                      className="w-full px-2 py-1 border rounded text-sm"
-                    >
-                      <option value="Arial">Arial</option>
-                      <option value="Verdana">Verdana</option>
-                      <option value="Helvetica">Helvetica</option>
-                      <option value="Times New Roman">Times New Roman</option>
-                      <option value="Courier New">Courier New</option>
-                      <option value="Georgia">Georgia</option>
-                      <option value="Tahoma">Tahoma</option>
-                      <option value="Trebuchet MS">Trebuchet MS</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Stick to web-safe fonts for email compatibility
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Color
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-8 h-8 rounded border cursor-pointer"
-                        style={{ backgroundColor: getActiveTokenById()?.color || '#ffffff' }}
-                        onClick={() => setShowColorPicker(showColorPicker === 'token' ? false : 'token')}
-                      ></div>
-                      <input
-                        type="text"
-                        value={getActiveTokenById()?.color || '#ffffff'}
-                        onChange={(e) => updateTokenProperty(activeToken, 'color', e.target.value)}
-                        className="flex-1 px-2 py-1 border rounded text-sm"
-                      />
-                    </div>
-                    
-                    {showColorPicker === 'token' && (
-                      <div className="mt-2 relative">
-                        <div className="absolute z-10">
-                          <div 
-                            className="fixed inset-0" 
-                            onClick={() => setShowColorPicker(false)}
-                          ></div>
-                          <HexColorPicker
-                            color={getActiveTokenById()?.color || '#ffffff'}
-                            onChange={(color) => updateTokenProperty(activeToken, 'color', color)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Opacity
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={getActiveTokenById()?.opacity || 1}
-                      onChange={(e) => updateTokenProperty(activeToken, 'opacity', Number(e.target.value))}
-                      className="w-full"
-                    />
-                    <div className="text-xs text-center">{Math.round((getActiveTokenById()?.opacity || 1) * 100)}%</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Personalization Tokens */}
-          <div className="card bg-gray-50">
-            <h4 className="font-medium mb-3">Personalization Tokens</h4>
-            <div className="space-y-2">
-              <div className="p-2 bg-white rounded border border-gray-200">
-                <div className="font-medium">[FIRSTNAME]</div>
-                <div className="text-xs text-gray-500">Current value: {tokens['FIRSTNAME'] || 'Not set'}</div>
-              </div>
-              <div className="p-2 bg-white rounded border border-gray-200">
-                <div className="font-medium">[LASTNAME]</div>
-                <div className="text-xs text-gray-500">Current value: {tokens['LASTNAME'] || 'Not set'}</div>
-              </div>
-              <div className="p-2 bg-white rounded border border-gray-200">
-                <div className="font-medium">[COMPANY]</div>
-                <div className="text-xs text-gray-500">Current value: {tokens['COMPANY'] || 'Not set'}</div>
-              </div>
-              <div className="p-2 bg-white rounded border border-gray-200">
-                <div className="font-medium">[EMAIL]</div>
-                <div className="text-xs text-gray-500">Current value: {tokens['EMAIL'] || 'Not set'}</div>
-              </div>
-            </div>
-          </div>
-          
+          <EmailSettings
+            emailTemplate={emailTemplate}
+            emailSubject={emailSubject}
+            linkText={linkText}
+            linkUrl={linkUrl}
+            emailWidth={emailWidth}
+            imageHeight={imageHeight}
+            emailBgColor={emailBgColor}
+            emailTextColor={emailTextColor}
+            emailAccentColor={emailAccentColor}
+            showAdvancedOptions={showAdvancedOptions}
+            isResponsive={isResponsive}
+            showColorPicker={showColorPicker}
+            onTemplateChange={setEmailTemplate}
+            onSubjectChange={setEmailSubject}
+            onLinkTextChange={setLinkText}
+            onLinkUrlChange={setLinkUrl}
+            onWidthChange={setEmailWidth}
+            onImageHeightChange={setImageHeight}
+            onBgColorChange={setEmailBgColor}
+            onTextColorChange={setEmailTextColor}
+            onAccentColorChange={setEmailAccentColor}
+            onToggleAdvanced={() => setShowAdvancedOptions(!showAdvancedOptions)}
+            onColorPickerToggle={setShowColorPicker}
+            onResponsiveToggle={setIsResponsive}
+          />
+
+          <TokenManager
+            activeToken={activeTokenData || null}
+            showColorPicker={showColorPicker}
+            onRemoveToken={removeToken}
+            onUpdateToken={updateTokenProperty}
+            onColorPickerToggle={setShowColorPicker}
+            tokens={tokens}
+          />
+
+          <TokenList tokens={tokens} />
+
           {/* Email Compatibility Tips */}
           <div className="card bg-indigo-50">
             <div className="flex items-start gap-2">
@@ -1072,6 +485,8 @@ const EmailImageEditor: React.FC<EmailImageEditorProps> = ({ tokens, onImageGene
       </div>
     </div>
   );
-};
+});
+
+EmailImageEditor.displayName = 'EmailImageEditor';
 
 export default EmailImageEditor;

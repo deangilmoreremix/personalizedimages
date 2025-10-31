@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import ModernHeader from './components/layout/ModernHeader';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
@@ -38,7 +39,7 @@ const AppLayout = () => {
   const isHomePage = location.pathname === '/';
 
   return (
-    <>
+    <ErrorBoundary>
       <ModernHeader />
       <main>
         <Routes>
@@ -69,7 +70,7 @@ const AppLayout = () => {
       </main>
       {isHomePage && <Footer />}
       <PWAInstallPrompt />
-    </>
+    </ErrorBoundary>
   );
 };
 

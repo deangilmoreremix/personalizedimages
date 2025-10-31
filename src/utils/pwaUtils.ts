@@ -22,7 +22,10 @@ const isStackBlitz = (): boolean => {
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
   // Skip Service Worker registration in StackBlitz WebContainer
   if (isStackBlitz()) {
-    console.log('Service Worker registration skipped: Running in StackBlitz WebContainer (not supported)');
+    // Skip logging in production
+    if (import.meta.env.DEV) {
+      console.log('Service Worker registration skipped: Running in StackBlitz WebContainer (not supported)');
+    }
     return null;
   }
 
@@ -32,7 +35,9 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
         scope: '/'
       });
 
-      console.log('Service Worker registered successfully:', registration.scope);
+      if (import.meta.env.DEV) {
+        console.log('Service Worker registered successfully:', registration.scope);
+      }
 
       // Handle updates
       registration.addEventListener('updatefound', () => {
@@ -49,12 +54,16 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
 
       return registration;
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
+      if (import.meta.env.DEV) {
+        console.error('Service Worker registration failed:', error);
+      }
       return null;
     }
   }
 
-  console.log('Service Worker not supported');
+  if (import.meta.env.DEV) {
+    console.log('Service Worker not supported');
+  }
   return null;
 };
 
@@ -106,7 +115,9 @@ export const getCacheStats = async (): Promise<{ size: number; entries: number }
 
       return { size: totalSize, entries: totalEntries };
     } catch (error) {
-      console.error('Error getting cache stats:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error getting cache stats:', error);
+      }
     }
   }
 
@@ -121,9 +132,13 @@ export const clearAllCaches = async (): Promise<void> => {
       await Promise.all(
         cacheNames.map(cacheName => caches.delete(cacheName))
       );
-      console.log('All caches cleared');
+      if (import.meta.env.DEV) {
+        console.log('All caches cleared');
+      }
     } catch (error) {
-      console.error('Error clearing caches:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error clearing caches:', error);
+      }
     }
   }
 };
@@ -173,12 +188,16 @@ const showUpdateNotification = () => {
 // Handle offline/online events
 export const setupNetworkListeners = (onOnline?: () => void, onOffline?: () => void) => {
   window.addEventListener('online', () => {
-    console.log('Network: Online');
+    if (import.meta.env.DEV) {
+      console.log('Network: Online');
+    }
     onOnline?.();
   });
 
   window.addEventListener('offline', () => {
-    console.log('Network: Offline');
+    if (import.meta.env.DEV) {
+      console.log('Network: Offline');
+    }
     onOffline?.();
   });
 };
@@ -232,7 +251,9 @@ export class PWAAnalyticsTracker {
         this.analytics = { ...this.analytics, ...JSON.parse(stored) };
       }
     } catch (error) {
-      console.error('Error loading PWA analytics:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error loading PWA analytics:', error);
+      }
     }
   }
 
@@ -240,7 +261,9 @@ export class PWAAnalyticsTracker {
     try {
       localStorage.setItem('pwa-analytics', JSON.stringify(this.analytics));
     } catch (error) {
-      console.error('Error saving PWA analytics:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error saving PWA analytics:', error);
+      }
     }
   }
 

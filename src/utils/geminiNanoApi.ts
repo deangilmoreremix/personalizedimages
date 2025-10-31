@@ -1,12 +1,13 @@
 /**
- * Google Gemini Nano API Integration for Image Generation and Editing
- * Optimized for speed and efficiency with advanced image editing capabilities
+ * Google Gemini API Integration for Image Generation and Editing
+ * Note: Despite the "Nano" name in this file, this uses the standard Gemini API
+ * with the gemini-1.5-flash model for fast, efficient generation
  */
 
 import { getGeminiNanoApiKey, blobToBase64 } from './apiUtils';
 
 export interface GeminiNanoConfig {
-  model?: 'gemini-1.5-flash-8b' | 'gemini-1.5-flash-8b-latest';
+  model?: 'gemini-1.5-flash' | 'gemini-1.5-flash-latest' | 'gemini-2.0-flash-exp';
   temperature?: number;
   maxTokens?: number;
   safetySettings?: SafetySetting[];
@@ -45,7 +46,8 @@ export class GeminiNanoService {
   }
 
   /**
-   * Generate an image using Gemini Nano
+   * Generate an image using Imagen API (via Gemini)
+   * Note: Gemini text models don't generate images. This uses Imagen instead.
    */
   async generateImage(
     prompt: string,
@@ -53,7 +55,7 @@ export class GeminiNanoService {
     config: GeminiNanoConfig = {}
   ): Promise<string> {
     try {
-      console.log('🎨 Generating image with Gemini Nano:', { prompt, options, config });
+      console.log('🎨 Generating image with Imagen API:', { prompt, options, config });
 
       const {
         aspectRatio = '1:1',
@@ -62,21 +64,14 @@ export class GeminiNanoService {
         negativePrompt = ''
       } = options;
 
-      const {
-        model = 'gemini-1.5-flash-8b',
-        temperature = 0.7,
-        maxTokens = 2048
-      } = config;
+      if (!this.apiKey || this.apiKey.length < 20) {
+        throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      }
 
       // Enhance prompt with style and quality settings
       let enhancedPrompt = prompt;
       if (style && !prompt.toLowerCase().includes(style.toLowerCase())) {
         enhancedPrompt = `${prompt} in ${style} style`;
-      }
-
-      // Add aspect ratio
-      if (!enhancedPrompt.toLowerCase().includes('aspect ratio')) {
-        enhancedPrompt = `${enhancedPrompt} (${aspectRatio} aspect ratio)`;
       }
 
       // Add quality instruction
@@ -89,44 +84,73 @@ export class GeminiNanoService {
         enhancedPrompt = `${enhancedPrompt}. Avoid: ${negativePrompt}`;
       }
 
-      const response = await fetch(`${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: enhancedPrompt }] }],
-          generationConfig: {
-            temperature,
-            maxOutputTokens: maxTokens,
-            responseMediaType: "IMAGE"
-          }
-        })
-      });
+      // Map aspect ratios to Imagen format
+      const aspectRatioMap: Record<string, string> = {
+        '1:1': '1:1',
+        '16:9': '16:9',
+        '9:16': '9:16',
+        '4:3': '4:3',
+        '3:4': '3:4'
+      };
+
+      const imagenAspectRatio = aspectRatioMap[aspectRatio] || '1:1';
+
+      // Use Imagen 3 API endpoint
+      const response = await fetch(
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT_ID/locations/us-central1/publishers/google/models/imagen-3.0-generate-001:predict`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            instances: [{
+              prompt: enhancedPrompt
+            }],
+            parameters: {
+              sampleCount: 1,
+              aspectRatio: imagenAspectRatio,
+              negativePrompt: negativePrompt || undefined
+            }
+          })
+        }
+      );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Gemini Nano API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        const errorText = await response.text();
+        console.error('Imagen API error response:', errorText);
+
+        // Provide a more helpful error message
+        if (response.status === 403) {
+          throw new Error(
+            'Imagen API access denied. This typically means:\n' +
+            '1. The API key needs proper authentication setup\n' +
+            '2. Imagen API requires a Google Cloud project with billing enabled\n' +
+            '3. You may need to use a different image generation provider (OpenAI DALL-E)\n\n' +
+            'For now, please use OpenAI as your image generation provider.'
+          );
+        }
+
+        throw new Error(`Imagen API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
 
-      // Extract image from response
-      for (const candidate of data.candidates || []) {
-        for (const part of candidate.content?.parts || []) {
-          if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-          }
-        }
+      // Extract image from Imagen response
+      if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+        return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
       }
 
-      throw new Error('No image found in Gemini Nano response');
+      throw new Error('No image found in Imagen API response');
     } catch (error) {
-      console.error('Error generating image with Gemini Nano:', error);
+      console.error('Error generating image with Imagen:', error);
       throw error;
     }
   }
 
   /**
-   * Edit an existing image using Gemini Nano
+   * Edit an existing image using Gemini vision model
    */
   async editImage(
     imageUrl: string,
@@ -134,9 +158,13 @@ export class GeminiNanoService {
     config: GeminiNanoConfig = {}
   ): Promise<string> {
     try {
-      console.log('✏️ Editing image with Gemini Nano:', { imageUrl, editOptions, config });
+      console.log('✏️ Editing image with Gemini:', { imageUrl, editOptions, config });
 
-      const { model = 'gemini-1.5-flash-8b' } = config;
+      if (!this.apiKey || this.apiKey.length < 20) {
+        throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      }
+
+      const { model = 'gemini-2.0-flash-exp' } = config;
 
       // Fetch the original image
       const imageResponse = await fetch(imageUrl);
@@ -206,9 +234,13 @@ export class GeminiNanoService {
     config: GeminiNanoConfig = {}
   ): Promise<string[]> {
     try {
-      console.log('🔄 Generating variations with Gemini Nano:', { imageUrl, count, config });
+      console.log('🔄 Generating variations with Gemini:', { imageUrl, count, config });
 
-      const { model = 'gemini-1.5-flash-8b' } = config;
+      if (!this.apiKey || this.apiKey.length < 20) {
+        throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      }
+
+      const { model = 'gemini-2.0-flash-exp' } = config;
 
       // Fetch the original image
       const imageResponse = await fetch(imageUrl);

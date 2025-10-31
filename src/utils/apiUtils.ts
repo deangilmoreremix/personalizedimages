@@ -12,7 +12,8 @@ export const getOpenAIApiKey = () => import.meta.env.VITE_OPENAI_API_KEY || '';
 export const getGeminiApiKey = () => import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // Helper function to get the Gemini Nano API key from environment variables
-export const getGeminiNanoApiKey = () => import.meta.env.VITE_GEMINI_NANO_API_KEY || '';
+// Note: Gemini Nano uses the same API key as regular Gemini
+export const getGeminiNanoApiKey = () => import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // Helper function to check if an API key is available
 export const hasApiKey = (provider: string): boolean => {

@@ -1029,8 +1029,8 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
         }
       }
     }
-    
-    throw error;
+
+    throw new Error('Invalid provider specified for cartoon-style image generation');
   } catch (error) {
     console.error('Error generating cartoon-style image:', error);
     throw error;
@@ -1128,8 +1128,8 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
         }
       }
     }
-    
-    throw error;
+
+    throw new Error('Invalid provider specified for action figure generation');
   } catch (error) {
     console.error('Error generating action figure:', error);
     throw error;

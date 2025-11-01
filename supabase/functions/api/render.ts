@@ -9,7 +9,7 @@ import { getCached, putCached } from "../../lib/cache";
 import { uploadPNG } from "../../lib/storage";
 // import { ensureCredits, spendCredits } from "../../lib/credits";
 
-export const handler: Handler = async (event) => {
+export const handler: Handler = async (event: any) => {
   try {
     if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method not allowed" };
     const { templateId, tokens: rawTokens = {}, userId = "public" } = JSON.parse(event.body || "{}");

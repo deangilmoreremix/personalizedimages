@@ -35,7 +35,7 @@ export default function PersonalizationLinkBuilder() {
         </label>
         <label className="flex flex-col gap-1">
           <span>Source (utm/src)</span>
-          <input className="border rounded p-2" value={src} onChange={e => setSrc(e.target.value)} />
+          <input className="border rounded p-2" value={src} onChange={e => setSrc(e.target.value as any)} />
         </label>
         <label className="flex flex-col gap-1">
           <span>User ID (for credit billing, optional)</span>

@@ -12,5 +12,8 @@ export async function getCached(templateId: string, tokenHash: string) {
 }
 
 export async function putCached(templateId: string, tokenHash: string, storageUrl: string) {
-  await supaAdmin.from("personalization_renders").insert([{ template_id: templateId, token_hash: tokenHash, storage_url: storageUrl }]).catch(() => {});
+  const result = await supaAdmin.from("personalization_renders").insert([{ template_id: templateId, token_hash: tokenHash, storage_url: storageUrl }]);
+  if (result.error) {
+    console.warn('Cache insert failed:', result.error);
+  }
 }

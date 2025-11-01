@@ -20,7 +20,7 @@ const PLATFORM_MAPS: Record<string, Record<string, string>> = {
   generic:        { first_name: "{first_name}", email: "{email}", company: "{company}" },
 };
 
-export const handler: Handler = async (event) => {
+export const handler: Handler = async (event: any) => {
   try {
     if (event.httpMethod !== "POST") return bad(405, "Method not allowed");
     const body = JSON.parse(event.body || "{}");

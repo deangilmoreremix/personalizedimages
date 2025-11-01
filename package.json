@@ -11,9 +11,11 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@netlify/functions": "^5.0.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@stripe/react-stripe-js": "^2.4.0",
     "@stripe/stripe-js": "^2.3.0",
-    "@supabase/supabase-js": "^2.49.4",
+    "@supabase/supabase-js": "^2.78.0",
     "classnames": "^2.5.1",
     "framer-motion": "^11.0.3",
     "gifshot": "^0.4.5",
@@ -34,6 +36,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^8.56.0",
+    "@types/node": "^24.9.2",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@types/react-syntax-highlighter": "^15.5.11",

@@ -16,7 +16,7 @@ import { getCached, putCached } from "../../lib/cache";
 import { uploadPNG } from "../../lib/storage";
 // import { ensureCredits, spendCredits } from "../../lib/credits"; // enable if billing per render
 
-export const handler: Handler = async (event) => {
+export const handler: Handler = async (event: any) => {
   try {
     const templateId = event.path.split("/").pop()!;
     const q = event.queryStringParameters || {};

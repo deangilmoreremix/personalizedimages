@@ -31,6 +31,7 @@ import TokensPanel from './pages/TokensPanel';
 import GeminiDocs from './pages/GeminiDocs';
 import EdgeFunctionDebugging from './pages/EdgeFunctionDebugging';
 import GeminiNanoEditorPage from './pages/features/GeminiNanoEditorPage';
+import Gallery from './pages/Gallery';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Component for conditionally rendering footer and other components
@@ -45,6 +46,7 @@ const AppLayout = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/editor" element={<EditorPage />} />
+          <Route path="/gallery" element={<Gallery />} />
           <Route path="/features/action-figures" element={<ActionFigurePage />} />
           <Route path="/features/retro-action-figures" element={<RetroActionFigurePage />} />
           <Route path="/features/music-star-action-figures" element={<MusicStarActionFigurePage />} />

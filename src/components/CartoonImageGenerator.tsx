@@ -7,6 +7,7 @@ import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface CartoonImageGeneratorProps {
   tokens: Record<string, string>;
@@ -118,9 +119,9 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
     : cartoonThemesConfig.themes.slice(0, 8);
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold flex items-center">
+    <div className={DESIGN_SYSTEM.components.section}>
+      <div className={commonStyles.actionBar}>
+        <h3 className={commonStyles.sectionHeader}>
           <PaintBrush className="h-6 w-6 text-primary-500 mr-2" />
           Cartoon Style Image Generator
         </h3>
@@ -129,12 +130,12 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={getGridClasses(2)}>
         <div className="space-y-4">
           {/* Theme Gallery */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-700">
+          <div className={commonStyles.formGroup}>
+            <div className={commonStyles.actionBar}>
+              <label className={commonStyles.formLabel}>
                 Cartoon Style
               </label>
               {cartoonThemesConfig.ui.enableSurpriseMeButton && (
@@ -207,23 +208,23 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           </div>
           
           {/* Custom Prompt Addition */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               Custom Additions (Optional)
             </label>
             <DroppableTextArea
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               placeholder="Add custom details or modifications to the cartoon style..."
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className={DESIGN_SYSTEM.components.textarea}
               onDrop={handleTokenDrop}
               rows={2}
             />
           </div>
           
           {/* Model Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               AI Model
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -248,8 +249,8 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           
           {/* Reference Image Upload */}
           {cartoonThemesConfig.ui.enableImageToImageUpload && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className={commonStyles.formGroup}>
+              <label className={commonStyles.formLabel}>
                 Reference Image (Optional)
               </label>
               <ReferenceImageUploader
@@ -264,7 +265,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           
           {/* Show error messages */}
           {error && (
-            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className={getAlertClasses('error')}>
               {error}
             </div>
           )}
@@ -331,11 +332,12 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           <button
             onClick={handleGenerateImage}
             disabled={isGenerating}
-            className="btn btn-primary w-full flex justify-center items-center"
+            className={`${getButtonClasses('primary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+            aria-label="Generate cartoon style image"
           >
             {isGenerating ? (
               <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                <div className={`${DESIGN_SYSTEM.components.loading.spinner} w-4 h-4 mr-2`}></div>
                 Generating Cartoon...
               </>
             ) : (
@@ -368,10 +370,11 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           
           {/* Download buttons (when image is generated) */}
           {generatedImage && (
-            <div className="flex gap-2">
+            <div className={commonStyles.buttonGroup}>
               <button
                 onClick={() => window.open(generatedImage)}
-                className="btn btn-outline flex-1 flex items-center justify-center"
+                className={`${getButtonClasses('secondary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+                aria-label="View full size cartoon image"
               >
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
@@ -380,7 +383,8 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
               <a
                 href={generatedImage}
                 download="cartoon-style.png"
-                className="btn btn-primary flex-1 flex items-center justify-center"
+                className={`${getButtonClasses('primary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+                aria-label="Download cartoon style image"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download

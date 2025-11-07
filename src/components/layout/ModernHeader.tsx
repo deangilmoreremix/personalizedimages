@@ -132,6 +132,9 @@ const ModernHeader: React.FC = () => {
             <Link to="/editor" className="animated-underline text-primary-600 hover:text-primary-700 font-medium px-3 py-2 rounded-lg hover:bg-primary-50 transition-colors">
               Editor
             </Link>
+            <Link to="/gallery" className="animated-underline text-primary-600 hover:text-primary-700 font-medium px-3 py-2 rounded-lg hover:bg-primary-50 transition-colors">
+              Gallery
+            </Link>
           </nav>
 
           <div className="hidden md:flex items-center space-x-3">
@@ -261,6 +264,9 @@ const ModernHeader: React.FC = () => {
                 
                 <Link to="/editor" className="block py-3 px-4 rounded-lg bg-primary-50 text-primary-600 font-medium">
                   Editor
+                </Link>
+                <Link to="/gallery" className="block py-3 px-4 border-b border-gray-100 hover:bg-gray-50 transition-colors rounded-lg">
+                  Gallery
                 </Link>
               </div>
             </motion.div>

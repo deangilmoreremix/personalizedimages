@@ -79,7 +79,10 @@ const ActionFigureShowcase: React.FC = () => {
       }
     };
 
-    generateShowcaseImages();
+    // Only generate if we have API keys configured
+    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY) {
+      generateShowcaseImages();
+    }
   }, []);
 
   return (

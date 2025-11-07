@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lightbulb, ChevronDown, ChevronUp, Image as ImageIcon, AlertCircle, HelpCircle, Sliders, Book, Wand2, Camera, RefreshCw, Scan, PaintBucket, Palette, FileVideo, Cpu, RotateCw, Shapes, Zap, Sparkles, X, Brain, Video, Download } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { 
-  generateImageWithDalle, 
-  generateImageWithGemini, 
-  generateImageWithGemini2Flash, 
+import {
+  generateImageWithDalle,
+  generateImageWithGemini,
+  generateImageWithGemini2Flash,
   generateImageWithImagen,
   generateImageWithGptImage,
   generateImageDescriptionWithAI
@@ -18,6 +18,7 @@ import { TokenDragItem } from '../types/DragTypes';
 import VideoGenerationButton from './VideoGenerationButton';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface AIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -307,23 +308,23 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold flex items-center">
+    <div className={DESIGN_SYSTEM.components.section}>
+      <div className={commonStyles.actionBar}>
+        <h3 className={commonStyles.sectionHeader}>
           <Cpu className="h-6 w-6 text-indigo-500 mr-2" />
           Streaming AI Image Generator
           <span className="ml-2 text-xs px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-medium">Real-time</span>
         </h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={getGridClasses(2)}>
         <div className="space-y-4">
           {/* Model Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               AI Model
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
+            <div className={getGridClasses(3)}>
               <button
                 className={`py-2 px-4 text-sm rounded flex items-center justify-center ${selectedProvider === 'openai' 
                   ? 'bg-indigo-600 text-white' 
@@ -375,9 +376,9 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
           </div>
           
           {/* Prompt Input */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-gray-700">
+          <div className={commonStyles.formGroup}>
+            <div className={commonStyles.actionBar}>
+              <label className={commonStyles.formLabel}>
                 Prompt
               </label>
               <div className="flex items-center space-x-2">
@@ -424,7 +425,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe the image you want to generate with specific details..."
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px]"
+              className={DESIGN_SYSTEM.components.textarea}
               onDrop={handlePromptTokenDrop}
             />
 
@@ -437,7 +438,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
           </div>
           
           {showAdvancedOptions && (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <div className={`${DESIGN_SYSTEM.components.panel} ${commonStyles.contentArea}`}>
               <h4 className="font-medium text-sm mb-2">Advanced Options</h4>
 
               {/* DALL-E 3 Specific Options */}
@@ -622,26 +623,22 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
           </div>
           
           {generatedDescription && (
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-700 max-h-40 overflow-y-auto">
+            <div className={`${DESIGN_SYSTEM.components.panel} text-sm text-gray-700 max-h-40 overflow-y-auto`}>
               <p className="font-medium mb-1">Generated Description:</p>
               <p>{generatedDescription}</p>
             </div>
           )}
-          
+
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className={getAlertClasses('error')}>
               {error}
             </div>
           )}
-          
+
           <button
             onClick={isGenerating && isStreamingActive ? cancelGeneration : handleGenerateImage}
             disabled={isGenerating && !isStreamingActive || !prompt}
-            className={`btn w-full flex justify-center items-center ${
-              isGenerating && isStreamingActive 
-                ? 'btn-outline bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                : !prompt ? 'btn-outline opacity-50 cursor-not-allowed' : 'btn-primary'
-            }`}
+            className={getButtonClasses('primary')}
           >
             {isGenerating && isStreamingActive ? (
               <>
@@ -744,10 +741,10 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
           
           {/* Download buttons */}
           {generatedImage && (
-            <div className="flex gap-2">
+            <div className={commonStyles.buttonGroup}>
               <button
                 onClick={() => window.open(generatedImage)}
-                className="btn btn-outline flex-1 flex items-center justify-center"
+                className={getButtonClasses('secondary')}
               >
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
@@ -756,7 +753,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               <a
                 href={generatedImage}
                 download="ai-generated-image.png"
-                className="btn btn-primary flex-1 flex items-center justify-center"
+                className={getButtonClasses('primary')}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download

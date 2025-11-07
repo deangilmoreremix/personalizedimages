@@ -6,6 +6,7 @@ import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import templatesService, { ActionFigureTemplate } from '../services/templatesService';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface ActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -195,13 +196,13 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <h3 className="text-xl font-bold mb-4">AI Action Figure Generator</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className={DESIGN_SYSTEM.components.section}>
+      <h3 className={commonStyles.sectionHeader}>AI Action Figure Generator</h3>
+
+      <div className={getGridClasses(2)}>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               Action Figure Description
             </label>
             <div className="relative">
@@ -209,7 +210,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe the action figure you want to create..."
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[120px]"
+                className={DESIGN_SYSTEM.components.textarea}
                 onDrop={handleTokenDrop}
               />
               <button
@@ -222,9 +223,9 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
             </div>
           </div>
           
-          <div>
-            <div className="flex justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">
+          <div className={commonStyles.formGroup}>
+            <div className={commonStyles.actionBar}>
+              <label className={commonStyles.formLabel}>
                 AI Model
               </label>
               <button
@@ -256,11 +257,11 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           </div>
 
           {/* Category Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               Action Figure Category
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className={getGridClasses(4)}>
               <button
                 className={`py-2 px-3 text-sm rounded ${
                   selectedCategory === 'general'
@@ -317,8 +318,8 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           </div>
 
           {/* Reference Image Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               Reference Image (Optional)
             </label>
             <ReferenceImageUploader
@@ -331,7 +332,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           </div>
           
           {showAdvancedOptions && (
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+            <div className={`${DESIGN_SYSTEM.components.panel} ${commonStyles.contentArea}`}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Character Name
@@ -341,7 +342,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
                   placeholder={tokens['FIRSTNAME'] || "Custom character name"}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className={DESIGN_SYSTEM.components.input}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Leave empty to use the first name from personalization tokens: {tokens['FIRSTNAME'] || "Not set"}
@@ -355,7 +356,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 <select
                   value={selectedStyleOption}
                   onChange={(e) => setSelectedStyleOption(parseInt(e.target.value))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                  className={DESIGN_SYSTEM.components.select}
                 >
                   {/* Display either first 10 styles or all 30 based on showAllStyles state */}
                   {(showAllStyles ? styles : styles.slice(0, 10)).map((style, index) => (
@@ -453,19 +454,20 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           )}
           
           {error && (
-            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className={getAlertClasses('error')}>
               {error}
             </div>
           )}
-          
+
           <button
             onClick={handleGenerateActionFigure}
             disabled={isGenerating}
-            className="btn btn-primary w-full flex justify-center items-center"
+            className={`${getButtonClasses('primary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+            aria-label="Generate action figure"
           >
             {isGenerating ? (
               <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                <div className={`${DESIGN_SYSTEM.components.loading.spinner} w-4 h-4 mr-2`}></div>
                 Generating Action Figure...
               </>
             ) : (
@@ -477,13 +479,13 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           </button>
         </div>
         
-        <div className="flex flex-col space-y-4">
+        <div className={commonStyles.contentArea}>
           <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: "300px" }}>
             {generatedFigure ? (
-              <img 
-                src={generatedFigure} 
-                alt="Generated Action Figure" 
-                className="max-w-full max-h-[400px] object-contain" 
+              <img
+                src={generatedFigure}
+                alt="Generated Action Figure"
+                className="max-w-full max-h-[400px] object-contain"
               />
             ) : (
               <div className="text-center p-6">
@@ -492,12 +494,13 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
               </div>
             )}
           </div>
-          
+
           {generatedFigure && (
-            <div className="flex gap-2">
+            <div className={commonStyles.buttonGroup}>
               <button
                 onClick={() => window.open(generatedFigure)}
-                className="btn btn-outline flex-1 flex items-center justify-center"
+                className={`${getButtonClasses('secondary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+                aria-label="View full size image"
               >
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
@@ -506,7 +509,8 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
               <a
                 href={generatedFigure}
                 download="action-figure.png"
-                className="btn btn-primary flex-1 flex items-center justify-center"
+                className={`${getButtonClasses('primary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+                aria-label="Download action figure image"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download
@@ -575,9 +579,9 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           )}
 
           {/* Style Gallery Preview */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium text-gray-700">Popular Style Previews</h4>
+          <div className={DESIGN_SYSTEM.components.panel}>
+            <div className={commonStyles.actionBar}>
+              <h4 className={DESIGN_SYSTEM.typography.h4}>Popular Style Previews</h4>
               <button
                 onClick={() => setShowAllStyles(!showAllStyles)}
                 className="text-xs text-primary-600 hover:text-primary-700 flex items-center"
@@ -587,7 +591,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
               </button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className={getGridClasses(3)}>
               {(showAllStyles ? styles : styles.slice(0, 6)).map((style, index) => (
                 <div
                   key={index}
@@ -603,7 +607,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
             </div>
           </div>
           
-          <div className="p-3 bg-yellow-50 rounded-lg text-xs text-yellow-700">
+          <div className={getAlertClasses('warning')}>
             <p className="font-medium">Prompt Details:</p>
             <p className="mt-1 whitespace-pre-wrap">{prompt}</p>
           </div>

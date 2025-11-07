@@ -9,6 +9,7 @@ import { FontSelector } from './ui/FontSelector';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface MemeGeneratorProps {
   tokens: Record<string, string>;
@@ -254,13 +255,13 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold flex items-center">
+    <div className={DESIGN_SYSTEM.components.section}>
+      <div className={commonStyles.actionBar}>
+        <h3 className={commonStyles.sectionHeader}>
           <MessageSquare className="h-6 w-6 text-purple-500 mr-2" />
           Personalized Meme Generator
         </h3>
-        <motion.div 
+        <motion.div
           className="px-3 py-1 bg-purple-100 rounded-full flex items-center"
           whileHover={{ scale: 1.05 }}
         >
@@ -268,8 +269,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           <span className="text-sm font-medium text-purple-700">New Feature</span>
         </motion.div>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div className={DESIGN_SYSTEM.grid.sidebar}>
         {/* Canvas Column */}
         <div className="lg:col-span-2">
           <div 
@@ -345,30 +346,30 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {/* Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={getGridClasses(2)}>
+            <div className={commonStyles.formGroup}>
+              <label className={commonStyles.formLabel}>
                 Top Text
               </label>
               <DroppableTextArea
                 value={topText}
                 onChange={(e) => setTopText(e.target.value)}
                 placeholder="Top text (supports [TOKENS])"
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className={DESIGN_SYSTEM.components.input}
                 onDrop={handleTopTextTokenDrop}
                 rows={2}
               />
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+
+            <div className={commonStyles.formGroup}>
+              <label className={commonStyles.formLabel}>
                 Bottom Text
               </label>
               <DroppableTextArea
                 value={bottomText}
                 onChange={(e) => setBottomText(e.target.value)}
                 placeholder="Bottom text (supports [TOKENS])"
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className={DESIGN_SYSTEM.components.input}
                 onDrop={handleBottomTextTokenDrop}
                 rows={2}
               />
@@ -376,7 +377,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {/* AI Enhancement Controls */}
-          <div className="bg-purple-50 p-4 rounded-lg mb-4">
+          <div className={`${DESIGN_SYSTEM.colors.info[50]} p-4 rounded-lg mb-4`}>
             <div className="flex items-start gap-3">
               <div>
                 <input
@@ -439,8 +440,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {/* Quick Meme Templates */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h4 className="font-medium text-gray-700 mb-3">Quick Text Templates</h4>
+          <div className={`${DESIGN_SYSTEM.components.panel} mb-4`}>
+            <h4 className={DESIGN_SYSTEM.typography.h4}>Quick Text Templates</h4>
             <div className="flex flex-wrap gap-2">
               {memeConfig.quickTemplates.map(template => (
                 <button
@@ -456,11 +457,11 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {/* Generate Button */}
-          <div className="flex gap-3">
+          <div className={commonStyles.buttonGroup}>
             <button
               onClick={handleGenerateMeme}
               disabled={isGenerating || !memeImage}
-              className="btn btn-primary flex-1 flex items-center justify-center"
+              className={getButtonClasses('primary')}
             >
               {isGenerating ? (
                 <>
@@ -493,7 +494,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
 
               <div className="mt-4 flex justify-center gap-4">
                 <button
-                  className="btn btn-outline flex items-center"
+                  className={getButtonClasses('secondary')}
                   onClick={() => {
                     if (generatedMeme) {
                       const link = document.createElement('a');
@@ -532,9 +533,9 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
         {/* Controls Column */}
         <div className="space-y-4">
           {/* Text Style Controls */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium text-gray-700">Text Style</h4>
+          <div className={DESIGN_SYSTEM.components.card}>
+            <div className={commonStyles.actionBar}>
+              <h4 className={DESIGN_SYSTEM.typography.h4}>Text Style</h4>
               <button
                 onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
                 className="text-xs text-gray-600 hover:text-purple-600 flex items-center"
@@ -733,8 +734,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {/* Personalization Tokens */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-            <h4 className="font-medium text-gray-700 mb-3">Personalization Tokens</h4>
+          <div className={DESIGN_SYSTEM.components.card}>
+            <h4 className={DESIGN_SYSTEM.typography.h4}>Personalization Tokens</h4>
             <div className="space-y-2">
               <div className="p-2 bg-gray-50 rounded border border-gray-200">
                 <div className="font-medium">[FIRSTNAME]</div>
@@ -755,8 +756,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {/* Meme Tips */}
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <h4 className="font-medium text-purple-700 mb-3 flex items-center">
+          <div className={`${DESIGN_SYSTEM.colors.info[50]} p-4 rounded-lg`}>
+            <h4 className={`${DESIGN_SYSTEM.typography.h4} text-purple-700 mb-3 flex items-center`}>
               <Zap className="w-4 h-4 mr-2" />
               Meme Creation Tips
             </h4>
@@ -770,8 +771,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {/* Business Use Cases */}
-          <div className="bg-indigo-50 p-4 rounded-lg">
-            <h4 className="font-medium text-indigo-700 mb-3">Marketing Use Cases</h4>
+          <div className={`${DESIGN_SYSTEM.colors.info[50]} p-4 rounded-lg`}>
+            <h4 className={`${DESIGN_SYSTEM.typography.h4} text-indigo-700 mb-3`}>Marketing Use Cases</h4>
             <ul className="text-sm text-indigo-700 space-y-2 list-disc pl-4">
               <li>Send personalized memes in birthday emails</li>
               <li>Welcome new team members with custom memes</li>
@@ -782,7 +783,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           </div>
           
           {error && (
-            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className={getAlertClasses('error')}>
               {error}
             </div>
           )}

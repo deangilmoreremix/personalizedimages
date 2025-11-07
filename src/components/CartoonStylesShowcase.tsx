@@ -1,22 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Paintbrush as PaintBrush } from 'lucide-react';
+import { ArrowRight, Sparkles, Paintbrush as PaintBrush, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import cartoonThemesConfig from '../data/cartoonThemes';
+import { generateCartoonImage } from '../utils/api';
 
 const CartoonStylesShowcase: React.FC = () => {
   // Get a sample of themes to display
   const sampleThemes = cartoonThemesConfig.themes.slice(0, 6);
   
-  // For demo purposes, use pexels images as placeholder previews
-  const demoImages = [
-    "https://images.pexels.com/photos/15286/pexels-photo-15286.jpeg?auto=compress&cs=tinysrgb&w=600",
-    "https://images.pexels.com/photos/36717/amazing-animal-beautiful-beautifull.jpg?auto=compress&cs=tinysrgb&w=600",
-    "https://images.pexels.com/photos/1408221/pexels-photo-1408221.jpeg?auto=compress&cs=tinysrgb&w=600",
-    "https://images.pexels.com/photos/2792157/pexels-photo-2792157.jpeg?auto=compress&cs=tinysrgb&w=600",
-    "https://images.pexels.com/photos/33109/fall-autumn-red-season.jpg?auto=compress&cs=tinysrgb&w=600",
-    "https://images.pexels.com/photos/460621/pexels-photo-460621.jpeg?auto=compress&cs=tinysrgb&w=600"
-  ];
+  // Generate real AI images for showcase
+  const [generatedImages, setGeneratedImages] = useState<Record<number, string>>({});
+  const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>({});
+
+  // Generate real cartoon style images on component mount
+  useEffect(() => {
+    const generateShowcaseImages = async () => {
+      const cartoonThemes = cartoonThemesConfig.themes.slice(0, 6);
+
+      for (let i = 0; i < cartoonThemes.length; i++) {
+        if (!generatedImages[i]) {
+          setLoadingStates(prev => ({ ...prev, [i]: true }));
+          try {
+            const imageUrl = await generateCartoonImage(
+              cartoonThemes[i].prompt,
+              'openai',
+              undefined,
+              cartoonThemes[i].label
+            );
+            setGeneratedImages(prev => ({ ...prev, [i]: imageUrl }));
+          } catch (error) {
+            console.warn(`Failed to generate cartoon image for ${cartoonThemes[i].label}:`, error);
+            // Keep placeholder if generation fails
+          } finally {
+            setLoadingStates(prev => ({ ...prev, [i]: false }));
+          }
+        }
+      }
+    };
+
+    // Only generate if we have API keys configured
+    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY) {
+      generateShowcaseImages();
+    }
+  }, []);
   
   return (
     <section className="py-16 bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -72,15 +99,23 @@ const CartoonStylesShowcase: React.FC = () => {
                     alt={theme.label} 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      // Fallback to demo image if preview fails to load
+                      // Fallback to generated image or placeholder
                       const target = e.target as HTMLImageElement;
-                      target.src = demoImages[index % demoImages.length];
+                      if (generatedImages[index]) {
+                        target.src = generatedImages[index];
+                      } else {
+                        target.src = `https://placehold.co/200x200/f5f5f5/a1a1aa?text=${encodeURIComponent(theme.label)}`;
+                      }
                     }}
                   />
+                ) : loadingStates[index] ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                  </div>
                 ) : (
-                  <img 
-                    src={demoImages[index % demoImages.length]}
-                    alt={theme.label} 
+                  <img
+                    src={generatedImages[index] || `https://placehold.co/200x200/f5f5f5/a1a1aa?text=${encodeURIComponent(theme.label)}`}
+                    alt={theme.label}
                     className="w-full h-full object-cover"
                   />
                 )}

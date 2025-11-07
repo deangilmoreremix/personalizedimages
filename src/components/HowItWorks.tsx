@@ -4,8 +4,11 @@ import { useInView } from 'react-intersection-observer';
 import { Mail, Facebook, Linkedin, TrendingUp, UserPlus, MousePointer, Zap, Award, Globe, Gift, Clock, Shield, Upload, Image, Sparkles, ArrowRight, Check, Star, Lightbulb, Camera, TrendingDown, Play, Wand2 } from 'lucide-react';
 
 interface HowItWorksStep {
+  id: number;
+  icon: React.ReactNode;
   title: string;
   description: string;
+  example: string;
 }
 
 interface HowItWorksProps {
@@ -23,7 +26,7 @@ const steps = [
   },
   {
     id: 2,
-    icon: <Text className="h-8 w-8 text-white" />,
+    icon: <Sparkles className="h-8 w-8 text-white" />,
     title: 'Insert personalization tokens',
     description: 'Add dynamic tokens like [FIRSTNAME], [COMPANY], and [LOCATION] that will be replaced with your customer data.',
     example: 'Hello_placeholder.jpg',
@@ -723,7 +726,7 @@ const floatingIconVariants = {
       delay: i * 0.3,
       duration: 2,
       repeat: Infinity,
-      repeatType: 'reverse',
+      repeatType: 'reverse' as const,
     },
   }),
 };

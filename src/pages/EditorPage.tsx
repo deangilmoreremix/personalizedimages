@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Layers, Search, Info, Zap, Image as ImageIcon, Mail, Box, MessageSquare, Wand2, Sparkles, Paintbrush as PaintBrush, Camera, Bell, Settings, Menu, X, HelpCircle, Music, Tv, Dumbbell, Globe, Cpu, Lightbulb, Brain, Video, Plus, Grid, List } from 'lucide-react';
+import { ArrowLeft, Layers, Search, Info, Zap, Image as ImageIcon, Mail, Box, MessageSquare, Wand2, Sparkles, Paintbrush as PaintBrush, Camera, Bell, Settings, Menu, X, HelpCircle, Music, Tv, Dumbbell, Globe, Cpu, Lightbulb, Brain, Video, Plus, Grid, List, Clock } from 'lucide-react';
 
 // Component imports
 import { createDefaultTokenValues } from '../types/personalization';
@@ -134,7 +134,7 @@ const EditorPage: React.FC = () => {
       
       // Update recently used
       setRecentlyUsed(prev => {
-        const newRecent = [state.selectedFeature, ...prev.filter(f => f !== state.selectedFeature)].slice(0, 5);
+        const newRecent = [state.selectedFeature!, ...prev.filter(f => f !== state.selectedFeature)].slice(0, 5);
         return newRecent;
       });
     }
@@ -172,7 +172,7 @@ const EditorPage: React.FC = () => {
 
   return (
     <FeatureDialogProvider tokens={userData}>
-      <section className="pt-20 pb-16 bg-gradient-to-br from-gray-50/80 to-gray-100/80 min-h-screen">
+      <section className="pt-24 pb-16 bg-gradient-to-br from-gray-50/80 to-gray-100/80 min-h-screen">
         {/* Intro animation overlay */}
         <AnimatePresence>
           {showingIntro && (

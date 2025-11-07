@@ -7,6 +7,7 @@ import DroppableInput from './DroppableInput';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import ghibliConfig from '../data/ghibliStyles';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface GhibliImageGeneratorProps {
   tokens: Record<string, string>;
@@ -203,13 +204,13 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <h3 className="text-xl font-bold mb-4">Studio Ghibli Style Image Generator</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className={DESIGN_SYSTEM.components.section}>
+      <h3 className={commonStyles.sectionHeader}>Studio Ghibli Style Image Generator</h3>
+
+      <div className={getGridClasses(2)}>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               Image Description
             </label>
             <div className="relative">
@@ -217,7 +218,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe the Ghibli-style scene you want to create..."
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[120px]"
+                className={DESIGN_SYSTEM.components.textarea}
                 onDrop={handleTokenDrop}
               />
               <button
@@ -230,9 +231,9 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
             </div>
           </div>
           
-          <div>
-            <div className="flex justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">
+          <div className={commonStyles.formGroup}>
+            <div className={commonStyles.actionBar}>
+              <label className={commonStyles.formLabel}>
                 AI Model
               </label>
               <button
@@ -273,8 +274,8 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           </div>
 
           {/* Reference Image Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={commonStyles.formGroup}>
+            <label className={commonStyles.formLabel}>
               Reference Image (Optional)
             </label>
             <ReferenceImageUploader
@@ -287,7 +288,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           </div>
           
           {showAdvancedOptions && (
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+            <div className={`${DESIGN_SYSTEM.components.panel} ${commonStyles.contentArea}`}>
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -450,13 +451,13 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           )}
           
           {error && (
-            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className={getAlertClasses('error')}>
               {error}
             </div>
           )}
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium text-sm mb-2">Ghibli Inspiration</h4>
+
+          <div className={DESIGN_SYSTEM.components.panel}>
+            <h4 className={DESIGN_SYSTEM.typography.h4}>Ghibli Inspiration</h4>
             <div className="space-y-2">
               {examplePrompts.map((example, index) => (
                 <div key={index} className="text-xs p-2 bg-white rounded border border-gray-200 flex justify-between">
@@ -475,7 +476,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           <button
             onClick={handleGenerateImage}
             disabled={isGenerating}
-            className="btn btn-primary w-full flex justify-center items-center"
+            className={getButtonClasses('primary')}
           >
             {isGenerating ? (
               <>
@@ -508,10 +509,10 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           </div>
           
           {generatedImage && (
-            <div className="flex gap-2">
+            <div className={commonStyles.buttonGroup}>
               <button
                 onClick={() => window.open(generatedImage)}
-                className="btn btn-outline flex-1 flex items-center justify-center"
+                className={getButtonClasses('secondary')}
               >
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
@@ -520,7 +521,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
               <a
                 href={generatedImage}
                 download="ghibli-image.png"
-                className="btn btn-primary flex-1 flex items-center justify-center"
+                className={getButtonClasses('primary')}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download
@@ -594,8 +595,8 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
             </div>
           )}
           
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-700 flex items-center mb-2">
+          <div className={`${DESIGN_SYSTEM.colors.info[50]} p-4 rounded-lg`}>
+            <h4 className={`${DESIGN_SYSTEM.typography.h4} text-blue-700 flex items-center mb-2`}>
               <Lightbulb className="w-4 h-4 mr-1" />
               About Studio Ghibli Style
             </h4>

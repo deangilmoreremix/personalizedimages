@@ -6,7 +6,7 @@ import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import templatesService, { ActionFigureTemplate } from '../services/templatesService';
-import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
 interface ActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -196,10 +196,10 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   };
 
   return (
-    <div className={DESIGN_SYSTEM.components.section}>
+    <div className={`${DESIGN_SYSTEM.components.section} ${getElevationClasses(2)}`}>
       <h3 className={commonStyles.sectionHeader}>AI Action Figure Generator</h3>
 
-      <div className={getGridClasses(2)}>
+      <div className={getGridClasses('creative')}>
         <div className="space-y-4">
           <div className={commonStyles.formGroup}>
             <label className={commonStyles.formLabel}>
@@ -462,7 +462,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           <button
             onClick={handleGenerateActionFigure}
             disabled={isGenerating}
-            className={`${getButtonClasses('primary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+            className={`${getButtonClasses('elevated')} ${DESIGN_SYSTEM.accessibility.focus} ${getAnimationClasses('stateLayer')}`}
             aria-label="Generate action figure"
           >
             {isGenerating ? (

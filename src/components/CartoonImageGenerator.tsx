@@ -7,7 +7,7 @@ import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
-import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
 interface CartoonImageGeneratorProps {
   tokens: Record<string, string>;
@@ -119,7 +119,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
     : cartoonThemesConfig.themes.slice(0, 8);
 
   return (
-    <div className={DESIGN_SYSTEM.components.section}>
+    <div className={`${DESIGN_SYSTEM.components.section} ${getElevationClasses(3)} ${getAnimationClasses('smooth')}`}>
       <div className={commonStyles.actionBar}>
         <h3 className={commonStyles.sectionHeader}>
           <PaintBrush className="h-6 w-6 text-primary-500 mr-2" />
@@ -130,7 +130,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
         </div>
       </div>
 
-      <div className={getGridClasses(2)}>
+      <div className={getGridClasses('creative')}>
         <div className="space-y-4">
           {/* Theme Gallery */}
           <div className={commonStyles.formGroup}>
@@ -332,7 +332,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           <button
             onClick={handleGenerateImage}
             disabled={isGenerating}
-            className={`${getButtonClasses('primary')} ${DESIGN_SYSTEM.accessibility.focus}`}
+            className={`${getButtonClasses('filled')} ${DESIGN_SYSTEM.accessibility.focus} ${getAnimationClasses('stateLayer')}`}
             aria-label="Generate cartoon style image"
           >
             {isGenerating ? (

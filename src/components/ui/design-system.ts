@@ -19,12 +19,23 @@ export const DESIGN_SYSTEM = {
     responsive: 'p-4 md:p-6',
   },
 
-  // Grid systems
+  // Grid systems - Extended with creative app patterns
   grid: {
     twoColumn: 'grid grid-cols-1 md:grid-cols-2 gap-6',
     threeColumn: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6',
     fourColumn: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4',
     sidebar: 'grid grid-cols-1 lg:grid-cols-3 gap-6',
+    // Creative app patterns (Canva/Figma/Adobe)
+    creativeWorkflow: 'grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-screen',
+    toolPanel: 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3',
+    canvasLayout: 'grid grid-cols-1 xl:grid-cols-5 gap-6',
+    editorGrid: 'grid grid-cols-1 lg:grid-cols-12 gap-4',
+    // Material Design responsive grids
+    materialResponsive: 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4',
+    // Chakra UI fluid grids
+    chakraFluid: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6',
+    // Ant Design admin layouts
+    antAdmin: 'grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6',
   },
 
   // Typography
@@ -86,7 +97,7 @@ export const DESIGN_SYSTEM = {
     },
   },
 
-  // Component styles
+  // Component styles - Extended with Material Design, Chakra UI, Ant Design, and Radix UI patterns
   components: {
     card: 'bg-white rounded-xl shadow-md border border-gray-100',
     section: 'bg-white rounded-xl shadow-md p-6',
@@ -100,6 +111,14 @@ export const DESIGN_SYSTEM = {
       secondary: 'btn btn-outline w-full flex justify-center items-center',
       small: 'px-3 py-1.5 text-sm rounded-md',
       large: 'px-6 py-3 text-base rounded-lg',
+      // Material Design variants
+      elevated: 'bg-white shadow-md hover:shadow-lg border border-gray-200 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-50 transition-all',
+      filled: 'bg-primary-600 text-white hover:bg-primary-700 rounded-lg px-4 py-2 shadow-md hover:shadow-lg transition-all',
+      outlined: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 rounded-lg px-4 py-2 transition-all',
+      text: 'text-primary-600 hover:bg-primary-50 rounded-lg px-4 py-2 transition-all',
+      // Chakra UI variants
+      ghost: 'text-primary-600 hover:bg-primary-50 rounded-lg px-4 py-2 transition-all',
+      link: 'text-primary-600 hover:underline rounded-lg px-4 py-2 transition-all',
     },
     badge: 'px-2 py-1 text-xs rounded-full font-medium',
     alert: {
@@ -112,6 +131,47 @@ export const DESIGN_SYSTEM = {
       spinner: 'animate-spin rounded-full border-2 border-gray-300 border-t-primary-600',
       skeleton: 'animate-pulse bg-gray-200 rounded',
       overlay: 'absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10',
+      // Ant Design patterns
+      skeletonBlock: 'animate-pulse bg-gray-200 rounded h-4 w-full mb-2',
+      skeletonCircle: 'animate-pulse bg-gray-200 rounded-full h-8 w-8',
+      skeletonText: 'animate-pulse bg-gray-200 rounded h-4 w-3/4',
+    },
+    // Material Design elevation system
+    elevation: {
+      0: 'shadow-none',
+      1: 'shadow-sm',
+      2: 'shadow',
+      3: 'shadow-md',
+      4: 'shadow-lg',
+      5: 'shadow-xl',
+      6: 'shadow-2xl',
+    },
+    // Chakra UI modal patterns
+    modal: {
+      overlay: 'fixed inset-0 bg-black/50 backdrop-blur-sm z-40',
+      content: 'bg-white rounded-xl shadow-xl max-w-md mx-auto mt-20 p-6',
+      header: 'border-b border-gray-200 pb-4 mb-4',
+      body: 'mb-6',
+      footer: 'flex justify-end gap-3 pt-4 border-t border-gray-200',
+    },
+    // Ant Design drawer/sidebar patterns
+    drawer: {
+      overlay: 'fixed inset-0 bg-black/20 backdrop-blur-sm z-30',
+      content: 'fixed right-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform',
+      header: 'p-4 border-b border-gray-200 flex justify-between items-center',
+      body: 'p-4 overflow-y-auto flex-1',
+    },
+    // Radix UI primitive patterns
+    primitive: {
+      dialog: 'fixed inset-0 z-50 flex items-center justify-center',
+      dialogContent: 'bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6',
+      popover: 'bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50',
+      tooltip: 'bg-gray-900 text-white text-sm rounded px-2 py-1 z-50',
+      collapsible: 'overflow-hidden transition-all duration-300',
+      accordion: 'border border-gray-200 rounded-lg overflow-hidden',
+      accordionItem: 'border-b border-gray-200 last:border-b-0',
+      accordionTrigger: 'w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex justify-between items-center',
+      accordionContent: 'px-4 pb-3 text-sm text-gray-600',
     },
   },
 
@@ -132,11 +192,26 @@ export const DESIGN_SYSTEM = {
     role: 'role',
   },
 
-  // Animation
+  // Animation - Extended with creative app micro-interactions
   animation: {
     fadeIn: 'animate-in fade-in duration-300',
     slideUp: 'animate-in slide-in-from-bottom-4 duration-300',
     scaleIn: 'animate-in zoom-in-95 duration-200',
+    // Material Design micro-interactions
+    ripple: 'relative overflow-hidden before:absolute before:inset-0 before:bg-white/20 before:scale-0 before:rounded-full before:transition-transform hover:before:scale-150',
+    stateLayer: 'relative before:absolute before:inset-0 before:bg-black/4 before:opacity-0 hover:before:opacity-100 before:transition-opacity',
+    // Chakra UI transitions
+    smooth: 'transition-all duration-200 ease-in-out',
+    bounce: 'animate-bounce',
+    pulse: 'animate-pulse',
+    // Ant Design loading animations
+    spin: 'animate-spin',
+    ping: 'animate-ping',
+    // Creative app patterns (Canva/Figma style)
+    dragFeedback: 'transition-transform duration-150 ease-out hover:scale-105 active:scale-95',
+    panelSlide: 'transform transition-transform duration-300 ease-in-out',
+    toolHover: 'hover:bg-primary-50 transition-colors duration-150',
+    canvasZoom: 'transition-transform duration-200 ease-out',
   },
 
   // Responsive breakpoints
@@ -165,21 +240,28 @@ export const DESIGN_SYSTEM = {
   },
 };
 
-// Utility functions for consistent styling
-export const getGridClasses = (columns: 1 | 2 | 3 | 4 = 2) => {
+// Utility functions for consistent styling - Extended with new patterns
+export const getGridClasses = (columns: 1 | 2 | 3 | 4 | 'creative' | 'material' | 'chakra' | 'ant' = 2) => {
   switch (columns) {
     case 1: return 'grid grid-cols-1 gap-6';
     case 2: return DESIGN_SYSTEM.grid.twoColumn;
     case 3: return DESIGN_SYSTEM.grid.threeColumn;
     case 4: return DESIGN_SYSTEM.grid.fourColumn;
+    case 'creative': return DESIGN_SYSTEM.grid.creativeWorkflow;
+    case 'material': return DESIGN_SYSTEM.grid.materialResponsive;
+    case 'chakra': return DESIGN_SYSTEM.grid.chakraFluid;
+    case 'ant': return DESIGN_SYSTEM.grid.antAdmin;
     default: return DESIGN_SYSTEM.grid.twoColumn;
   }
 };
 
-export const getButtonClasses = (variant: 'primary' | 'secondary' = 'primary', size: 'default' | 'small' | 'large' = 'default') => {
-  const baseClasses = DESIGN_SYSTEM.components.button[variant];
+export const getButtonClasses = (
+  variant: 'primary' | 'secondary' | 'elevated' | 'filled' | 'outlined' | 'text' | 'ghost' | 'link' = 'primary',
+  size: 'default' | 'small' | 'large' = 'default'
+) => {
+  const baseClasses = DESIGN_SYSTEM.components.button[variant] || DESIGN_SYSTEM.components.button.primary;
   const sizeClasses = size === 'small' ? DESIGN_SYSTEM.components.button.small :
-                     size === 'large' ? DESIGN_SYSTEM.components.button.large : '';
+                      size === 'large' ? DESIGN_SYSTEM.components.button.large : '';
 
   return `${baseClasses} ${sizeClasses}`.trim();
 };
@@ -191,6 +273,26 @@ export const getAlertClasses = (type: 'error' | 'success' | 'warning' | 'info') 
 export const getColorClasses = (color: keyof typeof DESIGN_SYSTEM.colors, shade: string) => {
   const colorObj = DESIGN_SYSTEM.colors[color];
   return (colorObj as any)[shade] || '';
+};
+
+export const getElevationClasses = (level: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1) => {
+  return DESIGN_SYSTEM.components.elevation[level];
+};
+
+export const getModalClasses = (variant: 'default' | 'chakra' | 'radix' = 'default') => {
+  switch (variant) {
+    case 'chakra': return DESIGN_SYSTEM.components.modal;
+    case 'radix': return DESIGN_SYSTEM.components.primitive;
+    default: return DESIGN_SYSTEM.components.modal;
+  }
+};
+
+export const getDrawerClasses = (variant: 'ant' | 'material' = 'ant') => {
+  return DESIGN_SYSTEM.components.drawer;
+};
+
+export const getAnimationClasses = (type: keyof typeof DESIGN_SYSTEM.animation) => {
+  return DESIGN_SYSTEM.animation[type];
 };
 
 // Common component patterns

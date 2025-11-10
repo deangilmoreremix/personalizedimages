@@ -20,10 +20,11 @@ const isStackBlitz = (): boolean => {
 
 // Service Worker Registration
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
-  // Skip Service Worker registration in StackBlitz WebContainer
-  if (isStackBlitz()) {
-    // Skip logging in production
+  // Skip Service Worker registration in development mode or StackBlitz WebContainer
+  if (import.meta.env.DEV || isStackBlitz()) {
     if (import.meta.env.DEV) {
+      console.log('Service Worker registration skipped: Development mode');
+    } else {
       console.log('Service Worker registration skipped: Running in StackBlitz WebContainer (not supported)');
     }
     return null;

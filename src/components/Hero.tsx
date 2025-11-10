@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useAnimation } from 'framer-motion';
-import { Play, ArrowRight, Sparkles, MousePointer, Mail, BarChart2, Clock, TrendingUp, Users, Upload, Zap, Image, Check, ShieldCheck } from 'lucide-react';
+import { Play, ArrowRight, Sparkles, MousePointer, Mail, BarChart2, Clock, TrendingUp, Users, Upload, Zap, Image, Check, ShieldCheck, Layers, Brain, Box, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AnimatedIcons from './AnimatedIcons';
 import { FloatingShape } from './FloatingElements';
@@ -14,7 +14,7 @@ const Hero: React.FC = () => {
 
   useEffect(() => {
     setIsInView(true);
-    
+
     // Start the staggered animation sequence
     controls.start((i) => ({
       opacity: 1,
@@ -49,35 +49,35 @@ const Hero: React.FC = () => {
         <div className="absolute top-20 left-10 w-64 h-64 bg-primary-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-float"></div>
         <div className="absolute bottom-20 right-10 w-72 h-72 bg-secondary-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-float animation-delay-2000"></div>
         <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-accent-200/10 rounded-full mix-blend-multiply filter blur-3xl animate-float animation-delay-3000"></div>
-        
+
         <AnimatedIcons iconType="mixed" density="high" />
-        
+
         {/* Additional floating shapes */}
-        <FloatingShape 
-          shape="blob" 
-          size="120px" 
-          color="rgba(125, 100, 255, 0.1)" 
-          x={15} y={20} delay={1.2} 
+        <FloatingShape
+          shape="blob"
+          size="120px"
+          color="rgba(125, 100, 255, 0.1)"
+          x={15} y={20} delay={1.2}
           duration={7}
-          className="top-1/4 right-1/4" 
+          className="top-1/4 right-1/4"
         />
-        
-        <FloatingShape 
-          shape="circle" 
-          size="80px" 
-          color="rgba(255, 122, 0, 0.1)" 
-          x={20} y={15} delay={0.5} 
+
+        <FloatingShape
+          shape="circle"
+          size="80px"
+          color="rgba(255, 122, 0, 0.1)"
+          x={20} y={15} delay={0.5}
           duration={8}
-          className="bottom-1/3 left-1/5" 
+          className="bottom-1/3 left-1/5"
         />
-        
-        <FloatingShape 
-          shape="triangle" 
-          size="60px" 
-          color="rgba(0, 200, 255, 0.1)" 
-          x={15} y={25} delay={2} 
+
+        <FloatingShape
+          shape="triangle"
+          size="60px"
+          color="rgba(0, 200, 255, 0.1)"
+          x={15} y={25} delay={2}
           duration={9}
-          className="top-1/3 right-1/5" 
+          className="top-1/3 right-1/5"
         />
       </div>
 
@@ -89,7 +89,7 @@ const Hero: React.FC = () => {
             transition={{ duration: 0.7, ease: "easeOut" }}
             className="relative"
           >
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -97,7 +97,7 @@ const Hero: React.FC = () => {
             >
               <MousePointer className="w-8 h-8" />
               <div className="absolute -top-12 -right-8 w-24 border-t-2 border-dashed border-accent-500 rotate-12"></div>
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.7 }}
@@ -115,9 +115,9 @@ const Hero: React.FC = () => {
             >
               Hyper-Personalized Content
             </motion.span>
-            
+
             <h1 className="mb-6 leading-tight">
-              <motion.span 
+              <motion.span
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.5 }}
@@ -133,14 +133,14 @@ const Hero: React.FC = () => {
               >
                 That Drive {" "}
               </motion.span>
-              <motion.span 
+              <motion.span
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.7, duration: 0.7 }}
                 className="gradient-text relative"
               >
                 985% Higher Conversion Rates
-                <motion.div 
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: '100%' }}
                   transition={{ delay: 1.4, duration: 0.8 }}
@@ -148,7 +148,7 @@ const Hero: React.FC = () => {
                 ></motion.div>
               </motion.span>
             </h1>
-            
+
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -159,7 +159,7 @@ const Hero: React.FC = () => {
             </motion.p>
 
             {!showPersonalizedContent ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.1, duration: 0.5 }}
@@ -191,8 +191,8 @@ const Hero: React.FC = () => {
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
-                  <motion.button 
-                    type="submit" 
+                  <motion.button
+                    type="submit"
                     className="btn btn-primary w-full flex items-center justify-center"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -210,20 +210,20 @@ const Hero: React.FC = () => {
                 className="glass-panel p-6 mb-8"
               >
                 <div className="text-center">
-                  <motion.h3 
+                  <motion.h3
                     className="text-2xl mb-2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    Hello, <motion.span 
+                    Hello, <motion.span
                       className="gradient-text font-bold"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 }}
                     >{name || 'there'}!</motion.span>
                   </motion.h3>
-                  <motion.p 
+                  <motion.p
                     className="mb-4"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -231,31 +231,31 @@ const Hero: React.FC = () => {
                   >
                     Here's your personalized content. Imagine sending this level of personalization to all your customers!
                   </motion.p>
-                  <motion.div 
+                  <motion.div
                     className="relative overflow-hidden bg-gradient-to-r from-primary-500 to-secondary-600 p-6 rounded-xl text-white text-center mb-6"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.6, duration: 0.5 }}
                   >
-                    <motion.div 
+                    <motion.div
                       className="absolute -top-10 -right-10 w-20 h-20 bg-white/20 rounded-full mix-blend-overlay filter blur-xl"
-                      animate={{ 
+                      animate={{
                         x: [0, 20, 0],
                         y: [0, -20, 0],
                       }}
-                      transition={{ 
+                      transition={{
                         repeat: Infinity,
                         duration: 8,
                         ease: "easeInOut"
                       }}
                     ></motion.div>
-                    <motion.div 
+                    <motion.div
                       className="absolute -bottom-10 -left-10 w-20 h-20 bg-white/20 rounded-full mix-blend-overlay filter blur-xl"
-                      animate={{ 
+                      animate={{
                         x: [0, -20, 0],
                         y: [0, 20, 0],
                       }}
-                      transition={{ 
+                      transition={{
                         repeat: Infinity,
                         duration: 8,
                         ease: "easeInOut",
@@ -266,14 +266,14 @@ const Hero: React.FC = () => {
                     <p className="relative z-10">We've personalized your entire experience. Each image, template, and creative asset will now include your personal details automatically.</p>
                     <Sparkles className="absolute top-3 right-3 w-5 h-5 text-white/70" />
                   </motion.div>
-                  
+
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8 }}
                   >
-                    <Link 
-                      to="/editor" 
+                    <Link
+                      to="/editor"
                       className="btn btn-primary flex items-center justify-center mx-auto"
                     >
                       Create Your Personalized Content
@@ -297,11 +297,11 @@ const Hero: React.FC = () => {
                   transition={{ delay: 1.2 + index * 0.1 }}
                   className="flex items-center space-x-1.5 text-sm text-gray-600 bg-white/50 backdrop-blur-sm px-3 py-1.5 rounded-full"
                 >
-                  <motion.span 
+                  <motion.span
                     className="text-primary-600"
                     animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ 
-                      repeat: Infinity, 
+                    transition={{
+                      repeat: Infinity,
                       repeatDelay: 3,
                       duration: 1
                     }}
@@ -321,58 +321,58 @@ const Hero: React.FC = () => {
             className="hidden lg:block relative"
           >
             {/* Animated gradient background */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 rounded-xl overflow-hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.7 }}
               transition={{ duration: 1, delay: 0.6 }}
             >
-              <motion.div 
+              <motion.div
                 className="absolute -top-10 -left-10 w-40 h-40 bg-primary-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-                animate={{ 
+                animate={{
                   y: [0, -20, 0],
                   x: [0, 20, 0]
                 }}
-                transition={{ 
-                  repeat: Infinity, 
-                  repeatType: "reverse", 
+                transition={{
+                  repeat: Infinity,
+                  repeatType: "reverse",
                   duration: 8,
                   ease: "easeInOut"
                 }}
               />
-              
-              <motion.div 
+
+              <motion.div
                 className="absolute -bottom-10 -right-10 w-40 h-40 bg-secondary-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-                animate={{ 
+                animate={{
                   y: [0, 20, 0],
                   x: [0, -20, 0]
                 }}
-                transition={{ 
-                  repeat: Infinity, 
-                  repeatType: "reverse", 
+                transition={{
+                  repeat: Infinity,
+                  repeatType: "reverse",
                   duration: 10,
                   ease: "easeInOut",
                   delay: 1
                 }}
               />
-              
-              <motion.div 
+
+              <motion.div
                 className="absolute top-1/3 -right-10 w-24 h-24 bg-accent-200 rounded-full mix-blend-multiply filter blur-lg opacity-70"
-                animate={{ 
+                animate={{
                   y: [0, 30, 0],
                   x: [0, -10, 0],
                   scale: [1, 1.2, 1]
                 }}
-                transition={{ 
-                  repeat: Infinity, 
-                  repeatType: "reverse", 
+                transition={{
+                  repeat: Infinity,
+                  repeatType: "reverse",
                   duration: 12,
                   ease: "easeInOut",
                   delay: 2
                 }}
               />
             </motion.div>
-            
+
             {/* New feature highlight */}
             <motion.div
               initial={{ opacity: 0, y: 20, x: 20 }}
@@ -381,21 +381,21 @@ const Hero: React.FC = () => {
               className="absolute -right-8 top-1/3 glass-panel py-2 px-3 rounded-lg shadow-lg z-20 flex items-center"
             >
               <motion.div
-                animate={{ 
+                animate={{
                   rotate: [0, 10, -10, 0],
                   scale: [1, 1.1, 1]
                 }}
-                transition={{ 
-                  repeat: Infinity, 
+                transition={{
+                  repeat: Infinity,
                   repeatDelay: 2,
-                  duration: 1 
+                  duration: 1
                 }}
               >
                 <Upload className="text-primary-500 w-4 h-4 mr-2" />
               </motion.div>
               <span className="text-xs">Personalized Reference Images</span>
             </motion.div>
-            
+
             <motion.div
               initial={{ opacity: 0, y: 30, x: -20 }}
               animate={{ opacity: 1, y: 0, x: 0 }}
@@ -403,12 +403,12 @@ const Hero: React.FC = () => {
               className="absolute -left-10 top-2/3 glass-panel py-2 px-3 rounded-lg shadow-lg z-20 flex items-center"
             >
               <motion.div
-                animate={{ 
+                animate={{
                   rotate: [0, -10, 10, 0],
                   scale: [1, 1.1, 1]
                 }}
-                transition={{ 
-                  repeat: Infinity, 
+                transition={{
+                  repeat: Infinity,
                   repeatDelay: 3,
                   duration: 1,
                   delay: 0.5
@@ -418,7 +418,7 @@ const Hero: React.FC = () => {
               </motion.div>
               <span className="text-xs">Personalized AI Generation</span>
             </motion.div>
-            
+
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -426,12 +426,12 @@ const Hero: React.FC = () => {
               className="absolute -left-8 bottom-1/4 glass-panel py-2 px-3 rounded-lg shadow-lg z-20 flex items-center"
             >
               <motion.div
-                animate={{ 
+                animate={{
                   rotate: [0, 15, -15, 0],
                   scale: [1, 1.1, 1]
                 }}
-                transition={{ 
-                  repeat: Infinity, 
+                transition={{
+                  repeat: Infinity,
                   repeatDelay: 4,
                   duration: 1.5,
                   delay: 1
@@ -441,7 +441,7 @@ const Hero: React.FC = () => {
               </motion.div>
               <span className="text-xs">Dynamic Personalization Tokens</span>
             </motion.div>
-            
+
             {/* Card stack effect */}
             <motion.div
               initial={{ rotateZ: 10, y: 30, opacity: 0 }}
@@ -449,34 +449,34 @@ const Hero: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.8 }}
               className="absolute right-4 top-8 w-[85%] h-[80%] bg-white/30 backdrop-blur-sm rounded-xl shadow-lg border border-white/40"
             ></motion.div>
-            
+
             <motion.div
               initial={{ rotateZ: -8, y: 20, opacity: 0 }}
               animate={{ rotateZ: -4, y: 8, opacity: 0.8 }}
               transition={{ duration: 0.5, delay: 1 }}
               className="absolute left-4 bottom-8 w-[85%] h-[80%] bg-white/40 backdrop-blur-sm rounded-xl shadow-lg border border-white/40"
             ></motion.div>
-            
-            {/* Main image */}
+
+            {/* Main image - AI Creative Studio Interface */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.8 }}
               className="relative z-10 responsive-image"
             >
-              <motion.div 
-                className="absolute -top-6 -left-6 text-accent-500"
+              <motion.div
+                className="absolute -top-6 -left-6 text-accent-500 rotate-12"
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1.4, duration: 0.5, type: "spring" }}
               >
                 <Sparkles className="w-12 h-12" />
               </motion.div>
-              
+
               <img
-                src="https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-                alt="Team collaboration with personalized content"
-                className="rounded-xl shadow-xl relative z-10"
+                src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop&crop=center"
+                alt="AI Creative Studio Interface - Professional design workspace with computer screens"
+                className="rounded-xl shadow-xl relative z-10 w-full h-auto"
               />
             </motion.div>
 
@@ -490,7 +490,7 @@ const Hero: React.FC = () => {
               <TrendingUp className="text-success-500 w-4 h-4 mr-2" />
               <span>+985% CTR</span>
             </motion.div>
-            
+
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -516,7 +516,7 @@ const Hero: React.FC = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-primary-50 text-primary-600 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -529,7 +529,7 @@ const Hero: React.FC = () => {
                 1:1 Personalization
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-secondary-50 text-secondary-600 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-secondary-50 text-secondary-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -542,7 +542,7 @@ const Hero: React.FC = () => {
                 Dynamic Content Tokens
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-accent-50 text-accent-600 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-accent-50 text-accent-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -555,7 +555,7 @@ const Hero: React.FC = () => {
                 985% Higher Engagement
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-green-50 text-green-600 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -568,7 +568,7 @@ const Hero: React.FC = () => {
                 Multi-Channel Personalization
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },

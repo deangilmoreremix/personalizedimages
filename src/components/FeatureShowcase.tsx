@@ -12,34 +12,34 @@ const FeatureShowcase: React.FC = () => {
 
   const features = [
     {
-      title: "Reference Image Upload",
-      description: "Upload your own photos as the starting point for AI-generated content that matches your style.",
-      icon: <Upload className="w-6 h-6 text-primary-500" />,
-      image: "https://images.pexels.com/photos/4050299/pexels-photo-4050299.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      title: "AI Creative Studio Interface",
+      description: "Professional editor with personalization tokens, drag-and-drop interface, and real-time AI generation for creating custom content.",
+      icon: <Image className="w-6 h-6 text-primary-500" />,
+      image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=600&fit=crop&crop=center",
       color: "from-primary-500 to-primary-700",
       delay: 0.1
     },
     {
-      title: "Studio Ghibli Generator",
-      description: "Create beautiful personalized scenes inspired by the magical world of Hayao Miyazaki.",
-      icon: <Sparkles className="w-6 h-6 text-secondary-500" />,
-      image: "https://images.pexels.com/photos/844297/pexels-photo-844297.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      title: "Personalization Tokens Panel",
+      description: "Manage and customize personalization tokens for dynamic content replacement. Add customer names, companies, and personal details.",
+      icon: <Box className="w-6 h-6 text-secondary-500" />,
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=800&h=600&fit=crop&crop=center",
       color: "from-secondary-500 to-secondary-700",
       delay: 0.2
     },
     {
-      title: "Expanded Action Figure Styles",
-      description: "Choose from 30 professionally designed action figure styles to create custom toys for your audience.",
-      icon: <Box className="w-6 h-6 text-accent-500" />,
-      image: "https://images.pexels.com/photos/12211/pexels-photo-12211.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      title: "Supabase Backend Integration",
+      description: "Secure cloud database with real-time synchronization, user authentication, and edge function deployment for scalable content delivery.",
+      icon: <Zap className="w-6 h-6 text-accent-500" />,
+      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop&crop=center",
       color: "from-accent-500 to-accent-700",
       delay: 0.3
     },
     {
-      title: "AI-Enhanced Meme Creator",
-      description: "Take your meme marketing to the next level with AI enhancements and personalization.",
+      title: "PWA Features & Offline Support",
+      description: "Progressive Web App with service worker caching, offline functionality, and native app-like experience across all devices.",
       icon: <MessageSquare className="w-6 h-6 text-green-500" />,
-      image: "https://images.pexels.com/photos/5380642/pexels-photo-5380642.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDgwMCA2MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNjAwIiBmaWxsPSIjZjNmNGY2Ii8+Cjx0ZXh0IHg9IjQwMCIgeT0iMjUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMTBhODU0IiBmb250LXNpemU9IjI0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiPk9mZmxpbmUgUmVhZHk8L3RleHQ+Cjx0ZXh0IHg9IjQwMCIgeT0iMjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMTBhODU0Ij5TV0NBQ0hFPC90ZXh0Pgo8cmVjdCB4PSIyMDAiIHk9IjMwMCIgd2lkdGg9IjQwMCIgaGVpZ2h0PSI4MCIgZmlsbD0iI2VkZjJmNyIgc3Ryb2tlPSIjMTBhODU0IiBzdHJva2Utd2lkdGg9IjIiLz4KPHRleHQgeD0iNDAwIiB5PSIzNDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMxMGE4NTQiPk5hdGl2ZSBBcHAgRXhwZXJpZW5jZTwvdGV4dD4KPHJlY3QgeD0iMzAwIiB5PSI0MDAiIHdpZHRoPSIyMDAiIGhlaWdodD0iNjAiIGZpbGw9IiMxMGE4NTQiLz4KPHRleHQgeD0iNDAwIiB5PSI0MzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5QV0EgSW5zdGFsbGFibGU8L3RleHQ+Cjwvc3ZnPg==",
       color: "from-green-500 to-green-700",
       delay: 0.4
     }
@@ -236,48 +236,48 @@ const FeatureShowcase: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {[
-              { 
-                title: "Security & Privacy", 
-                description: "Your data stays protected with enterprise-grade security and comprehensive privacy controls",
-                icon: <Shield className="w-5 h-5 text-red-500" />,
-                color: "bg-red-50 text-red-800 border-red-100",
-                animation: {
-                  rotate: [-3, 3, -3],
-                  y: [0, -5, 0]
-                }
-              },
-              { 
-                title: "Advanced Integrations", 
-                description: "Connect with your existing tools through our powerful API and native integrations",
-                icon: <Code className="w-5 h-5 text-blue-500" />,
-                color: "bg-blue-50 text-blue-800 border-blue-100",
-                animation: {
-                  x: [-3, 3, -3],
-                  y: [-2, 2, -2]
-                }
-              },
-              { 
-                title: "Creative Tools", 
-                description: "Access professional-grade design tools and templates for stunning visuals",
-                icon: <Palette className="w-5 h-5 text-purple-500" />,
-                color: "bg-purple-50 text-purple-800 border-purple-100",
-                animation: {
-                  rotate: [3, -3, 3],
-                  scale: [1, 1.05, 1]
-                }
-              },
-              { 
-                title: "Real-time Generation", 
-                description: "Create personalized content on-the-fly with our high-performance AI models",
-                icon: <Zap className="w-5 h-5 text-amber-500" />,
-                color: "bg-amber-50 text-amber-800 border-amber-100",
-                animation: {
-                  y: [-4, 4, -4],
-                  scale: [1, 1.03, 1]
-                }
-              }
-            ].map((item, index) => (
+           {[
+             {
+               title: "Token-Based Personalization",
+               description: "Dynamic content replacement using personalization tokens like [FIRSTNAME], [COMPANY], and custom fields",
+               icon: <Shield className="w-5 h-5 text-red-500" />,
+               color: "bg-red-50 text-red-800 border-red-100",
+               animation: {
+                 rotate: [-3, 3, -3],
+                 y: [0, -5, 0]
+               }
+             },
+             {
+               title: "Supabase Edge Functions",
+               description: "Serverless functions deployed globally for fast, secure AI processing and content generation",
+               icon: <Code className="w-5 h-5 text-blue-500" />,
+               color: "bg-blue-50 text-blue-800 border-blue-100",
+               animation: {
+                 x: [-3, 3, -3],
+                 y: [-2, 2, -2]
+               }
+             },
+             {
+               title: "PWA Offline Support",
+               description: "Service worker caching ensures your app works offline with background sync for content generation",
+               icon: <Palette className="w-5 h-5 text-purple-500" />,
+               color: "bg-purple-50 text-purple-800 border-purple-100",
+               animation: {
+                 rotate: [3, -3, 3],
+                 scale: [1, 1.05, 1]
+               }
+             },
+             {
+               title: "Real-time AI Generation",
+               description: "Instant content creation with OpenAI, Gemini, and other AI models integrated through our backend",
+               icon: <Zap className="w-5 h-5 text-amber-500" />,
+               color: "bg-amber-50 text-amber-800 border-amber-100",
+               animation: {
+                 y: [-4, 4, -4],
+                 scale: [1, 1.03, 1]
+               }
+             }
+           ].map((item, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}

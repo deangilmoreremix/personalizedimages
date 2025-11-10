@@ -10,48 +10,48 @@ const ActionFigureShowcase: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
 
-  // Action figure style examples with personalization
+  // Action figure style examples with personalization - showing actual app features
   const styles = [
     {
-      id: 'collectible-card',
-      name: 'Personalized AI Collectible Card',
-      description: 'Trading card with your name, personalized stats and custom holographic design',
-      image: 'https://images.pexels.com/photos/6615294/pexels-photo-6615294.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      id: 'editor-interface',
+      name: 'AI Creative Studio Editor',
+      description: 'Professional interface with drag-and-drop tokens, real-time personalization, and AI-powered content generation',
+      image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=600&fit=crop&crop=center',
       color: 'from-purple-500 to-indigo-600'
     },
     {
-      id: 'boxed-toy',
-      name: 'Personalized Boxed Toy',
-      description: 'Ultra-detailed action figure in collector\'s packaging featuring your name and company',
-      image: 'https://images.pexels.com/photos/12211/pexels-photo-12211.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      id: 'tokens-panel',
+      name: 'Personalization Tokens Panel',
+      description: 'Manage dynamic content tokens for personalized experiences. Add customer data and drag tokens into content.',
+      image: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&h=600&fit=crop&crop=center',
       color: 'from-blue-500 to-cyan-600'
     },
     {
-      id: 'turntable',
-      name: 'Personalized 3D Character',
-      description: '360° view of a fully articulated action figure customized with your details',
-      image: 'https://images.pexels.com/photos/5004872/pexels-photo-5004872.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      id: 'supabase-integration',
+      name: 'Supabase Backend Dashboard',
+      description: 'Real-time database with edge functions, user authentication, and secure API endpoints for content delivery',
+      image: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=800&h=600&fit=crop&crop=center',
       color: 'from-teal-500 to-emerald-600'
     },
     {
-      id: 'game-character',
-      name: 'Personalized Game Character',
-      description: 'Fighting game character select screen featuring personalized fighters with your name',
-      image: 'https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      id: 'pwa-features',
+      name: 'PWA Installation & Offline',
+      description: 'Progressive Web App with service worker caching, offline support, and native app installation capabilities',
+      image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=600&fit=crop&crop=center',
       color: 'from-red-500 to-orange-600'
     },
     {
-      id: 'vinyl-toy',
-      name: 'Personalized Vinyl Figure',
-      description: 'Cute vinyl figure with your name, custom details and personalized accessories',
-      image: 'https://images.pexels.com/photos/163036/mario-luigi-yoschi-figures-163036.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      id: 'email-editor',
+      name: 'Email Template Editor',
+      description: 'Visual email editor with drag-and-drop personalization tokens and real-time preview for marketing campaigns',
+      image: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&h=600&fit=crop&crop=center',
       color: 'from-pink-500 to-rose-600'
     },
     {
-      id: 'superhero',
-      name: 'Personalized Superhero Pack',
-      description: 'Superhero action figure with your name, custom powers and personalized backstory',
-      image: 'https://images.pexels.com/photos/8346904/pexels-photo-8346904.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      id: 'feature-gallery',
+      name: 'AI Feature Gallery',
+      description: 'Browse and select from 30+ AI-powered content generation features including memes, action figures, and animations',
+      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop&crop=center',
       color: 'from-amber-500 to-yellow-600'
     }
   ];
@@ -190,11 +190,11 @@ const ActionFigureShowcase: React.FC = () => {
             className="space-y-6"
           >
             <div className="space-y-4">
-              <h3 className="text-2xl font-bold">Create Personalized Action Figures</h3>
+              <h3 className="text-2xl font-bold">AI Creative Studio Features</h3>
               <p className="text-gray-600">
-                Create highly personalized, custom action figures for your marketing campaigns. 
-                Choose from 30+ premium styles to transform your customers into collectible toys, 
-                board game characters, or trading cards featuring their name and personal details.
+                Experience our comprehensive AI-powered content creation platform with drag-and-drop personalization,
+                real-time token replacement, and 30+ AI generation features including memes, action figures,
+                Ghibli-style art, and video conversion.
               </p>
               
               <div className="space-y-4">
@@ -203,28 +203,28 @@ const ActionFigureShowcase: React.FC = () => {
                     <Upload className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-medium">Personalized Reference Images</h4>
-                    <p className="text-sm text-gray-600">Upload your customers' photos to create personalized action figures that truly capture their likeness and personal details.</p>
+                    <h4 className="font-medium">Token-Based Personalization</h4>
+                    <p className="text-sm text-gray-600">Use dynamic tokens like [FIRSTNAME], [COMPANY], and [EMAIL] for real-time content personalization across all features.</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="bg-primary-100 p-2 rounded-full text-primary-600 mt-1 mr-4">
                     <Sparkles className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-medium">30+ Personalized Styles</h4>
-                    <p className="text-sm text-gray-600">Choose from boxed toys, collectible cards, vinyl figures, game characters, superhero figures, all featuring your customer's name and details.</p>
+                    <h4 className="font-medium">Supabase Edge Functions</h4>
+                    <p className="text-sm text-gray-600">Serverless functions handle AI processing, content generation, and real-time personalization with global deployment.</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="bg-primary-100 p-2 rounded-full text-primary-600 mt-1 mr-4">
                     <Camera className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-medium">Personalized AI Generation</h4>
-                    <p className="text-sm text-gray-600">Our advanced AI creates personalized action figures with your customer's name, company, and personal details for truly individualized experiences.</p>
+                    <h4 className="font-medium">PWA Offline Support</h4>
+                    <p className="text-sm text-gray-600">Service worker caching enables offline functionality with background sync for seamless content generation.</p>
                   </div>
                 </div>
               </div>
@@ -240,32 +240,32 @@ const ActionFigureShowcase: React.FC = () => {
         
         {/* Style Gallery */}
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-medium mb-4">Popular Personalized Action Figure Styles (30+ Options)</h3>
+          <h3 className="text-lg font-medium mb-4">AI Creative Studio Feature Gallery (30+ Options)</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
             {[
               {
-                label: "AI Collectible Card",
-                image: "https://images.pexels.com/photos/6615294/pexels-photo-6615294.jpeg?auto=compress&cs=tinysrgb&w=600"
+                label: "AI Image Gen",
+                image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=100&h=100&fit=crop&crop=center"
               },
               {
-                label: "Boxed Toy Mockup",
-                image: "https://images.pexels.com/photos/12211/pexels-photo-12211.jpeg?auto=compress&cs=tinysrgb&w=600"
+                label: "Action Figures",
+                image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=100&h=100&fit=crop&crop=center"
               },
               {
-                label: "3D Character",
-                image: "https://images.pexels.com/photos/5004872/pexels-photo-5004872.jpeg?auto=compress&cs=tinysrgb&w=600"
+                label: "Ghibli Style",
+                image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=100&h=100&fit=crop&crop=center"
               },
               {
-                label: "Game Character",
-                image: "https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg?auto=compress&cs=tinysrgb&w=600"
+                label: "AI Memes",
+                image: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=100&h=100&fit=crop&crop=center"
               },
               {
-                label: "Vinyl Figure",
-                image: "https://images.pexels.com/photos/163036/mario-luigi-yoschi-figures-163036.jpeg?auto=compress&cs=tinysrgb&w=600"
+                label: "Email Editor",
+                image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=100&h=100&fit=crop&crop=center"
               },
               {
-                label: "Superhero Pack",
-                image: "https://images.pexels.com/photos/8346904/pexels-photo-8346904.jpeg?auto=compress&cs=tinysrgb&w=600"
+                label: "Video Convert",
+                image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=100&h=100&fit=crop&crop=center"
               }
             ].map((style, index) => {
               const styleId = `gallery-${index}`;
@@ -338,17 +338,17 @@ const ActionFigureShowcase: React.FC = () => {
                 </motion.span>
               </div>
               
-              <h3 className="text-2xl font-bold">Upload Reference Images For Personalization</h3>
-              
+              <h3 className="text-2xl font-bold">Token-Based Personalization System</h3>
+
               <p className="text-gray-700">
-                Take personalization to the next level by uploading reference images. Our AI will 
-                use them as inspiration to generate action figures, Ghibli-style scenes, memes, 
-                and other content personalized with your customer's name, company, and details.
+                Our advanced personalization system uses dynamic tokens for real-time content replacement.
+                Drag and drop tokens like [FIRSTNAME], [COMPANY], and [EMAIL] into any content editor
+                for instant personalization across all AI generation features.
               </p>
               
               <div className="pt-2">
                 <Link to="/editor" className="btn btn-primary flex items-center inline-flex">
-                  Try Personalized Image-to-Image <ArrowRight className="ml-2 w-4 h-4" />
+                  Try AI Creative Studio <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </div>
             </div>

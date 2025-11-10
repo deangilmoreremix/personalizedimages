@@ -4,11 +4,10 @@ import { callGPT, polishImagePrompt } from './gptApi';
 // Mock the OpenAI client
 vi.mock('../../lib/openai', () => ({
   openai: {
-    chat: {
-      completions: {
-        create: vi.fn(),
-      },
+    responses: {
+      create: vi.fn(),
     },
+    apiKey: 'test-key',
   },
 }));
 
@@ -37,8 +36,8 @@ describe('GPT API', () => {
       // Mock the API key to be present
       Object.defineProperty(openai, 'apiKey', { value: 'test-key', configurable: true });
       const mockCreate = vi.fn().mockRejectedValue(new Error('API Error'));
-      openai.chat.completions.create = mockCreate;
-  
+      openai.responses.create = mockCreate;
+
       const result = await callGPT({ input: 'test' });
       expect(result.error).toBe('API Error');
     });
@@ -48,7 +47,7 @@ describe('GPT API', () => {
     it('should return original prompt if polishing fails', async () => {
       const { openai } = await import('../../lib/openai');
       const mockCreate = vi.fn().mockRejectedValue(new Error('API Error'));
-      openai.chat.completions.create = mockCreate;
+      openai.responses.create = mockCreate;
 
       const originalPrompt = 'A simple cat';
       const result = await polishImagePrompt(originalPrompt);

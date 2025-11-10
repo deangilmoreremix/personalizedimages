@@ -7,6 +7,7 @@ This document outlines the comprehensive design system implemented for the Video
 ## 🎨 Design System Architecture
 
 ### Core Principles
+
 - **Consistency**: Unified visual language across all components
 - **Maintainability**: Single source of truth for design tokens
 - **Scalability**: Easy to extend and modify
@@ -30,11 +31,13 @@ spacing: {
 ## 🎨 Color Palette
 
 ### Primary Colors
+
 - **Primary**: Blue gradient (`primary-500` to `primary-700`)
 - **Secondary**: Purple gradient (`secondary-500` to `secondary-700`)
 - **Accent**: Orange (`accent-500` to `accent-700`)
 
 ### Semantic Colors
+
 - **Success**: Green variants (`green-50`, `green-100`, etc.)
 - **Error**: Red variants (`red-50`, `red-100`, etc.)
 - **Warning**: Yellow variants (`yellow-50`, `yellow-100`, etc.)
@@ -58,6 +61,7 @@ typography: {
 ## 🧩 Component Patterns
 
 ### Cards and Sections
+
 ```typescript
 components: {
   card: 'bg-white rounded-xl shadow-md border border-gray-100',
@@ -67,6 +71,7 @@ components: {
 ```
 
 ### Form Elements
+
 ```typescript
 input: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
 textarea: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 min-h-[100px] resize-vertical',
@@ -75,6 +80,7 @@ checkbox: 'rounded text-primary-600 focus:ring-primary-500',
 ```
 
 ### Buttons
+
 ```typescript
 button: {
   primary: 'btn btn-primary w-full flex justify-center items-center',
@@ -85,6 +91,7 @@ button: {
 ```
 
 ### Alerts
+
 ```typescript
 alert: {
   error: 'p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200',
@@ -95,6 +102,7 @@ alert: {
 ```
 
 ### Loading States
+
 ```typescript
 loading: {
   spinner: 'animate-spin rounded-full border-2 border-gray-300 border-t-primary-600',
@@ -106,6 +114,7 @@ loading: {
 ## 📐 Grid Systems
 
 ### Responsive Grids
+
 ```typescript
 grid: {
   twoColumn: 'grid grid-cols-1 md:grid-cols-2 gap-6',
@@ -116,6 +125,7 @@ grid: {
 ```
 
 ### Utility Functions
+
 ```typescript
 getGridClasses(columns: 1 | 2 | 3 | 4): string
 getButtonClasses(variant: 'primary' | 'secondary', size?: 'default' | 'small' | 'large'): string
@@ -125,6 +135,7 @@ getAlertClasses(type: 'error' | 'success' | 'warning' | 'info'): string
 ## ♿ Accessibility
 
 ### Focus States
+
 ```typescript
 accessibility: {
   focus: 'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
@@ -136,6 +147,7 @@ accessibility: {
 ```
 
 ### Implementation Guidelines
+
 - All interactive elements must include proper ARIA labels
 - Focus states use consistent primary color theming
 - Screen reader support with `sr-only` class
@@ -144,6 +156,7 @@ accessibility: {
 ## 🏗️ Layout Patterns
 
 ### Common Layouts
+
 ```typescript
 layout: {
   formGroup: 'space-y-2',
@@ -154,6 +167,7 @@ layout: {
 ```
 
 ### Common Styles
+
 ```typescript
 commonStyles = {
   sectionHeader: `${DESIGN_SYSTEM.typography.h2} mb-6`,
@@ -168,6 +182,7 @@ commonStyles = {
 ## 📱 Responsive Design
 
 ### Breakpoints
+
 ```typescript
 breakpoints: {
   sm: 'sm:',
@@ -178,6 +193,7 @@ breakpoints: {
 ```
 
 ### Container Patterns
+
 ```typescript
 container: {
   padding: 'p-6',
@@ -188,6 +204,7 @@ container: {
 ## 🎭 Animation & Interaction
 
 ### Animation Variants
+
 ```typescript
 animation: {
   fadeIn: 'animate-in fade-in duration-300',
@@ -197,6 +214,7 @@ animation: {
 ```
 
 ### Shadows & Elevation
+
 ```typescript
 shadows: {
   sm: 'shadow-sm',
@@ -207,6 +225,7 @@ shadows: {
 ```
 
 ### Border Radius
+
 ```typescript
 radius: {
   sm: 'rounded',
@@ -222,11 +241,13 @@ radius: {
 ### Using the Design System
 
 1. **Import the design system**:
+
 ```typescript
 import { DESIGN_SYSTEM, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 ```
 
 2. **Apply component styles**:
+
 ```typescript
 <div className={DESIGN_SYSTEM.components.section}>
   <h3 className={commonStyles.sectionHeader}>Title</h3>
@@ -237,6 +258,7 @@ import { DESIGN_SYSTEM, getButtonClasses, getAlertClasses, commonStyles } from '
 ```
 
 3. **Use utility functions**:
+
 ```typescript
 <button className={`${getButtonClasses('primary')} ${DESIGN_SYSTEM.accessibility.focus}`}>
   Click me
@@ -244,6 +266,7 @@ import { DESIGN_SYSTEM, getButtonClasses, getAlertClasses, commonStyles } from '
 ```
 
 4. **Handle alerts and loading states**:
+
 ```typescript
 {error && <div className={getAlertClasses('error')}>{error}</div>}
 
@@ -278,6 +301,7 @@ When creating new components, ensure they include:
 ### Example Migration
 
 **Before:**
+
 ```typescript
 <div className="bg-white rounded-lg shadow-md p-4">
   <h3 className="text-lg font-bold mb-4">Title</h3>
@@ -286,6 +310,7 @@ When creating new components, ensure they include:
 ```
 
 **After:**
+
 ```typescript
 <div className={DESIGN_SYSTEM.components.section}>
   <h3 className={commonStyles.sectionHeader}>Title</h3>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Music } from 'lucide-react';
-import { generateActionFigure } from '../utils/api';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Music, Shapes } from 'lucide-react';
+import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { musicStarActionFigurePrompts as musicPrompts } from '../data/musicStarActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
 interface MusicStarActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -17,7 +18,11 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('gemini');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini');
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [selectedAdditions, setSelectedAdditions] = useState<string[]>([]);
@@ -253,22 +258,30 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
             <label className="block text-sm font-medium text-gray-700 mb-1">
               AI Model
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-purple-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'openai'
+                  ? 'bg-purple-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
                 DALL-E 3
               </button>
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-purple-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'
+                  ? 'bg-purple-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
                 Gemini AI
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini-nano'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini-nano')}
+              >
+                Gemini Nano
               </button>
             </div>
           </div>

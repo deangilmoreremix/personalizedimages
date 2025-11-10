@@ -3,7 +3,7 @@
  * AI-powered prompt analysis, enhancement, and validation
  */
 
-import { getOpenAIApiKey } from '../utils/apiUtils';
+import { callGPT } from '../utils/gptApi';
 
 export interface PromptAnalysis {
   quality_score: number; // 0-100
@@ -24,20 +24,14 @@ export interface EnhancedPrompt {
 }
 
 class PromptEnhancementService {
-  private apiKey: string;
-
   constructor() {
-    this.apiKey = getOpenAIApiKey();
+    // API key is now handled by the centralized GPT API utility
   }
 
   /**
    * Analyze prompt quality and provide suggestions
    */
   async analyzePrompt(prompt: string, category?: string): Promise<PromptAnalysis> {
-    if (!this.apiKey) {
-      return this.fallbackAnalysis(prompt);
-    }
-
     try {
       const systemPrompt = `You are a prompt engineering expert. Analyze the given image generation prompt and provide structured feedback.
 
@@ -60,31 +54,39 @@ Respond in JSON format with this structure:
   "strengths": ["strength1", "strength2"]
 }`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Analyze this ${category || 'image generation'} prompt:\n\n${prompt}` }
-          ],
-          temperature: 0.3,
-          response_format: { type: 'json_object' }
-        })
+      const response = await callGPT({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Analyze this ${category || 'image generation'} prompt:\n\n${prompt}` }
+        ],
+        model: 'gpt-4o-mini',
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'prompt_analysis',
+            schema: {
+              type: 'object',
+              properties: {
+                quality_score: { type: 'number', minimum: 0, maximum: 100 },
+                clarity: { type: 'number', minimum: 0, maximum: 100 },
+                specificity: { type: 'number', minimum: 0, maximum: 100 },
+                completeness: { type: 'number', minimum: 0, maximum: 100 },
+                issues: { type: 'array', items: { type: 'string' } },
+                suggestions: { type: 'array', items: { type: 'string' } },
+                missing_elements: { type: 'array', items: { type: 'string' } },
+                strengths: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['quality_score', 'clarity', 'specificity', 'completeness', 'issues', 'suggestions', 'missing_elements', 'strengths']
+            }
+          }
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
+      if (response.error) {
+        throw new Error(response.error);
       }
 
-      const data = await response.json();
-      const analysisText = data.choices[0].message.content;
-      const analysis = JSON.parse(analysisText);
-
+      const analysis = JSON.parse(response.text);
       return analysis;
     } catch (error) {
       console.error('Error analyzing prompt:', error);
@@ -96,15 +98,6 @@ Respond in JSON format with this structure:
    * Enhance a prompt with AI suggestions
    */
   async enhancePrompt(prompt: string, style?: string, category?: string): Promise<EnhancedPrompt> {
-    if (!this.apiKey) {
-      return {
-        original: prompt,
-        enhanced: prompt,
-        improvements: ['API key not available - using original prompt'],
-        analysis: this.fallbackAnalysis(prompt)
-      };
-    }
-
     try {
       const systemPrompt = `You are an expert at writing prompts for AI image generation. Your task is to enhance the given prompt while maintaining the user's intent.
 
@@ -124,30 +117,33 @@ Respond in JSON format:
   "improvements": ["improvement1", "improvement2", "improvement3"]
 }`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.7,
-          response_format: { type: 'json_object' }
-        })
+      const response = await callGPT({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        model: 'gpt-4o-mini',
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'prompt_enhancement',
+            schema: {
+              type: 'object',
+              properties: {
+                enhanced: { type: 'string' },
+                improvements: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['enhanced', 'improvements']
+            }
+          }
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
+      if (response.error) {
+        throw new Error(response.error);
       }
 
-      const data = await response.json();
-      const resultText = data.choices[0].message.content;
-      const result = JSON.parse(resultText);
+      const result = JSON.parse(response.text);
 
       // Analyze the enhanced prompt
       const analysis = await this.analyzePrompt(result.enhanced, category);
@@ -173,7 +169,7 @@ Respond in JSON format:
    * Get smart suggestions as user types
    */
   async getSmartSuggestions(partialPrompt: string, category?: string): Promise<string[]> {
-    if (!this.apiKey || partialPrompt.length < 10) {
+    if (partialPrompt.length < 10) {
       return this.getFallbackSuggestions(partialPrompt, category);
     }
 
@@ -191,33 +187,32 @@ Category: ${category || 'general'}
 Respond with JSON array of strings:
 ["suggestion1", "suggestion2", "suggestion3", "suggestion4", "suggestion5"]`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: partialPrompt }
-          ],
-          temperature: 0.8,
-          max_tokens: 200,
-          response_format: { type: 'json_object' }
-        })
+      const response = await callGPT({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: partialPrompt }
+        ],
+        model: 'gpt-4o-mini',
+        temperature: 0.8,
+        max_output_tokens: 200,
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'prompt_suggestions',
+            schema: {
+              type: 'array',
+              items: { type: 'string' }
+            }
+          }
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
+      if (response.error) {
+        throw new Error(response.error);
       }
 
-      const data = await response.json();
-      const resultText = data.choices[0].message.content;
-      const result = JSON.parse(resultText);
-
-      return Array.isArray(result) ? result : (result.suggestions || []);
+      const result = JSON.parse(response.text);
+      return Array.isArray(result) ? result : [];
     } catch (error) {
       console.error('Error getting suggestions:', error);
       return this.getFallbackSuggestions(partialPrompt, category);

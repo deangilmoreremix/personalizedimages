@@ -19,6 +19,7 @@ import VideoGenerationButton from './VideoGenerationButton';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
 interface AIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -61,6 +62,10 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   const [reasoningText, setReasoningText] = useState('');
   const [lastUpdateTime, setLastUpdateTime] = useState(0);
   const [isStreamingActive, setIsStreamingActive] = useState(false);
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
 
   // Refs for cancelation
   const generationRef = useRef<(() => void) | null>(null);
@@ -418,6 +423,13 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
                     <Sparkles className="w-3 h-3 mr-1" />
                   )}
                   Auto-generate
+                </button>
+                <button
+                  onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+                  className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+                >
+                  <Shapes className="w-3 h-3 mr-1" />
+                  {showPersonalizationPanel ? "Hide" : "Show"} Personalization
                 </button>
               </div>
             </div>
@@ -925,6 +937,21 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
       {showPromptGuide && (
         <div className="mt-4">
           <ImagenPromptGuide onPromptSelect={handlePromptSelect} />
+        </div>
+      )}
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={prompt}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              setPersonalizedContent(content);
+              setPrompt(content);
+              setShowPersonalizationPanel(false);
+            }}
+          />
         </div>
       )}
     </div>

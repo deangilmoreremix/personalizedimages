@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Paintbrush as PaintBrush } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wand2, Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Lightbulb, Dices, Paintbrush as PaintBrush, Shapes } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateImageWithDalle, generateImageWithGemini, generateCartoonImage } from '../utils/api';
+import { generateImageWithDalle, generateImageWithGemini, generateCartoonImage, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
 interface CartoonImageGeneratorProps {
@@ -20,11 +21,14 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>('Cartoon Styles');
   const [showAllThemes, setShowAllThemes] = useState(false);
   
   // Initialize with the first theme
@@ -227,22 +231,30 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
             <label className={commonStyles.formLabel}>
               AI Model
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-primary-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'openai'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
                 DALL-E 3
               </button>
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-primary-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
                 Gemini AI
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini-nano'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini-nano')}
+              >
+                Gemini Nano
               </button>
             </div>
           </div>
@@ -271,7 +283,14 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           )}
           
           {/* Additional options toggle */}
-          <div className="flex justify-end">
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+              className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+            >
+              <Shapes className="w-3 h-3 mr-1" />
+              {showPersonalizationPanel ? "Hide" : "Show"} Personalization
+            </button>
             <button
               onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
               className="text-xs text-gray-600 hover:text-primary-600 flex items-center"
@@ -456,6 +475,21 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           </div>
         </div>
       </div>
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={customPrompt || prompt}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              setCustomPrompt(content);
+              setPersonalizedContent(content);
+              setShowPersonalizationPanel(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

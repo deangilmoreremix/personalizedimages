@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices } from 'lucide-react';
-import { generateGhibliStyleImage } from '../utils/api';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes } from 'lucide-react';
+import { generateGhibliStyleImage, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import DroppableInput from './DroppableInput';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import ghibliConfig from '../data/ghibliStyles';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
@@ -28,6 +29,10 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [includePersonalization, setIncludePersonalization] = useState(true);
   const [customCharacterName, setCustomCharacterName] = useState('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
 
   // Use configuration data
   const sceneOptions = ghibliConfig.scenes.map(scene => scene.label);
@@ -236,13 +241,22 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
               <label className={commonStyles.formLabel}>
                 AI Model
               </label>
-              <button
-                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-                className="text-xs text-gray-600 hover:text-primary-600 flex items-center"
-              >
-                <SlidersHorizontal className="w-3 h-3 mr-1" />
-                {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+                  className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+                >
+                  <Shapes className="w-3 h-3 mr-1" />
+                  {showPersonalizationPanel ? "Hide" : "Show"} Personalization
+                </button>
+                <button
+                  onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                  className="text-xs text-gray-600 hover:text-primary-600 flex items-center"
+                >
+                  <SlidersHorizontal className="w-3 h-3 mr-1" />
+                  {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2 mb-2">
               <button
@@ -614,6 +628,21 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           </div>
         </div>
       </div>
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={prompt || generatePrompt()}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              setPrompt(content);
+              setPersonalizedContent(content);
+              setShowPersonalizationPanel(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

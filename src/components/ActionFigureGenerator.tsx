@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, ChevronDown, ChevronUp, History } from 'lucide-react';
-import { generateActionFigure } from '../utils/api';
+import { Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Dices, ChevronDown, ChevronUp, Zap, Layers, Shapes } from 'lucide-react';
+import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import templatesService, { ActionFigureTemplate } from '../services/templatesService';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
@@ -17,7 +18,11 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const [prompt, setPrompt] = useState('');
   const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [figureStyle, setFigureStyle] = useState<string>('realistic');
@@ -31,7 +36,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const [templates, setTemplates] = useState<ActionFigureTemplate[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load templates from Supabase
   useEffect(() => {
@@ -235,23 +240,38 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 <SlidersHorizontal className="w-3 h-3 mr-1" />
                 {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
               </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-primary-600 text-white' 
+                onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+                className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+              >
+                <Shapes className="w-3 h-3 mr-1" />
+                {showPersonalizationPanel ? "Hide" : "Show"} Personalization
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              <button
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'openai'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
                 DALL-E 3
               </button>
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-primary-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
                 Gemini AI
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini-nano'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini-nano')}
+              >
+                Gemini Nano
               </button>
             </div>
           </div>
@@ -613,6 +633,21 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
           </div>
         </div>
       </div>
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={prompt}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              setPrompt(content);
+              setPersonalizedContent(content);
+              setShowPersonalizationPanel(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

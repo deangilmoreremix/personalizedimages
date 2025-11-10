@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare } from 'lucide-react';
+import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
-import { generateMemeWithReference } from '../utils/api';
+import { generateMemeWithReference, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { FontSelector } from './ui/FontSelector';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
@@ -26,7 +27,11 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   const [error, setError] = useState<string | null>(null);
   
   // Model selection
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
   
   // Advanced options
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
@@ -407,11 +412,11 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                       onDrop={handleAIPromptTokenDrop}
                     />
                     
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
-                        className={`flex-1 py-2 px-3 text-sm rounded ${
-                          selectedProvider === 'openai' 
-                            ? 'bg-purple-600 text-white' 
+                        className={`py-2 px-3 text-sm rounded ${
+                          selectedProvider === 'openai'
+                            ? 'bg-purple-600 text-white'
                             : 'bg-white text-gray-700 border border-gray-300'
                         }`}
                         onClick={() => setSelectedProvider('openai')}
@@ -419,19 +424,40 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                         DALL-E 3
                       </button>
                       <button
-                        className={`flex-1 py-2 px-3 text-sm rounded ${
-                          selectedProvider === 'gemini' 
-                            ? 'bg-purple-600 text-white' 
+                        className={`py-2 px-3 text-sm rounded ${
+                          selectedProvider === 'gemini'
+                            ? 'bg-purple-600 text-white'
                             : 'bg-white text-gray-700 border border-gray-300'
                         }`}
                         onClick={() => setSelectedProvider('gemini')}
                       >
                         Gemini AI
                       </button>
+                      <button
+                        className={`py-2 px-3 text-sm rounded ${
+                          selectedProvider === 'gemini-nano'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300'
+                        }`}
+                        onClick={() => setSelectedProvider('gemini-nano')}
+                      >
+                        Gemini Nano
+                      </button>
                     </div>
                     
                     <div className="text-xs text-purple-700 bg-purple-100 p-2 rounded">
                       <strong>Note:</strong> AI enhancement will apply your text on top of a modified version of your template. For simple text overlay without image modification, uncheck this option.
+                    </div>
+
+                    {/* Personalization Toggle */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-purple-200">
+                      <button
+                        onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+                        className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+                      >
+                        <Shapes className="w-3 h-3 mr-1" />
+                        {showPersonalizationPanel ? "Hide" : "Show"} Personalization
+                      </button>
                     </div>
                   </div>
                 )}
@@ -789,6 +815,23 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           )}
         </div>
       </div>
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={`${topText}\n${bottomText}`}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              const lines = content.split('\n');
+              setTopText(lines[0] || '');
+              setBottomText(lines[1] || '');
+              setPersonalizedContent(content);
+              setShowPersonalizationPanel(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -16,7 +16,7 @@ export const openai = new OpenAI({
   dangerouslyAllowBrowser: true, // Note: In production, API calls should be made from the server
 });
 
-export type GPTModel = 'gpt-4o' | 'gpt-4' | 'gpt-3.5-turbo';
+export type GPTModel = 'gpt-4o' | 'gpt-4' | 'gpt-3.5-turbo' | 'gpt-4o-mini';
 
 export const GPT_MODELS: { value: GPTModel; label: string }[] = [
   { value: 'gpt-4o', label: 'GPT-4o (Latest)' },

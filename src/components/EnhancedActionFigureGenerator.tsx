@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Package, X } from 'lucide-react';
-import { generateActionFigure } from '../utils/api';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Package, X, Shapes } from 'lucide-react';
+import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { actionFigureTemplates, generateActionFigurePrompt, getRandomAccessories, getCompanyColors } from '../data/actionFigureTemplates';
 import { FontSelector } from './ui/FontSelector';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
 interface EnhancedActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -18,7 +19,11 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('gemini');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini');
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   
@@ -296,22 +301,30 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
             <label className="block text-sm font-medium text-gray-700 mb-1">
               AI Model
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-primary-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'openai'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
                 DALL-E 3
               </button>
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-primary-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'
+                  ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
                 Gemini AI
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini-nano'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini-nano')}
+              >
+                Gemini Nano
               </button>
             </div>
           </div>
@@ -373,7 +386,16 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
               <Dices className="w-4 h-4 mr-2" />
               Randomize Options
             </button>
-            
+
+            <button
+              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+              className="btn btn-secondary flex items-center justify-center px-3"
+              disabled={isGenerating}
+            >
+              <Shapes className="w-4 h-4 mr-2" />
+              Personalize
+            </button>
+
             <button
               onClick={handleGenerateActionFigure}
               disabled={isGenerating}
@@ -573,6 +595,21 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={generateCompletePrompt()}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              setCustomPrompt(content);
+              setPersonalizedContent(content);
+              setShowPersonalizationPanel(false);
+            }}
+          />
         </div>
       )}
     </div>

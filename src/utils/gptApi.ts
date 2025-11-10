@@ -4,6 +4,11 @@ export interface GPTRequest {
   input?: string;
   messages?: { role: 'user' | 'system' | 'assistant'; content: string }[];
   model?: GPTModel;
+  tools?: any[];
+  tool_choice?: any;
+  response_format?: any;
+  max_output_tokens?: number;
+  temperature?: number;
 }
 
 export interface GPTResponse {
@@ -13,11 +18,19 @@ export interface GPTResponse {
 }
 
 /**
- * Call OpenAI GPT API for text generation
+ * Call OpenAI GPT API for text generation using Responses API
  */
 export async function callGPT(request: GPTRequest): Promise<GPTResponse> {
   try {
-    const { input, messages, model = 'gpt-4o' } = request;
+    const {
+      input,
+      messages,
+      model = 'gpt-4o',
+      tools,
+      tool_choice,
+      response_format,
+      max_output_tokens = 1000
+    } = request;
 
     // Prepare messages for OpenAI API
     let apiMessages;
@@ -34,14 +47,17 @@ export async function callGPT(request: GPTRequest): Promise<GPTResponse> {
       throw new Error('Missing OPENAI_API_KEY');
     }
 
-    const response = await openai.chat.completions.create({
+    const response = await openai.responses.create({
       model,
       messages: apiMessages,
-      temperature: 0.7,
-      max_tokens: 1000,
+      temperature: request.temperature || 0.7,
+      max_output_tokens,
+      ...(tools && { tools }),
+      ...(tool_choice && { tool_choice }),
+      ...(response_format && { response_format })
     });
 
-    const text = response.choices[0]?.message?.content || '';
+    const text = response.output_text || '';
 
     return {
       model,

@@ -31,7 +31,12 @@ import TokensPanel from './pages/TokensPanel';
 import GeminiDocs from './pages/GeminiDocs';
 import EdgeFunctionDebugging from './pages/EdgeFunctionDebugging';
 import GeminiNanoEditorPage from './pages/features/GeminiNanoEditorPage';
-import Gallery from './pages/Gallery';
+import Gallery from './components/Gallery';
+import MultiModelComparison from './components/MultiModelComparison';
+import BatchGeneration from './components/BatchGeneration';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
+import TokenManagement from './components/TokenManagement';
+import UniversalPersonalizationPanel from './components/UniversalPersonalizationPanel';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Component for conditionally rendering footer and other components
@@ -47,6 +52,11 @@ const AppLayout = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/gallery" element={<Gallery />} />
+          <Route path="/model-comparison" element={<MultiModelComparison tokens={{}} />} />
+          <Route path="/batch-generation" element={<BatchGeneration tokens={{}} />} />
+          <Route path="/analytics" element={<AnalyticsDashboard />} />
+          <Route path="/token-management" element={<TokenManagement currentTokens={{}} onTokensChange={() => {}} />} />
+          <Route path="/personalization" element={<UniversalPersonalizationPanel />} />
           <Route path="/features/action-figures" element={<ActionFigurePage />} />
           <Route path="/features/retro-action-figures" element={<RetroActionFigurePage />} />
           <Route path="/features/music-star-action-figures" element={<MusicStarActionFigurePage />} />

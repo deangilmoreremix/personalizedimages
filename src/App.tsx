@@ -38,6 +38,7 @@ import ModernGhibliStylePage from './pages/features/ModernGhibliStylePage';
 import ModernCartoonStylePage from './pages/features/ModernCartoonStylePage';
 import ModernBatchGenerationPage from './pages/features/ModernBatchGenerationPage';
 import ModernVideoConverterPage from './pages/features/ModernVideoConverterPage';
+import ReimaginedAIImagePage from './pages/features/ReimaginedAIImagePage';
 import Gallery from './components/Gallery';
 import MultiModelComparison from './components/MultiModelComparison';
 import BatchGeneration from './components/BatchGeneration';
@@ -75,6 +76,7 @@ const AppLayout = () => {
           <Route path="/features/meme-generator" element={<MemeGeneratorPage />} />
           <Route path="/features/ai-image" element={<AIImagePage />} />
           <Route path="/features/modern-ai-image" element={<ModernAIImagePage />} />
+          <Route path="/features/reimagined-ai-image" element={<ReimaginedAIImagePage />} />
           <Route path="/features/modern-action-figures" element={<ModernActionFigurePage />} />
           <Route path="/features/modern-meme-generator" element={<ModernMemeGeneratorPage />} />
           <Route path="/features/modern-ghibli-style" element={<ModernGhibliStylePage />} />

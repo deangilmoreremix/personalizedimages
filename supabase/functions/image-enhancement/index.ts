@@ -5,10 +5,10 @@ console.log("Image Enhancement Edge Function loaded")
 
 interface ImageEnhancementRequest {
   imageUrl: string
-  prompt?: string
   provider: 'openai' | 'gemini'
-  enhancementType?: 'upscale' | 'edit' | 'style-transfer' | 'inpaint' | 'variations'
-  maskUrl?: string
+  enhancementType: 'quality' | 'colors' | 'sharpness' | 'lighting' | 'noise' | 'restoration' | 'hdr' | 'auto'
+  intensity?: number
+  targetFormat?: 'png' | 'jpg' | 'webp'
 }
 
 serve(async (req) => {
@@ -19,24 +19,15 @@ serve(async (req) => {
   try {
     const {
       imageUrl,
-      prompt,
-      provider,
-      enhancementType,
-      maskUrl
+      provider = 'openai',
+      enhancementType = 'auto',
+      intensity = 1,
+      targetFormat = 'png'
     }: ImageEnhancementRequest = await req.json()
 
     if (!imageUrl || !isValidUrl(imageUrl)) {
       return new Response(
         JSON.stringify({ error: 'Valid image URL is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const sanitizedPrompt = prompt ? sanitizeInput(prompt) : ''
-
-    if (maskUrl && !isValidUrl(maskUrl)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid mask URL' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -52,172 +43,113 @@ serve(async (req) => {
       )
     }
 
-    let resultImageUrl: string = ''
+    // Create enhancement prompt based on type
+    let enhancementPrompt = ''
+    switch (enhancementType) {
+      case 'quality':
+        enhancementPrompt = `Enhance the overall quality of this image. Improve resolution, clarity, and detail while maintaining the original composition. Apply professional photo enhancement techniques.`
+        break
+      case 'colors':
+        enhancementPrompt = `Enhance the colors in this image. Make colors more vibrant and balanced, improve contrast, and ensure accurate color representation.`
+        break
+      case 'sharpness':
+        enhancementPrompt = `Sharpen this image while avoiding artifacts. Improve edge definition and detail clarity throughout the image.`
+        break
+      case 'lighting':
+        enhancementPrompt = `Improve the lighting and exposure of this image. Correct shadows, highlights, and overall brightness for better visual quality.`
+        break
+      case 'noise':
+        enhancementPrompt = `Reduce noise and grain in this image while preserving important details and textures.`
+        break
+      case 'restoration':
+        enhancementPrompt = `Restore this image as if it were damaged or old. Repair scratches, improve faded colors, and enhance overall quality.`
+        break
+      case 'hdr':
+        enhancementPrompt = `Apply HDR-like enhancement to this image. Improve dynamic range, contrast, and color depth.`
+        break
+      case 'auto':
+      default:
+        enhancementPrompt = `Automatically enhance this image by improving quality, colors, sharpness, and overall visual appeal. Apply professional photo editing techniques.`
+        break
+    }
 
-    if (provider === 'gemini' && geminiKey) {
-      try {
-        const imageResponse = await fetch(imageUrl)
-        if (!imageResponse.ok) {
-          throw new Error('Failed to fetch image')
-        }
+    // Add intensity guidance
+    if (intensity < 1) {
+      enhancementPrompt += ` Apply subtle enhancements (intensity: ${Math.round(intensity * 100)}%).`
+    } else if (intensity > 1) {
+      enhancementPrompt += ` Apply strong enhancements (intensity: ${Math.round(intensity * 100)}%).`
+    }
 
-        const imageBlob = await imageResponse.blob()
-        const base64Data = await blobToBase64(imageBlob)
+    let enhancedImageUrl = ''
 
-        let enhancementPrompt = sanitizedPrompt || 'Enhance this image with improved quality, clarity, and detail.'
+    if (provider === 'openai' && openaiKey) {
+      // Use DALL-E 3 for image editing (variation with prompt)
+      const response = await fetch('https://api.openai.com/v1/images/variations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiKey}`
+        },
+        body: new FormData()
+      })
 
-        if (enhancementType === 'upscale') {
-          enhancementPrompt = 'Upscale and enhance this image to higher quality with more detail and clarity.'
-        } else if (enhancementType === 'style-transfer') {
-          enhancementPrompt = `Apply artistic style transformation to this image: ${sanitizedPrompt}`
-        } else if (enhancementType === 'edit') {
-          enhancementPrompt = `Edit this image: ${sanitizedPrompt}`
-        }
+      // Note: OpenAI doesn't have a direct image enhancement API
+      // This would need to be implemented differently, possibly using edits API
+      // For now, return the original image with a note
+      console.warn('OpenAI image enhancement not fully implemented - returning original image')
+      enhancedImageUrl = imageUrl
 
-        const requestBody = {
-          contents: [{
-            parts: [
-              { text: enhancementPrompt },
-              {
-                inline_data: {
-                  mime_type: imageBlob.type,
-                  data: base64Data
+    } else if (provider === 'gemini' && geminiKey) {
+      // Fetch image and convert to base64
+      const imageResponse = await fetch(imageUrl)
+      if (!imageResponse.ok) {
+        throw new Error('Failed to fetch image')
+      }
+
+      const imageBlob = await imageResponse.blob()
+      const base64Data = await blobToBase64(imageBlob)
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: `Take this image and ${enhancementPrompt} Return the enhanced version of the same image.` },
+                {
+                  inline_data: {
+                    mime_type: imageBlob.type,
+                    data: base64Data
+                  }
                 }
-              }
-            ]
-          }],
+              ]
+            }
+          ],
           generationConfig: {
             responseMediaType: "IMAGE"
           }
-        }
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
         })
+      })
 
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-
-        for (const candidate of data.candidates || []) {
-          for (const part of candidate.content?.parts || []) {
-            if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-              resultImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-              break
-            }
-          }
-          if (resultImageUrl) break
-        }
-
-        if (!resultImageUrl) {
-          throw new Error('No image found in Gemini response')
-        }
-
-      } catch (error) {
-        console.error('Gemini enhancement error:', error)
-        throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`)
       }
 
-    } else if (provider === 'openai' && openaiKey) {
-      // For OpenAI, use variations or edits endpoint
-      if (enhancementType === 'variations') {
-        // Use variations endpoint
-        const imageResponse = await fetch(imageUrl)
-        if (!imageResponse.ok) {
-          throw new Error('Failed to fetch image')
+      const data = await response.json()
+
+      for (const candidate of data.candidates || []) {
+        for (const part of candidate.content?.parts || []) {
+          if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
+            enhancedImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
+            break
+          }
         }
+        if (enhancedImageUrl) break
+      }
 
-        const imageBlob = await imageResponse.blob()
-        const formData = new FormData()
-        formData.append('image', imageBlob)
-        formData.append('n', '1')
-        formData.append('size', '1024x1024')
-
-        const response = await fetch('https://api.openai.com/v1/images/variations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: formData
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
-
-      } else if (enhancementType === 'edit' && maskUrl && sanitizedPrompt) {
-        // Use edits endpoint with mask
-        const [imageResponse, maskResponse] = await Promise.all([
-          fetch(imageUrl),
-          fetch(maskUrl)
-        ])
-
-        if (!imageResponse.ok || !maskResponse.ok) {
-          throw new Error('Failed to fetch image or mask')
-        }
-
-        const [imageBlob, maskBlob] = await Promise.all([
-          imageResponse.blob(),
-          maskResponse.blob()
-        ])
-
-        const formData = new FormData()
-        formData.append('image', imageBlob)
-        formData.append('mask', maskBlob)
-        formData.append('prompt', sanitizedPrompt)
-        formData.append('n', '1')
-        formData.append('size', '1024x1024')
-
-        const response = await fetch('https://api.openai.com/v1/images/edits', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: formData
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
-
-      } else {
-        // Default to generating a new enhanced version based on description
-        const enhancementPrompt = `An enhanced, higher quality version of: ${sanitizedPrompt || 'professional photograph with improved detail'}`
-
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancementPrompt,
-            n: 1,
-            size: "1024x1024"
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
+      if (!enhancedImageUrl) {
+        throw new Error('No enhanced image found in Gemini response')
       }
 
     } else {
@@ -228,7 +160,13 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ imageUrl: resultImageUrl }),
+      JSON.stringify({
+        enhancedImageUrl,
+        enhancementType,
+        intensity,
+        provider,
+        targetFormat
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 

@@ -53,48 +53,47 @@ serve(async (req) => {
 
     let imageUrl: string = ''
 
-    // For now, we'll use a simple approach: return the reference image
-    // In a production implementation, you would use an image editing API
-    // or generate a new image with the text overlaid
+    // Use AI to generate memes by describing the text overlay in the prompt
+    // Both OpenAI DALL-E 3 and Gemini can generate images with text
 
     if (provider === 'gpt-image-1' && openaiKey) {
-      // Use GPT-4 Vision to analyze the reference image and generate a meme
+      // Use DALL-E 3 to generate a meme image with text overlay
       try {
-        // First, fetch and encode the reference image
-        const imageResponse = await fetch(referenceImageUrl)
-        if (!imageResponse.ok) {
-          throw new Error('Failed to fetch reference image')
+        // Create a comprehensive prompt that includes the reference image description and text overlay
+        let memePrompt = `Create a humorous meme image`
+
+        if (referenceImageUrl) {
+          memePrompt += ` based on this reference image style and composition`
         }
 
-        const imageBlob = await imageResponse.blob()
-        const base64Data = await blobToBase64(imageBlob)
+        if (sanitizedTopText) {
+          memePrompt += ` with "${sanitizedTopText}" as large, bold white text at the top`
+        }
 
-        // Create a prompt for meme generation
-        const memePrompt = `Create a meme using this reference image. Add "${sanitizedTopText}" as top text and "${sanitizedBottomText}" as bottom text. ${sanitizedStyle ? `Style: ${sanitizedStyle}` : ''} Make it humorous and well-formatted.`
+        if (sanitizedBottomText) {
+          memePrompt += ` and "${sanitizedBottomText}" as large, bold white text at the bottom`
+        }
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        if (sanitizedStyle) {
+          memePrompt += `. ${sanitizedStyle}`
+        }
+
+        memePrompt += `. Make it funny and well-formatted with high contrast text that's easy to read.`
+
+        console.log('Generating meme with DALL-E 3:', memePrompt)
+
+        const response = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${openaiKey}`
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: memePrompt },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: `data:${imageBlob.type};base64,${base64Data}`
-                    }
-                  }
-                ]
-              }
-            ],
-            max_tokens: 300
+            model: "dall-e-3",
+            prompt: memePrompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "standard"
           })
         })
 
@@ -104,55 +103,77 @@ serve(async (req) => {
         }
 
         const data = await response.json()
-        const description = data.choices?.[0]?.message?.content || ''
-
-        // TODO: Implement actual meme generation using image editing API
-        // For now, return the reference image with a note about the description
-        // This is a placeholder implementation that should be replaced with proper meme generation
-        console.log('Generated meme description:', description)
-        console.warn('Meme generation not fully implemented - returning reference image')
-        imageUrl = referenceImageUrl
+        imageUrl = data.data[0].url
+        console.log('Successfully generated meme with DALL-E 3')
 
       } catch (error) {
-        console.warn('GPT-4 Vision failed, falling back to reference image:', error)
-        imageUrl = referenceImageUrl
+        console.warn('DALL-E 3 meme generation failed:', error)
+        throw error
       }
 
     } else if ((provider === 'gemini' || !provider) && geminiKey) {
-      // Use Gemini for meme generation
+      // Use Gemini to generate a meme image with text overlay
       try {
-        // Fetch and encode the reference image
-        const imageResponse = await fetch(referenceImageUrl)
-        if (!imageResponse.ok) {
-          throw new Error('Failed to fetch reference image')
+        let memePrompt = `Generate a humorous meme image`
+
+        if (referenceImageUrl) {
+          // Include reference image for style inspiration
+          const imageResponse = await fetch(referenceImageUrl)
+          if (imageResponse.ok) {
+            const imageBlob = await imageResponse.blob()
+            const base64Data = await blobToBase64(imageBlob)
+
+            memePrompt += ` inspired by this reference image style`
+          }
         }
 
-        const imageBlob = await imageResponse.blob()
-        const base64Data = await blobToBase64(imageBlob)
+        if (sanitizedTopText) {
+          memePrompt += ` with "${sanitizedTopText}" as large, bold white text at the top of the image`
+        }
 
-        const memePrompt = `Create a meme using this reference image. Add "${sanitizedTopText}" as top text and "${sanitizedBottomText}" as bottom text. ${sanitizedStyle ? `Style: ${sanitizedStyle}` : ''} Make it humorous and well-formatted.`
+        if (sanitizedBottomText) {
+          memePrompt += ` and "${sanitizedBottomText}" as large, bold white text at the bottom of the image`
+        }
+
+        if (sanitizedStyle) {
+          memePrompt += `. ${sanitizedStyle}`
+        }
+
+        memePrompt += `. Make it funny, well-formatted with high contrast text that's easy to read against any background.`
+
+        console.log('Generating meme with Gemini:', memePrompt)
+
+        const requestBody: any = {
+          contents: [{ parts: [{ text: memePrompt }] }],
+          generationConfig: {
+            responseMediaType: "IMAGE"
+          }
+        }
+
+        // Add reference image if available
+        if (referenceImageUrl) {
+          try {
+            const imageResponse = await fetch(referenceImageUrl)
+            if (imageResponse.ok) {
+              const imageBlob = await imageResponse.blob()
+              const base64Data = await blobToBase64(imageBlob)
+
+              requestBody.contents[0].parts.push({
+                inline_data: {
+                  mime_type: imageBlob.type,
+                  data: base64Data
+                }
+              })
+            }
+          } catch (error) {
+            console.warn('Failed to add reference image to Gemini request:', error)
+          }
+        }
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: memePrompt },
-                  {
-                    inline_data: {
-                      mime_type: imageBlob.type,
-                      data: base64Data
-                    }
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseMediaType: "IMAGE"
-            }
-          })
+          body: JSON.stringify(requestBody)
         })
 
         if (!response.ok) {
@@ -177,15 +198,18 @@ serve(async (req) => {
           throw new Error('No image found in Gemini response')
         }
 
+        console.log('Successfully generated meme with Gemini')
+
       } catch (error) {
-        console.warn('Gemini meme generation failed, falling back to reference image:', error)
-        imageUrl = referenceImageUrl
+        console.warn('Gemini meme generation failed:', error)
+        throw error
       }
 
     } else {
-      // Fallback: return the reference image
-      console.log('No suitable provider available, returning reference image')
-      imageUrl = referenceImageUrl
+      return new Response(
+        JSON.stringify({ error: `Provider ${provider} not available or API key missing` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     return new Response(

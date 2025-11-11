@@ -31,6 +31,13 @@ import TokensPanel from './pages/TokensPanel';
 import GeminiDocs from './pages/GeminiDocs';
 import EdgeFunctionDebugging from './pages/EdgeFunctionDebugging';
 import GeminiNanoEditorPage from './pages/features/GeminiNanoEditorPage';
+import ModernAIImagePage from './pages/features/ModernAIImagePage';
+import ModernActionFigurePage from './pages/features/ModernActionFigurePage';
+import ModernMemeGeneratorPage from './pages/features/ModernMemeGeneratorPage';
+import ModernGhibliStylePage from './pages/features/ModernGhibliStylePage';
+import ModernCartoonStylePage from './pages/features/ModernCartoonStylePage';
+import ModernBatchGenerationPage from './pages/features/ModernBatchGenerationPage';
+import ModernVideoConverterPage from './pages/features/ModernVideoConverterPage';
 import Gallery from './components/Gallery';
 import MultiModelComparison from './components/MultiModelComparison';
 import BatchGeneration from './components/BatchGeneration';
@@ -38,6 +45,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TokenManagement from './components/TokenManagement';
 import UniversalPersonalizationPanel from './components/UniversalPersonalizationPanel';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Component for conditionally rendering footer and other components
 const AppLayout = () => {
@@ -66,6 +74,13 @@ const AppLayout = () => {
           <Route path="/features/cartoon-style" element={<CartoonStylePage />} />
           <Route path="/features/meme-generator" element={<MemeGeneratorPage />} />
           <Route path="/features/ai-image" element={<AIImagePage />} />
+          <Route path="/features/modern-ai-image" element={<ModernAIImagePage />} />
+          <Route path="/features/modern-action-figures" element={<ModernActionFigurePage />} />
+          <Route path="/features/modern-meme-generator" element={<ModernMemeGeneratorPage />} />
+          <Route path="/features/modern-ghibli-style" element={<ModernGhibliStylePage />} />
+          <Route path="/features/modern-cartoon-style" element={<ModernCartoonStylePage />} />
+          <Route path="/features/modern-batch-generation" element={<ModernBatchGenerationPage />} />
+          <Route path="/features/modern-video-converter" element={<ModernVideoConverterPage />} />
           <Route path="/features/gemini-nano-editor" element={<GeminiNanoEditorPage />} />
           <Route path="/gif-editor" element={<GifEditorDemo />} />
           <Route path="/fonts" element={<FontsPage />} />
@@ -78,6 +93,7 @@ const AppLayout = () => {
           <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/testimonials" element={<TestimonialsPage />} />
           <Route path="/faq" element={<FAQPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>
       {isHomePage && <Footer />}

@@ -4,6 +4,7 @@ import { Play, ArrowRight, Sparkles, MousePointer, Mail, BarChart2, Clock, Trend
 import { Link } from 'react-router-dom';
 import AnimatedIcons from './AnimatedIcons';
 import { FloatingShape } from './FloatingElements';
+import EditableImage from './admin/EditableImage';
 
 const Hero: React.FC = () => {
   const [name, setName] = useState('');
@@ -473,9 +474,11 @@ const Hero: React.FC = () => {
                 <Sparkles className="w-12 h-12" />
               </motion.div>
 
-              <img
+              <EditableImage
                 src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop&crop=center"
                 alt="AI Creative Studio Interface - Professional design workspace with computer screens"
+                section="hero"
+                slot="main_image"
                 className="rounded-xl shadow-xl relative z-10 w-full h-auto"
               />
             </motion.div>

@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, MessageSquare, Send, RefreshCw, Download, Image as ImageIcon } from 'lucide-react';
-import { generateImageWithDalle, generateImageWithGemini } from '../utils/api';
-import { AIModelSelector, AIModel } from './shared';
+import { Send, Sparkles, History, X, Image as ImageIcon, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
+import { refineImageConversationally, RefinementStep } from '../utils/geminiNanoApi';
 
 interface ConversationalRefinementPanelProps {
   initialImageUrl: string;
@@ -10,247 +8,254 @@ interface ConversationalRefinementPanelProps {
   onClose: () => void;
 }
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  imageUrl?: string;
-}
-
-export const ConversationalRefinementPanel: React.FC<ConversationalRefinementPanelProps> = ({
+const ConversationalRefinementPanel: React.FC<ConversationalRefinementPanelProps> = ({
   initialImageUrl,
   onImageUpdated,
   onClose
 }) => {
   const [currentImageUrl, setCurrentImageUrl] = useState(initialImageUrl);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: "I'm here to help refine your image. Tell me what changes you'd like to make, and I'll generate an updated version.",
-      imageUrl: initialImageUrl
-    }
-  ]);
-  const [inputMessage, setInputMessage] = useState('');
+  const [refinementHistory, setRefinementHistory] = useState<RefinementStep[]>([]);
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(-1);
+  const [userInput, setUserInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<AIModel>('openai');
   const [error, setError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isProcessing) return;
+  const quickActions = [
+    { label: 'Brighten', prompt: 'Make the image brighter and more vibrant' },
+    { label: 'Add warmth', prompt: 'Add warm tones and a golden hour feel' },
+    { label: 'More detail', prompt: 'Enhance the details and sharpness' },
+    { label: 'Soften', prompt: 'Soften the image with a dreamy, ethereal quality' },
+    { label: 'High contrast', prompt: 'Increase the contrast for a more dramatic look' },
+    { label: 'Cool tones', prompt: 'Add cool blue tones for a calming atmosphere' }
+  ];
 
-    const userMessage: Message = {
-      role: 'user',
-      content: inputMessage
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
-    setIsProcessing(true);
-    setError(null);
+  const handleRefine = async (prompt: string) => {
+    if (!prompt.trim()) {
+      setError('Please enter a refinement request');
+      return;
+    }
 
     try {
-      const refinementPrompt = `Based on the current image, apply this refinement: ${inputMessage}. Maintain the overall style and composition while making the requested changes.`;
+      setIsProcessing(true);
+      setError(null);
 
-      let newImageUrl: string;
-      if (selectedModel === 'openai') {
-        newImageUrl = await generateImageWithDalle(refinementPrompt, {
-          size: '1024x1024',
-          quality: 'hd'
-        });
-      } else {
-        newImageUrl = await generateImageWithGemini(refinementPrompt);
-      }
+      const refinedImageUrl = await refineImageConversationally({
+        currentImageUrl,
+        refinementPrompt: prompt,
+        history: refinementHistory
+      });
 
-      setCurrentImageUrl(newImageUrl);
-      onImageUpdated(newImageUrl);
-
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: `I've applied your refinement: "${inputMessage}". Here's the updated image. What else would you like to change?`,
-        imageUrl: newImageUrl
+      // Add to history
+      const newStep: RefinementStep = {
+        userPrompt: prompt,
+        imageUrl: refinedImageUrl,
+        timestamp: Date.now()
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      const newHistory = [...refinementHistory.slice(0, currentHistoryIndex + 1), newStep];
+      setRefinementHistory(newHistory);
+      setCurrentHistoryIndex(newHistory.length - 1);
+
+      setCurrentImageUrl(refinedImageUrl);
+      onImageUpdated(refinedImageUrl);
+      setUserInput('');
     } catch (err) {
-      console.error('Refinement error:', err);
+      console.error('Error refining image:', err);
       setError(err instanceof Error ? err.message : 'Failed to refine image');
-
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: `I encountered an error while refining the image: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again with a different description.`
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const handleQuickAction = (prompt: string) => {
+    handleRefine(prompt);
+  };
+
+  const navigateHistory = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentHistoryIndex > 0) {
+      const newIndex = currentHistoryIndex - 1;
+      setCurrentHistoryIndex(newIndex);
+      setCurrentImageUrl(refinementHistory[newIndex].imageUrl);
+      onImageUpdated(refinementHistory[newIndex].imageUrl);
+    } else if (direction === 'next' && currentHistoryIndex < refinementHistory.length - 1) {
+      const newIndex = currentHistoryIndex + 1;
+      setCurrentHistoryIndex(newIndex);
+      setCurrentImageUrl(refinementHistory[newIndex].imageUrl);
+      onImageUpdated(refinementHistory[newIndex].imageUrl);
     }
   };
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = currentImageUrl;
-    link.download = 'refined-image.png';
-    link.click();
+  const goToHistoryStep = (index: number) => {
+    setCurrentHistoryIndex(index);
+    setCurrentImageUrl(refinementHistory[index].imageUrl);
+    onImageUpdated(refinementHistory[index].imageUrl);
+    setShowHistory(false);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-xl shadow-2xl max-w-6xl w-full h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 flex items-center justify-between rounded-t-xl">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="w-6 h-6 text-white" />
-            <h2 className="text-xl font-bold text-white">Conversational Refinement</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-white" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-hidden flex">
-          <div className="w-1/3 border-r border-gray-200 flex flex-col">
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <h3 className="font-medium text-gray-900 mb-3">Current Image</h3>
-              <div className="relative bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src={currentImageUrl}
-                  alt="Current version"
-                  className="w-full h-auto"
-                />
-              </div>
+    <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-bold flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-purple-600" />
+          Conversational Refinement
+        </h3>
+        <div className="flex items-center gap-2">
+          {refinementHistory.length > 0 && (
+            <>
               <button
-                onClick={handleDownload}
-                className="w-full mt-3 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                onClick={() => setShowHistory(!showHistory)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="View History"
               >
-                <Download className="w-4 h-4" />
-                Download Current
+                <History className="w-5 h-5" />
               </button>
-            </div>
-
-            <div className="p-4">
-              <h4 className="font-medium text-gray-900 mb-2 text-sm">AI Model</h4>
-              <AIModelSelector
-                selectedModel={selectedModel}
-                onModelChange={setSelectedModel}
-                size="sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg p-4 ${
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    {message.imageUrl && (
-                      <div className="mt-3 rounded-lg overflow-hidden border-2 border-white/20">
-                        <img
-                          src={message.imageUrl}
-                          alt="Generated version"
-                          className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => {
-                            setCurrentImageUrl(message.imageUrl!);
-                            onImageUpdated(message.imageUrl!);
-                          }}
-                        />
-                        <div className="bg-black/20 px-2 py-1 text-xs text-white">
-                          Click to set as current
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {isProcessing && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 text-gray-900 rounded-lg p-4">
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-                      <span className="text-sm">Generating refined image...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              <div className="bg-blue-50 rounded-lg p-3 mb-3 text-xs text-blue-700">
-                <p className="font-medium mb-1">💡 Refinement Tips:</p>
-                <ul className="space-y-1 list-disc list-inside">
-                  <li>Be specific about what to change</li>
-                  <li>Use descriptive language</li>
-                  <li>Make incremental adjustments</li>
-                  <li>Click previous versions to restore them</li>
-                </ul>
-              </div>
-
-              <div className="flex gap-2">
-                <textarea
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Describe the changes you want to make..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={2}
-                  disabled={isProcessing}
-                />
+              <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-lg text-sm">
                 <button
-                  onClick={handleSendMessage}
-                  disabled={isProcessing || !inputMessage.trim()}
-                  className="px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-medium"
+                  onClick={() => navigateHistory('prev')}
+                  disabled={currentHistoryIndex <= 0}
+                  className="p-1 hover:bg-gray-200 disabled:opacity-30 rounded"
                 >
-                  {isProcessing ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Send
-                    </>
-                  )}
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <span className="font-medium">
+                  {currentHistoryIndex + 1} / {refinementHistory.length}
+                </span>
+                <button
+                  onClick={() => navigateHistory('next')}
+                  disabled={currentHistoryIndex >= refinementHistory.length - 1}
+                  className="p-1 hover:bg-gray-200 disabled:opacity-30 rounded"
+                >
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-            </div>
+            </>
+          )}
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Current Image Preview */}
+      <div className="relative bg-gray-100 rounded-lg overflow-hidden" style={{ maxHeight: '300px' }}>
+        <img
+          src={currentImageUrl}
+          alt="Current refinement"
+          className="w-full h-full object-contain"
+        />
+        {refinementHistory.length === 0 && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <p className="text-white text-center px-4">
+              Start refining this image by describing what you'd like to change
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* History Panel */}
+      {showHistory && refinementHistory.length > 0 && (
+        <div className="border border-gray-200 rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
+          <h4 className="font-semibold text-sm text-gray-700 mb-2">Refinement History</h4>
+          <div className="space-y-2">
+            {refinementHistory.map((step, index) => (
+              <button
+                key={index}
+                onClick={() => goToHistoryStep(index)}
+                className={`w-full text-left p-3 rounded-lg transition-colors ${
+                  index === currentHistoryIndex
+                    ? 'bg-purple-100 border-2 border-purple-400'
+                    : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <ImageIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Step {index + 1}</p>
+                    <p className="text-xs text-gray-600 truncate">{step.userPrompt}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(step.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
-      </motion.div>
-    </motion.div>
+      )}
+
+      {/* Quick Actions */}
+      <div>
+        <h4 className="text-sm font-semibold text-gray-700 mb-2">Quick Actions</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {quickActions.map((action, index) => (
+            <button
+              key={index}
+              onClick={() => handleQuickAction(action.prompt)}
+              disabled={isProcessing}
+              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-lg transition-colors text-left"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Describe how you want to refine the image
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && !isProcessing && handleRefine(userInput)}
+            placeholder="e.g., 'make it more colorful', 'add a sunset', 'increase saturation'"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            disabled={isProcessing}
+          />
+          <button
+            onClick={() => handleRefine(userInput)}
+            disabled={isProcessing || !userInput.trim()}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            {isProcessing ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Refining...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                Refine
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Instructions */}
+      <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
+        <h4 className="font-semibold text-purple-900 mb-2 text-sm">How it works:</h4>
+        <ul className="text-xs text-purple-800 space-y-1">
+          <li>• Describe changes in natural language</li>
+          <li>• Each refinement builds on previous changes</li>
+          <li>• Navigate history to compare versions</li>
+          <li>• Use quick actions for common adjustments</li>
+        </ul>
+      </div>
+    </div>
   );
 };
 

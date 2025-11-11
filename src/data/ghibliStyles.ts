@@ -264,3 +264,13 @@ export const ghibliConfig: GhibliConfig = {
 };
 
 export default ghibliConfig;
+
+// Export simple array for easy usage
+export const ghibliStyles = [
+  { id: 'spirited-away', name: 'Spirited Away', description: 'Bathhouse spirits and Japanese folklore inspired' },
+  { id: 'totoro', name: 'My Neighbor Totoro', description: 'Gentle forest spirits and rural countryside' },
+  { id: 'howl', name: "Howl's Moving Castle", description: 'Magical machinery and steampunk fantasy' },
+  { id: 'mononoke', name: 'Princess Mononoke', description: 'Epic nature spirits and ancient forests' },
+  { id: 'kiki', name: "Kiki's Delivery Service", description: 'Charming European town and gentle magic' },
+  { id: 'ponyo', name: 'Ponyo', description: 'Underwater magic and seaside adventures' }
+];

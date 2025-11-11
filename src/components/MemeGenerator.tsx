@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes } from 'lucide-react';
+import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes, PaintBucket } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { generateMemeWithReference, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
@@ -8,6 +8,8 @@ import { TokenDragItem } from '../types/DragTypes';
 import { FontSelector } from './ui/FontSelector';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import SemanticMaskingEditor from './SemanticMaskingEditor';
+import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
@@ -32,7 +34,11 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   // Personalization panel state
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [personalizedContent, setPersonalizedContent] = useState('');
-  
+
+  // Advanced editing panels
+  const [showSemanticMasking, setShowSemanticMasking] = useState(false);
+  const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
+
   // Advanced options
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState<boolean | string>(false);
@@ -541,7 +547,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
 
           {/* Enhanced Image Editor with AI and Classic Options */}
           {generatedMeme && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <EnhancedImageEditorWithChoice
                 imageUrl={generatedMeme}
                 onImageUpdated={(newImageUrl) => {
@@ -552,6 +558,24 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                 }}
                 tokens={tokens}
               />
+
+              {/* Advanced Editing Options */}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => setShowSemanticMasking(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <PaintBucket className="w-4 h-4" />
+                  Semantic Masking
+                </button>
+                <button
+                  onClick={() => setShowConversationalRefinement(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Conversational Refinement
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -829,6 +853,37 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
               setPersonalizedContent(content);
               setShowPersonalizationPanel(false);
             }}
+          />
+        </div>
+      )}
+
+      {/* Semantic Masking Editor */}
+      {showSemanticMasking && generatedMeme && (
+        <SemanticMaskingEditor
+          imageUrl={generatedMeme}
+          onEditComplete={(editedUrl) => {
+            setGeneratedMeme(editedUrl);
+            if (onMemeGenerated) {
+              onMemeGenerated(editedUrl);
+            }
+            setShowSemanticMasking(false);
+          }}
+          onClose={() => setShowSemanticMasking(false)}
+        />
+      )}
+
+      {/* Conversational Refinement Panel */}
+      {showConversationalRefinement && generatedMeme && (
+        <div className="mt-6">
+          <ConversationalRefinementPanel
+            initialImageUrl={generatedMeme}
+            onImageUpdated={(imageUrl) => {
+              setGeneratedMeme(imageUrl);
+              if (onMemeGenerated) {
+                onMemeGenerated(imageUrl);
+              }
+            }}
+            onClose={() => setShowConversationalRefinement(false)}
           />
         </div>
       )}

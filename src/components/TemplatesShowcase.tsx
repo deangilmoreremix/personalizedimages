@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Image, Video, Play, ArrowRight, Sparkles, Zap, Camera, FileVideo } from 'lucide-react';
 import ActionFigureCarousel from './ActionFigureCarousel';
+import EditableImage from './admin/EditableImage';
 
 // Updated modern template images
 const imageTemplates = [
@@ -173,9 +174,11 @@ const TemplatesShowcase: React.FC = () => {
             <div className="grid grid-cols-3 gap-2 aspect-video rounded-lg overflow-hidden mb-6 relative">
               {videoTemplates.map((src, index) => (
                 <div key={index} className="relative overflow-hidden">
-                  <img 
+                  <EditableImage
                     src={src}
                     alt={`Video template ${index + 1}`}
+                    section="templates"
+                    slot={`video_${index + 1}`}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -234,9 +237,11 @@ const TemplatesShowcase: React.FC = () => {
             <div className="grid grid-cols-3 gap-2 aspect-video rounded-lg overflow-hidden mb-6 relative">
               {imageTemplates.map((src, index) => (
                 <div key={index} className="relative overflow-hidden">
-                  <img 
+                  <EditableImage
                     src={src}
                     alt={`Image template ${index + 1}`}
+                    section="templates"
+                    slot={`image_${index + 1}`}
                     className="w-full h-full object-cover"
                   />
                 </div>

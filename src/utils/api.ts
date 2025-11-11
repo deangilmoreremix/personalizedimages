@@ -1081,10 +1081,10 @@ export async function generateMemeWithReference(topText: string, bottomText: str
 export async function generateActionFigure(prompt: string, provider: string = 'openai', referenceImageUrl?: string): Promise<string> {
   try {
     console.log(`🤖 Generating action figure with ${provider}`);
-    
+
     // Enhance the prompt for action figure style
     const enhancedPrompt = `Create a highly detailed, professional-quality product photo of an action figure: ${prompt}. The figure should look like a real commercial toy with articulation points, detailed textures, realistic packaging design, and toy store lighting.`;
-    
+
     // Try edge function first
     if (isSupabaseConfigured()) {
       try {
@@ -1093,7 +1093,7 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
           provider,
           referenceImageUrl
         });
-        
+
         if (result && result.imageUrl) {
           return result.imageUrl;
         }
@@ -1102,7 +1102,7 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
         // Continue to direct API fallback
       }
     }
-    
+
     // Fall back to direct API calls
     if (provider === 'gpt-image-1') {
       if (referenceImageUrl) {
@@ -1110,9 +1110,15 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
       } else {
         return generateImageWithGptImage(enhancedPrompt);
       }
+    } else if (provider === 'gemini-nano') {
+      // Use Gemini Nano for on-device generation
+      return generateImageWithGeminiNano(enhancedPrompt, {
+        aspectRatio: '1:1',
+        quality: 'standard'
+      });
     } else if (provider === 'gemini' || provider === 'openai') {
       console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'DALL-E'} API directly for action figure`);
-      
+
       if (provider === 'gemini') {
         if (referenceImageUrl) {
           return generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl);
@@ -1129,7 +1135,7 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
       }
     }
 
-    throw new Error('Invalid provider specified for action figure generation');
+    throw new Error(`Invalid provider specified for action figure generation: ${provider}. Supported providers are: openai, gemini, gemini-nano, gpt-image-1`);
   } catch (error) {
     console.error('Error generating action figure:', error);
     throw error;

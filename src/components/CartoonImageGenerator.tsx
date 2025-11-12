@@ -7,6 +7,8 @@ import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import SemanticMaskingEditor from './SemanticMaskingEditor';
+import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
@@ -29,6 +31,10 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   // Personalization panel state
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [personalizedContent, setPersonalizedContent] = useState('');
+
+  // Advanced editing panels
+  const [showSemanticMasking, setShowSemanticMasking] = useState(false);
+  const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);

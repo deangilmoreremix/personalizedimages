@@ -12,6 +12,7 @@ import { AuthProvider } from './auth/AuthContext.tsx';
 import { AiAssistantProvider } from './components/ui/AiAssistantProvider.tsx';
 import { BrowserRouter } from 'react-router-dom';
 import { registerServiceWorker, setupNetworkListeners } from './utils/pwaUtils';
+import { AdminProvider } from './contexts/AdminContext.tsx';
 
 // Preload commonly used fonts
 preloadCommonFonts();
@@ -35,14 +36,16 @@ setupNetworkListeners(
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <BrowserRouter>
-        <AiAssistantProvider>
-          <DndProvider backend={backend}>
-            <App />
-            <DragLayer />
-          </DndProvider>
-        </AiAssistantProvider>
-      </BrowserRouter>
+      <AdminProvider>
+        <BrowserRouter>
+          <AiAssistantProvider>
+            <DndProvider backend={backend}>
+              <App />
+              <DragLayer />
+            </DndProvider>
+          </AiAssistantProvider>
+        </BrowserRouter>
+      </AdminProvider>
     </AuthProvider>
   </StrictMode>
 );

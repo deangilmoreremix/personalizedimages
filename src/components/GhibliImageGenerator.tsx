@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes } from 'lucide-react';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes, PaintBucket } from 'lucide-react';
 import { generateGhibliStyleImage, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import DroppableInput from './DroppableInput';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import SemanticMaskingEditor from './SemanticMaskingEditor';
+import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
@@ -47,6 +49,10 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
       console.log('Email-ready Ghibli image generated:', emailImage, html);
     }
   });
+
+  // Advanced editing panels
+  const [showSemanticMasking, setShowSemanticMasking] = useState(false);
+  const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
 
   // Use configuration data
   const sceneOptions = ghibliConfig.scenes.map(scene => scene.label);
@@ -564,7 +570,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
 
           {/* Enhanced Image Editor with AI and Classic Options */}
           {generatedImage && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <EnhancedImageEditorWithChoice
                 imageUrl={generatedImage}
                 onImageUpdated={(newImageUrl) => {
@@ -575,6 +581,24 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                 }}
                 tokens={tokens}
               />
+
+              {/* Advanced Editing Options */}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => setShowSemanticMasking(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <PaintBucket className="w-4 h-4" />
+                  Semantic Masking
+                </button>
+                <button
+                  onClick={() => setShowConversationalRefinement(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Conversational Refinement
+                </button>
+              </div>
             </div>
           )}
 
@@ -691,6 +715,37 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
               setPersonalizedContent(content);
               setShowPersonalizationPanel(false);
             }}
+          />
+        </div>
+      )}
+
+      {/* Semantic Masking Editor */}
+      {showSemanticMasking && generatedImage && (
+        <SemanticMaskingEditor
+          imageUrl={generatedImage}
+          onEditComplete={(editedUrl) => {
+            setGeneratedImage(editedUrl);
+            if (onImageGenerated) {
+              onImageGenerated(editedUrl);
+            }
+            setShowSemanticMasking(false);
+          }}
+          onClose={() => setShowSemanticMasking(false)}
+        />
+      )}
+
+      {/* Conversational Refinement Panel */}
+      {showConversationalRefinement && generatedImage && (
+        <div className="mt-6">
+          <ConversationalRefinementPanel
+            initialImageUrl={generatedImage}
+            onImageUpdated={(imageUrl) => {
+              setGeneratedImage(imageUrl);
+              if (onImageGenerated) {
+                onImageGenerated(imageUrl);
+              }
+            }}
+            onClose={() => setShowConversationalRefinement(false)}
           />
         </div>
       )}

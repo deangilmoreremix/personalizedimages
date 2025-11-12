@@ -18,6 +18,8 @@ import { TokenDragItem } from '../types/DragTypes';
 import VideoGenerationButton from './VideoGenerationButton';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import SemanticMaskingEditor from './SemanticMaskingEditor';
+import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
@@ -66,6 +68,10 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   // Personalization panel state
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [personalizedContent, setPersonalizedContent] = useState('');
+
+  // Advanced editing panels
+  const [showSemanticMasking, setShowSemanticMasking] = useState(false);
+  const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
 
   // Refs for cancelation
   const generationRef = useRef<(() => void) | null>(null);
@@ -782,7 +788,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
 
           {/* Enhanced Image Editor with AI and Classic Options */}
           {generatedImage && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <EnhancedImageEditorWithChoice
                 imageUrl={generatedImage}
                 onImageUpdated={(newImageUrl) => {
@@ -791,6 +797,24 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
                 }}
                 tokens={tokens}
               />
+
+              {/* Advanced Editing Options */}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => setShowSemanticMasking(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <PaintBucket className="w-4 h-4" />
+                  Semantic Masking
+                </button>
+                <button
+                  onClick={() => setShowConversationalRefinement(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Conversational Refinement
+                </button>
+              </div>
             </div>
           )}
           
@@ -951,6 +975,33 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               setPrompt(content);
               setShowPersonalizationPanel(false);
             }}
+          />
+        </div>
+      )}
+
+      {/* Semantic Masking Editor */}
+      {showSemanticMasking && generatedImage && (
+        <SemanticMaskingEditor
+          imageUrl={generatedImage}
+          onEditComplete={(editedUrl) => {
+            setGeneratedImage(editedUrl);
+            onImageGenerated(editedUrl);
+            setShowSemanticMasking(false);
+          }}
+          onClose={() => setShowSemanticMasking(false)}
+        />
+      )}
+
+      {/* Conversational Refinement Panel */}
+      {showConversationalRefinement && generatedImage && (
+        <div className="mt-6">
+          <ConversationalRefinementPanel
+            initialImageUrl={generatedImage}
+            onImageUpdated={(imageUrl) => {
+              setGeneratedImage(imageUrl);
+              onImageGenerated(imageUrl);
+            }}
+            onClose={() => setShowConversationalRefinement(false)}
           />
         </div>
       )}

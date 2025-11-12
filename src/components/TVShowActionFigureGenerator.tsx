@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Tv } from 'lucide-react';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Tv, PaintBucket } from 'lucide-react';
 import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
@@ -9,6 +9,8 @@ import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import SemanticMaskingEditor from './SemanticMaskingEditor';
+import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 
 interface TVShowActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -38,6 +40,10 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
       console.log('Email-ready TV show figure generated:', emailImage, html);
     }
   });
+
+  // Advanced editing panels
+  const [showSemanticMasking, setShowSemanticMasking] = useState(false);
+  const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
 
   // Initialize with first prompt
   useEffect(() => {
@@ -509,7 +515,7 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
 
           {/* Enhanced Image Editor with AI and Classic Options */}
           {generatedFigure && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <EnhancedImageEditorWithChoice
                 imageUrl={generatedFigure}
                 onImageUpdated={(newImageUrl) => {
@@ -520,6 +526,24 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
                 }}
                 tokens={tokens}
               />
+
+              {/* Advanced Editing Options */}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => setShowSemanticMasking(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <PaintBucket className="w-4 h-4" />
+                  Semantic Masking
+                </button>
+                <button
+                  onClick={() => setShowConversationalRefinement(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Conversational Refinement
+                </button>
+              </div>
             </div>
           )}
           
@@ -602,6 +626,37 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
           </div>
         </div>
       </div>
+
+      {/* Semantic Masking Editor */}
+      {showSemanticMasking && generatedFigure && (
+        <SemanticMaskingEditor
+          imageUrl={generatedFigure}
+          onEditComplete={(editedUrl) => {
+            setGeneratedFigure(editedUrl);
+            if (onImageGenerated) {
+              onImageGenerated(editedUrl);
+            }
+            setShowSemanticMasking(false);
+          }}
+          onClose={() => setShowSemanticMasking(false)}
+        />
+      )}
+
+      {/* Conversational Refinement Panel */}
+      {showConversationalRefinement && generatedFigure && (
+        <div className="mt-6">
+          <ConversationalRefinementPanel
+            initialImageUrl={generatedFigure}
+            onImageUpdated={(imageUrl) => {
+              setGeneratedFigure(imageUrl);
+              if (onImageGenerated) {
+                onImageGenerated(imageUrl);
+              }
+            }}
+            onClose={() => setShowConversationalRefinement(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };

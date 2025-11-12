@@ -49,13 +49,15 @@ export const DESIGN_SYSTEM = {
     label: 'text-sm font-medium text-gray-700',
   },
 
-  // Colors
+  // Colors - Updated to match uploaded design (purple/violet theme)
   colors: {
     primary: {
-      50: 'bg-primary-50',
-      100: 'bg-primary-100',
-      600: 'bg-primary-600',
-      700: 'bg-primary-700',
+      50: 'bg-violet-50',
+      100: 'bg-violet-100',
+      200: 'bg-violet-200',
+      500: 'bg-violet-500',
+      600: 'bg-violet-600',
+      700: 'bg-violet-700',
     },
     gray: {
       50: 'bg-gray-50',
@@ -102,10 +104,12 @@ export const DESIGN_SYSTEM = {
     card: 'bg-white rounded-xl shadow-md border border-gray-100',
     section: 'bg-white rounded-xl shadow-md p-6',
     panel: 'bg-gray-50 rounded-lg p-4',
-    input: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-    textarea: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 min-h-[100px] resize-vertical',
-    select: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-    checkbox: 'rounded text-primary-600 focus:ring-primary-500',
+    input: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-sm',
+    textarea: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 min-h-[100px] resize-vertical text-sm',
+    select: 'w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-sm',
+    checkbox: 'rounded text-violet-600 focus:ring-violet-500',
+    uploadArea: 'w-full px-4 py-12 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-violet-500 transition-colors bg-gray-50',
+    characterCount: 'text-xs text-gray-500',
     button: {
       primary: 'btn btn-primary w-full flex justify-center items-center',
       secondary: 'btn btn-outline w-full flex justify-center items-center',
@@ -113,12 +117,17 @@ export const DESIGN_SYSTEM = {
       large: 'px-6 py-3 text-base rounded-lg',
       // Material Design variants
       elevated: 'bg-white shadow-md hover:shadow-lg border border-gray-200 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-50 transition-all',
-      filled: 'bg-primary-600 text-white hover:bg-primary-700 rounded-lg px-4 py-2 shadow-md hover:shadow-lg transition-all',
-      outlined: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 rounded-lg px-4 py-2 transition-all',
-      text: 'text-primary-600 hover:bg-primary-50 rounded-lg px-4 py-2 transition-all',
+      filled: 'bg-violet-600 text-white hover:bg-violet-700 rounded-lg px-4 py-2 shadow-md hover:shadow-lg transition-all',
+      outlined: 'border-2 border-violet-600 text-violet-600 hover:bg-violet-50 rounded-lg px-4 py-2 transition-all',
+      text: 'text-violet-600 hover:bg-violet-50 rounded-lg px-4 py-2 transition-all',
       // Chakra UI variants
-      ghost: 'text-primary-600 hover:bg-primary-50 rounded-lg px-4 py-2 transition-all',
-      link: 'text-primary-600 hover:underline rounded-lg px-4 py-2 transition-all',
+      ghost: 'text-violet-600 hover:bg-violet-50 rounded-lg px-4 py-2 transition-all',
+      link: 'text-violet-600 hover:underline rounded-lg px-4 py-2 transition-all',
+      // Main generate button (matches uploaded design)
+      generate: 'w-full py-3 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2',
+      tab: 'px-4 py-2 text-sm font-medium rounded-t-lg transition-colors',
+      tabActive: 'px-4 py-2 text-sm font-medium rounded-t-lg bg-white border-b-2 border-violet-600 text-violet-600',
+      tabInactive: 'px-4 py-2 text-sm font-medium rounded-t-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50',
     },
     badge: 'px-2 py-1 text-xs rounded-full font-medium',
     alert: {
@@ -128,7 +137,7 @@ export const DESIGN_SYSTEM = {
       info: 'p-3 bg-blue-50 text-blue-700 rounded-lg text-sm border border-blue-200',
     },
     loading: {
-      spinner: 'animate-spin rounded-full border-2 border-gray-300 border-t-primary-600',
+      spinner: 'animate-spin rounded-full border-2 border-gray-300 border-t-violet-600',
       skeleton: 'animate-pulse bg-gray-200 rounded',
       overlay: 'absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10',
       // Ant Design patterns
@@ -185,7 +194,7 @@ export const DESIGN_SYSTEM = {
 
   // Accessibility
   accessibility: {
-    focus: 'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+    focus: 'focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2',
     srOnly: 'sr-only',
     ariaLabel: 'aria-label',
     ariaDescribedBy: 'aria-describedby',
@@ -210,7 +219,7 @@ export const DESIGN_SYSTEM = {
     // Creative app patterns (Canva/Figma style)
     dragFeedback: 'transition-transform duration-150 ease-out hover:scale-105 active:scale-95',
     panelSlide: 'transform transition-transform duration-300 ease-in-out',
-    toolHover: 'hover:bg-primary-50 transition-colors duration-150',
+    toolHover: 'hover:bg-violet-50 transition-colors duration-150',
     canvasZoom: 'transition-transform duration-200 ease-out',
   },
 

@@ -5,6 +5,8 @@ import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import SemanticMaskingEditor from './SemanticMaskingEditor';
+import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import templatesService, { ActionFigureTemplate } from '../services/templatesService';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
@@ -35,6 +37,10 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const [selectedCategory, setSelectedCategory] = useState<'general' | 'wrestling' | 'music' | 'retro'>('general');
   const [templates, setTemplates] = useState<ActionFigureTemplate[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+
+  // Advanced editing panels
+  const [showSemanticMasking, setShowSemanticMasking] = useState(false);
+  const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
 
   // const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -540,7 +546,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
 
           {/* Enhanced Image Editor with AI and Classic Options */}
           {generatedFigure && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <EnhancedImageEditorWithChoice
                 imageUrl={generatedFigure}
                 onImageUpdated={(newImageUrl) => {
@@ -551,6 +557,24 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 }}
                 tokens={tokens}
               />
+
+              {/* Advanced Editing Options */}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => setShowSemanticMasking(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Semantic Masking
+                </button>
+                <button
+                  onClick={() => setShowConversationalRefinement(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Conversational Refinement
+                </button>
+              </div>
             </div>
           )}
 
@@ -645,6 +669,37 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
               setPersonalizedContent(content);
               setShowPersonalizationPanel(false);
             }}
+          />
+        </div>
+      )}
+
+      {/* Semantic Masking Editor */}
+      {showSemanticMasking && generatedFigure && (
+        <SemanticMaskingEditor
+          imageUrl={generatedFigure}
+          onEditComplete={(editedUrl) => {
+            setGeneratedFigure(editedUrl);
+            if (onImageGenerated) {
+              onImageGenerated(editedUrl);
+            }
+            setShowSemanticMasking(false);
+          }}
+          onClose={() => setShowSemanticMasking(false)}
+        />
+      )}
+
+      {/* Conversational Refinement Panel */}
+      {showConversationalRefinement && generatedFigure && (
+        <div className="mt-6">
+          <ConversationalRefinementPanel
+            initialImageUrl={generatedFigure}
+            onImageUpdated={(imageUrl) => {
+              setGeneratedFigure(imageUrl);
+              if (onImageGenerated) {
+                onImageGenerated(imageUrl);
+              }
+            }}
+            onClose={() => setShowConversationalRefinement(false)}
           />
         </div>
       )}

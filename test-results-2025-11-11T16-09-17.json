@@ -1,0 +1,285 @@
+{
+  "total": 46,
+  "passed": 43,
+  "failed": 3,
+  "tests": [
+    {
+      "name": "1.1 Supabase client initialization",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "1.2 Database connectivity",
+      "passed": true,
+      "message": "",
+      "duration": 842
+    },
+    {
+      "name": "1.3.1 Table exists: user_images",
+      "passed": true,
+      "message": "",
+      "duration": 138
+    },
+    {
+      "name": "1.3.2 Table exists: folders",
+      "passed": true,
+      "message": "",
+      "duration": 109
+    },
+    {
+      "name": "1.3.3 Table exists: image_tags",
+      "passed": true,
+      "message": "",
+      "duration": 94
+    },
+    {
+      "name": "1.3.4 Table exists: prompt_history",
+      "passed": true,
+      "message": "",
+      "duration": 105
+    },
+    {
+      "name": "1.3.5 Table exists: prompt_favorites",
+      "passed": true,
+      "message": "",
+      "duration": 94
+    },
+    {
+      "name": "1.3.6 Table exists: generation_queue",
+      "passed": true,
+      "message": "",
+      "duration": 95
+    },
+    {
+      "name": "1.3.7 Table exists: token_profiles",
+      "passed": true,
+      "message": "",
+      "duration": 98
+    },
+    {
+      "name": "1.3.8 Table exists: analytics_events",
+      "passed": true,
+      "message": "",
+      "duration": 94
+    },
+    {
+      "name": "2.1 All 88 tokens defined",
+      "passed": true,
+      "message": "Found 88 tokens",
+      "duration": 0
+    },
+    {
+      "name": "2.2 All token categories present",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "2.3 Required tokens identified",
+      "passed": true,
+      "message": "Found 5 required tokens",
+      "duration": 0
+    },
+    {
+      "name": "2.4 Computed tokens identified",
+      "passed": false,
+      "message": "Found 21 computed tokens",
+      "duration": 0
+    },
+    {
+      "name": "2.5 FULLNAME computed correctly",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "2.6 DATE token auto-computes",
+      "passed": [
+        "2025-11-11"
+      ],
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "2.7 YEAR token is current year",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "2.8 Email validation works",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "2.9 Token lookup by key",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "2.10 Filter tokens by category",
+      "passed": true,
+      "message": "Found 8 personal tokens",
+      "duration": 0
+    },
+    {
+      "name": "2.11 YEARS_OF_SERVICE computes tenure",
+      "passed": true,
+      "message": "Computed 5 years",
+      "duration": 0
+    },
+    {
+      "name": "2.12 Default values applied",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "Cloud Gallery Service import",
+      "passed": false,
+      "message": "Cannot find module '/tmp/cc-agent/45731086/project/src/utils/supabaseClient' imported from /tmp/cc-agent/45731086/project/src/services/cloudGalleryService.ts",
+      "duration": 0
+    },
+    {
+      "name": "Prompt Enhancement Service import",
+      "passed": false,
+      "message": "Cannot find module '/tmp/cc-agent/45731086/project/src/utils/gptApi' imported from /tmp/cc-agent/45731086/project/src/services/promptEnhancementService.ts",
+      "duration": 0
+    },
+    {
+      "name": "5.1 Auth methods available",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "5.2 Session check",
+      "passed": true,
+      "message": "No active session",
+      "duration": 0
+    },
+    {
+      "name": "5.3 User check",
+      "passed": true,
+      "message": "No user",
+      "duration": 0
+    },
+    {
+      "name": "5.4 RLS policies enforce protection",
+      "passed": true,
+      "message": "Accessible (user authenticated or public)",
+      "duration": 0
+    },
+    {
+      "name": "5.5.1 RLS check: user_images",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "5.5.2 RLS check: folders",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "5.5.3 RLS check: prompt_history",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "5.5.4 RLS check: token_profiles",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "6.1 UUID auto-generation",
+      "passed": true,
+      "message": "Skipped (no user)",
+      "duration": 0
+    },
+    {
+      "name": "6.2 Timestamp fields auto-populate",
+      "passed": true,
+      "message": "Verified via schema",
+      "duration": 0
+    },
+    {
+      "name": "6.3 JSONB fields store complex objects",
+      "passed": true,
+      "message": "Verified via schema",
+      "duration": 0
+    },
+    {
+      "name": "6.4 Array fields (tags) supported",
+      "passed": true,
+      "message": "Verified via schema",
+      "duration": 0
+    },
+    {
+      "name": "6.5 Foreign key constraints defined",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "6.6 Cascade delete configured",
+      "passed": true,
+      "message": "Verified via schema (ON DELETE CASCADE)",
+      "duration": 0
+    },
+    {
+      "name": "7.1 Query response time",
+      "passed": true,
+      "message": "107ms",
+      "duration": 107
+    },
+    {
+      "name": "7.2 Pagination query performance",
+      "passed": true,
+      "message": "94ms",
+      "duration": 94
+    },
+    {
+      "name": "7.3 Full-text search performance",
+      "passed": true,
+      "message": "113ms",
+      "duration": 113
+    },
+    {
+      "name": "7.4.1 Indexes on user_images (user_id, created_at, folder_id, tags)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.2 Indexes on folders (user_id, parent_id)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.3 Indexes on prompt_history (user_id, prompt)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.4 Indexes on generation_queue (user_id, status)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.5 Indexes on token_profiles (user_id)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    }
+  ]
+}

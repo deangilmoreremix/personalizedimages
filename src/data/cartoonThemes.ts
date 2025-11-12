@@ -151,3 +151,13 @@ const cartoonThemesConfig: CartoonThemesConfig = {
 };
 
 export default cartoonThemesConfig;
+
+// Export simple array for easy usage
+export const cartoonThemes = [
+  { id: 'disney', name: 'Disney Classic', description: 'Hand-drawn animation style with expressive characters and vibrant colors' },
+  { id: 'pixar', name: 'Pixar 3D', description: 'Glossy 3D renders with rounded features and warm lighting' },
+  { id: 'anime', name: 'Anime', description: 'Japanese animation with large eyes and detailed expressions' },
+  { id: 'cartoon-network', name: 'Cartoon Network', description: 'Modern TV cartoon with bold lines and simple shapes' },
+  { id: 'comic-strip', name: 'Comic Strip', description: 'Classic newspaper comic style with clean linework' },
+  { id: 'rubber-hose', name: 'Rubber Hose', description: '1930s animation with bendy limbs and simple designs' }
+];

@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Video, Menu, X, ChevronDown, ChevronRight, Zap, Sparkles, Search, Bell, Settings } from 'lucide-react';
+import { Video, Menu, X, ChevronDown, ChevronRight, Zap, Sparkles, Search, Bell, Settings, Edit, Eye } from 'lucide-react';
 import Tooltip from '../ui/Tooltip';
+import { useAdmin } from '../../contexts/AdminContext';
 
 const ModernHeader: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
+  const { isAdmin, isEditMode, toggleEditMode } = useAdmin();
   
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -90,7 +92,7 @@ const ModernHeader: React.FC = () => {
                     description="AI personalization studio"
                   />
                   <DropdownItem
-                    to="/features/ai-image"
+                    to="/features/modern-ai-image"
                     icon={<Sparkles className="w-4 h-4 text-purple-600" />}
                     label="AI Image Creator"
                     description="Generate custom AI imagery"
@@ -138,8 +140,36 @@ const ModernHeader: React.FC = () => {
           </nav>
 
           <div className="hidden md:flex items-center space-x-3">
+            {isAdmin && (
+              <Tooltip content={isEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}>
+                <motion.button
+                  onClick={toggleEditMode}
+                  className={`px-3 py-2 rounded-xl font-medium flex items-center space-x-2 transition-colors ${
+                    isEditMode
+                      ? 'bg-amber-500 text-white hover:bg-amber-600'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  aria-label="Toggle edit mode"
+                >
+                  {isEditMode ? (
+                    <>
+                      <Edit className="w-4 h-4" />
+                      <span className="text-sm">Edit Mode</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" />
+                      <span className="text-sm">View Mode</span>
+                    </>
+                  )}
+                </motion.button>
+              </Tooltip>
+            )}
+
             <Tooltip content="Search">
-              <button 
+              <button
                 onClick={toggleSearch}
                 className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded-full transition-colors"
                 aria-label="Search"
@@ -147,16 +177,16 @@ const ModernHeader: React.FC = () => {
                 <Search className="w-5 h-5" />
               </button>
             </Tooltip>
-            
+
             <Tooltip content="Notifications">
               <button className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded-full transition-colors relative" aria-label="Notifications">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
               </button>
             </Tooltip>
-            
+
             <Tooltip content="Settings">
-              <motion.button 
+              <motion.button
                 className="p-2 bg-primary-100 text-primary-600 hover:bg-primary-200 rounded-xl transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -253,7 +283,7 @@ const ModernHeader: React.FC = () => {
                 <div className="px-4 py-2 border-b border-gray-100">
                   <h3 className="font-medium mb-2">Tools</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <Link to="/features/ai-image" className="p-2 rounded hover:bg-gray-50">AI Images</Link>
+                    <Link to="/features/modern-ai-image" className="p-2 rounded hover:bg-gray-50">AI Images</Link>
                     <Link to="/features/action-figures" className="p-2 rounded hover:bg-gray-50">Action Figures</Link>
                     <Link to="/features/ghibli-style" className="p-2 rounded hover:bg-gray-50">Ghibli Style</Link>
                     <Link to="/features/cartoon-style" className="p-2 rounded hover:bg-gray-50">Cartoon Style</Link>

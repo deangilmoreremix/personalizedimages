@@ -6,20 +6,20 @@ This directory contains Edge Functions for the VideoRemix application, providing
 
 | Function | Purpose | Status |
 |----------|---------|--------|
-| `action-figure` | Generate action figure images from prompts | ✅ Implemented |
-| `assistant-stream` | Stream AI assistant responses | ✅ Implemented |
-| `crazy-image` | Generate surreal, creative images | ✅ Implemented |
-| `create-payment-intent` | Create Stripe payment intents | ✅ Implemented |
+| `action-figure` | Generate action figure images from prompts | ❌ Missing implementation |
+| `assistant-stream` | Stream AI assistant responses | ❌ Missing implementation |
+| `crazy-image` | Generate surreal, creative images | ❌ Missing implementation |
+| `create-payment-intent` | Create Stripe payment intents | ❌ Missing implementation |
 | `ghibli-image` | Generate Studio Ghibli-style images | ✅ Implemented |
-| `health-check` | Verify Edge Function environment | ✅ Implemented |
-| `image-analysis` | Analyze and extract information from images | ✅ Implemented |
-| `image-description` | Generate descriptions for image generation | ✅ Implemented |
-| `image-enhancement` | Enhance images with AI | ✅ Implemented |
-| `image-generation` | Generate images from text prompts | ✅ Implemented |
-| `image-to-video` | Convert still images to short videos | ⚠️ Partially implemented (API response format) |
-| `meme-generator` | Create personalized memes | ✅ Implemented |
-| `prompt-recommendations` | Generate enhanced prompt suggestions | ✅ Implemented |
-| `reference-image` | Generate images using reference images | ✅ Implemented |
+| `health-check` | Verify Edge Function environment | ❌ Missing implementation |
+| `image-analysis` | Analyze and extract information from images | ❌ Missing implementation |
+| `image-description` | Generate descriptions for image generation | ❌ Missing implementation |
+| `image-enhancement` | Enhance images with AI | ❌ Missing implementation |
+| `image-generation` | Generate images from text prompts | ❌ Missing implementation |
+| `image-to-video` | Convert still images to short videos | ✅ Implemented (Gemini Veo) |
+| `meme-generator` | Create personalized memes | ⚠️ Partially implemented (placeholder) |
+| `prompt-recommendations` | Generate enhanced prompt suggestions | ❌ Missing implementation |
+| `reference-image` | Generate images using reference images | ❌ Missing implementation |
 
 ## Recent Security & Compatibility Updates
 

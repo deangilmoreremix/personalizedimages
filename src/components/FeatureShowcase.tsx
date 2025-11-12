@@ -3,6 +3,7 @@ import { motion, useViewportScroll, useTransform } from 'framer-motion';
 import { Image, ArrowRight, Upload, Sparkles, Camera, Box, Zap, MessageSquare, Shield, Code, Palette } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FloatingShape } from './FloatingElements';
+import EditableImage from './admin/EditableImage';
 
 const FeatureShowcase: React.FC = () => {
   // Scroll-based animations
@@ -162,22 +163,20 @@ const FeatureShowcase: React.FC = () => {
               transition={{ duration: 0.3 }}
             >
               <div className="relative h-64 overflow-hidden rounded-t-xl">
-                <motion.div 
+                <motion.div
                   className={`absolute inset-0 bg-gradient-to-r ${feature.color} opacity-90 mix-blend-multiply`}
                   whileHover={{
                     opacity: 0.75,
                     transition: { duration: 0.3 }
                   }}
                 />
-                
-                <motion.img
+
+                <EditableImage
                   src={feature.image}
                   alt={feature.title}
+                  section="features"
+                  slot={index === 0 ? 'ai_studio' : index === 1 ? 'tokens_panel' : index === 2 ? 'supabase_integration' : 'pwa_features'}
                   className="w-full h-full object-cover mix-blend-overlay"
-                  whileHover={{ 
-                    scale: 1.05,
-                    transition: { duration: 0.5 }
-                  }}
                 />
                 
                 <motion.div 

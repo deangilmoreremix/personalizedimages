@@ -4,9 +4,9 @@ import { HexColorPicker } from 'react-colorful';
 import { useDropzone } from 'react-dropzone';
 import gifshot from 'gifshot';
 import { FontSelector } from './ui/FontSelector';
-import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
-import EmailPersonalizationToggle from './EmailPersonalizationToggle';
-import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import { useUniversalAIFeatures } from '../hooks/useUniversalAIFeatures';
+import { useUniversalEmailSystem } from '../hooks/useUniversalEmailSystem';
+import EmailHtmlGenerator from './EmailHtmlGenerator';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, getColorClasses, commonStyles } from './ui/design-system';
 
 interface GifEditorProps {
@@ -59,15 +59,20 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
 
   const activeFrame = frames[activeFrameIndex];
 
-  // Email personalization hook
-  const emailPersonalization = useEmailPersonalization({
+  // Universal AI Features Hook
+  const aiFeatures = useUniversalAIFeatures({
+    generatorType: 'gif',
+    tokens,
+    onImageGenerated: (imageUrl) => {
+      console.log('AI Image generated:', imageUrl);
+    }
+  });
+
+  // Universal Email System Hook
+  const emailSystem = useUniversalEmailSystem({
     imageUrl: generatedGif,
     tokens,
-    generatorType: 'gif',
-    onEmailImageGenerated: (emailImage, html) => {
-      // Handle email-ready GIF generation
-      console.log('Email-ready GIF generated:', emailImage, html);
-    }
+    personalizationTokens: activeFrame?.tokens || []
   });
 
   // Initialize with an empty frame

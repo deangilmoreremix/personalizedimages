@@ -74,7 +74,8 @@ const AppLayout = () => {
           <Route path="/features/ghibli-style" element={<GhibliStylePage />} />
           <Route path="/features/cartoon-style" element={<CartoonStylePage />} />
           <Route path="/features/meme-generator" element={<MemeGeneratorPage />} />
-          <Route path="/features/ai-image" element={<AIImagePage />} />
+          <Route path="/features/ai-image" element={<ModernAIImagePage />} />
+          <Route path="/features/ai-image-classic" element={<AIImagePage />} />
           <Route path="/features/modern-ai-image" element={<ModernAIImagePage />} />
           <Route path="/features/reimagined-ai-image" element={<ReimaginedAIImagePage />} />
           <Route path="/features/modern-action-figures" element={<ModernActionFigurePage />} />

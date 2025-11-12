@@ -92,7 +92,7 @@ const ModernHeader: React.FC = () => {
                     description="AI personalization studio"
                   />
                   <DropdownItem
-                    to="/features/ai-image"
+                    to="/features/modern-ai-image"
                     icon={<Sparkles className="w-4 h-4 text-purple-600" />}
                     label="AI Image Creator"
                     description="Generate custom AI imagery"
@@ -283,7 +283,7 @@ const ModernHeader: React.FC = () => {
                 <div className="px-4 py-2 border-b border-gray-100">
                   <h3 className="font-medium mb-2">Tools</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <Link to="/features/ai-image" className="p-2 rounded hover:bg-gray-50">AI Images</Link>
+                    <Link to="/features/modern-ai-image" className="p-2 rounded hover:bg-gray-50">AI Images</Link>
                     <Link to="/features/action-figures" className="p-2 rounded hover:bg-gray-50">Action Figures</Link>
                     <Link to="/features/ghibli-style" className="p-2 rounded hover:bg-gray-50">Ghibli Style</Link>
                     <Link to="/features/cartoon-style" className="p-2 rounded hover:bg-gray-50">Cartoon Style</Link>

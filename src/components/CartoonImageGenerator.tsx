@@ -8,6 +8,9 @@ import cartoonThemesConfig from '../data/cartoonThemes';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
 interface CartoonImageGeneratorProps {
@@ -30,7 +33,18 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [showAllThemes, setShowAllThemes] = useState(false);
-  
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedImage,
+    tokens,
+    generatorType: 'cartoon',
+    onEmailImageGenerated: (emailImage, html) => {
+      // Handle email-ready cartoon generation
+      console.log('Email-ready cartoon generated:', emailImage, html);
+    }
+  });
+
   // Initialize with the first theme
   useEffect(() => {
     if (cartoonThemesConfig.themes.length > 0) {
@@ -387,7 +401,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
             )}
           </div>
           
-          {/* Download buttons (when image is generated) */}
+          {/* Download buttons and Email Toggle (when image is generated) */}
           {generatedImage && (
             <div className={commonStyles.buttonGroup}>
               <button
@@ -398,6 +412,11 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
+
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
 
               <a
                 href={generatedImage}
@@ -423,6 +442,38 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
                   }
                 }}
                 tokens={tokens}
+              />
+            </div>
+          )}
+
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <div className="mt-6">
+              <EmailPersonalizationPanel
+                imageUrl={generatedImage}
+                personalizationTokens={[]} // Cartoon images don't use tokens the same way
+                selectedProvider={emailPersonalization.selectedProvider}
+                template={emailPersonalization.template}
+                subject={emailPersonalization.subject}
+                linkText={emailPersonalization.linkText}
+                linkUrl={emailPersonalization.linkUrl}
+                bgColor={emailPersonalization.bgColor}
+                textColor={emailPersonalization.textColor}
+                accentColor={emailPersonalization.accentColor}
+                width={emailPersonalization.width}
+                imageHeight={emailPersonalization.imageHeight}
+                generatedHtml={emailPersonalization.generatedHtml}
+                isGenerating={emailPersonalization.isGenerating}
+                error={emailPersonalization.error}
+                recommendedTokens={emailPersonalization.recommendedTokens}
+                tokenValidation={emailPersonalization.tokenValidation}
+                onAddToken={() => {}} // Cartoon images don't need token management
+                onRemoveToken={() => {}}
+                onUpdateToken={() => {}}
+                onUpdateSettings={emailPersonalization.updateSettings}
+                onGenerate={emailPersonalization.generateEmailImage}
+                onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+                onDownloadHtml={emailPersonalization.downloadHtml}
               />
             </div>
           )}

@@ -9,6 +9,9 @@ import { FontSelector } from './ui/FontSelector';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
@@ -47,6 +50,17 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   
   // Use templates from configuration
   const templates = getAllTemplates();
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedMeme,
+    tokens,
+    generatorType: 'meme',
+    onEmailImageGenerated: (emailImage, html) => {
+      // Handle email-ready meme generation
+      console.log('Email-ready meme generated:', emailImage, html);
+    }
+  });
 
   useEffect(() => {
     // Initialize with first template
@@ -519,6 +533,11 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
               </div>
 
               <div className="mt-4 flex justify-center gap-4">
+                <EmailPersonalizationToggle
+                  isActive={emailPersonalization.isActive}
+                  onToggle={emailPersonalization.toggle}
+                />
+
                 <button
                   className={getButtonClasses('secondary')}
                   onClick={() => {
@@ -551,6 +570,38 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                   }
                 }}
                 tokens={tokens}
+              />
+            </div>
+          )}
+
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <div className="mt-6">
+              <EmailPersonalizationPanel
+                imageUrl={generatedMeme}
+                personalizationTokens={[]} // Memes don't use tokens the same way
+                selectedProvider={emailPersonalization.selectedProvider}
+                template={emailPersonalization.template}
+                subject={emailPersonalization.subject}
+                linkText={emailPersonalization.linkText}
+                linkUrl={emailPersonalization.linkUrl}
+                bgColor={emailPersonalization.bgColor}
+                textColor={emailPersonalization.textColor}
+                accentColor={emailPersonalization.accentColor}
+                width={emailPersonalization.width}
+                imageHeight={emailPersonalization.imageHeight}
+                generatedHtml={emailPersonalization.generatedHtml}
+                isGenerating={emailPersonalization.isGenerating}
+                error={emailPersonalization.error}
+                recommendedTokens={emailPersonalization.recommendedTokens}
+                tokenValidation={emailPersonalization.tokenValidation}
+                onAddToken={() => {}} // Memes don't need token management
+                onRemoveToken={() => {}}
+                onUpdateToken={() => {}}
+                onUpdateSettings={emailPersonalization.updateSettings}
+                onGenerate={emailPersonalization.generateEmailImage}
+                onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+                onDownloadHtml={emailPersonalization.downloadHtml}
               />
             </div>
           )}

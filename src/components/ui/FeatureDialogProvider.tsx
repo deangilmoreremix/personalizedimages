@@ -5,7 +5,6 @@ import { Image as ImageIcon, Box, MessageSquare, Sparkles, Paintbrush as PaintBr
 // Lazy load components to improve performance
 const ImageEditor = lazy(() => import('../ImageEditor'));
 const GifEditor = lazy(() => import('../GifEditor'));
-const EmailImageEditor = lazy(() => import('../EmailImageEditor'));
 const ActionFigureGenerator = lazy(() => import('../ActionFigureGenerator'));
 const MemeGenerator = lazy(() => import('../MemeGenerator'));
 const GhibliImageGenerator = lazy(() => import('../GhibliImageGenerator'));
@@ -55,14 +54,6 @@ export const FEATURES: Record<string, FeatureConfig> = {
     icon: <Clock className="w-6 h-6" />,
     category: 'media',
     helpText: 'Add personalization to animated GIFs'
-  },
-  'email': {
-    id: 'email',
-    title: 'Email-Ready Images',
-    description: 'Design images optimized for email marketing',
-    icon: <Mail className="w-6 h-6" />,
-    category: 'media',
-    helpText: 'Create email-compatible images with personalization'
   },
   'action-figure': {
     id: 'action-figure',
@@ -199,11 +190,9 @@ export const FeatureDialogProvider: React.FC<FeatureDialogProviderProps> = ({
     switch(activeFeature) {
       case 'image': 
         return renderWithSuspense(AIImageGenerator);
-      case 'gif': 
+      case 'gif':
         return renderWithSuspense(GifEditor);
-      case 'email': 
-        return renderWithSuspense(EmailImageEditor);
-      case 'action-figure': 
+      case 'action-figure':
         return renderWithSuspense(ActionFigureGenerator);
       case 'music-figure': 
         return renderWithSuspense(MusicStarActionFigureGenerator);

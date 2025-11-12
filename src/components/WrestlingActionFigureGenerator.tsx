@@ -6,6 +6,9 @@ import { TokenDragItem } from '../types/DragTypes';
 import { wrestlingActionFigurePrompts as wrestlingPrompts } from '../data/wrestlingActionFigures';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
 interface WrestlingActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -25,6 +28,17 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
   const [selectedPose, setSelectedPose] = useState<string>('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [showAllCharacters, setShowAllCharacters] = useState(false);
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedFigure,
+    tokens,
+    generatorType: 'action-figure',
+    onEmailImageGenerated: (emailImage, html) => {
+      // Handle email-ready action figure generation
+      console.log('Email-ready action figure generated:', emailImage, html);
+    }
+  });
 
   // Initialize with first prompt
   useEffect(() => {
@@ -437,7 +451,7 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
             )}
           </div>
           
-          {/* Download Buttons */}
+          {/* Download Buttons and Email Toggle */}
           {generatedFigure && (
             <div className="flex gap-2">
               <button
@@ -447,6 +461,11 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
+
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
 
               <a
                 href={generatedFigure}
@@ -471,6 +490,38 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
                   }
                 }}
                 tokens={tokens}
+              />
+            </div>
+          )}
+
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <div className="mt-6">
+              <EmailPersonalizationPanel
+                imageUrl={generatedFigure}
+                personalizationTokens={[]} // Wrestling figures don't use tokens the same way
+                selectedProvider={emailPersonalization.selectedProvider}
+                template={emailPersonalization.template}
+                subject={emailPersonalization.subject}
+                linkText={emailPersonalization.linkText}
+                linkUrl={emailPersonalization.linkUrl}
+                bgColor={emailPersonalization.bgColor}
+                textColor={emailPersonalization.textColor}
+                accentColor={emailPersonalization.accentColor}
+                width={emailPersonalization.width}
+                imageHeight={emailPersonalization.imageHeight}
+                generatedHtml={emailPersonalization.generatedHtml}
+                isGenerating={emailPersonalization.isGenerating}
+                error={emailPersonalization.error}
+                recommendedTokens={emailPersonalization.recommendedTokens}
+                tokenValidation={emailPersonalization.tokenValidation}
+                onAddToken={() => {}} // Wrestling figures don't need token management
+                onRemoveToken={() => {}}
+                onUpdateToken={() => {}}
+                onUpdateSettings={emailPersonalization.updateSettings}
+                onGenerate={emailPersonalization.generateEmailImage}
+                onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+                onDownloadHtml={emailPersonalization.downloadHtml}
               />
             </div>
           )}

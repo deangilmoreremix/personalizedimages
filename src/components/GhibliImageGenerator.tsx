@@ -7,6 +7,9 @@ import DroppableInput from './DroppableInput';
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import ghibliConfig from '../data/ghibliStyles';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
@@ -33,6 +36,17 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   // Personalization panel state
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [personalizedContent, setPersonalizedContent] = useState('');
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedImage,
+    tokens,
+    generatorType: 'ghibli',
+    onEmailImageGenerated: (emailImage, html) => {
+      // Handle email-ready Ghibli image generation
+      console.log('Email-ready Ghibli image generated:', emailImage, html);
+    }
+  });
 
   // Use configuration data
   const sceneOptions = ghibliConfig.scenes.map(scene => scene.label);
@@ -532,6 +546,11 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                 View Full Size
               </button>
 
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
+
               <a
                 href={generatedImage}
                 download="ghibli-image.png"
@@ -555,6 +574,38 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                   }
                 }}
                 tokens={tokens}
+              />
+            </div>
+          )}
+
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <div className="mt-6">
+              <EmailPersonalizationPanel
+                imageUrl={generatedImage}
+                personalizationTokens={[]} // Ghibli images don't use tokens the same way
+                selectedProvider={emailPersonalization.selectedProvider}
+                template={emailPersonalization.template}
+                subject={emailPersonalization.subject}
+                linkText={emailPersonalization.linkText}
+                linkUrl={emailPersonalization.linkUrl}
+                bgColor={emailPersonalization.bgColor}
+                textColor={emailPersonalization.textColor}
+                accentColor={emailPersonalization.accentColor}
+                width={emailPersonalization.width}
+                imageHeight={emailPersonalization.imageHeight}
+                generatedHtml={emailPersonalization.generatedHtml}
+                isGenerating={emailPersonalization.isGenerating}
+                error={emailPersonalization.error}
+                recommendedTokens={emailPersonalization.recommendedTokens}
+                tokenValidation={emailPersonalization.tokenValidation}
+                onAddToken={() => {}} // Ghibli images don't need token management
+                onRemoveToken={() => {}}
+                onUpdateToken={() => {}}
+                onUpdateSettings={emailPersonalization.updateSettings}
+                onGenerate={emailPersonalization.generateEmailImage}
+                onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+                onDownloadHtml={emailPersonalization.downloadHtml}
               />
             </div>
           )}

@@ -7,6 +7,9 @@ import { musicStarActionFigurePrompts as musicPrompts } from '../data/musicStarA
 import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
 interface MusicStarActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -30,6 +33,16 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
   const [selectedPose, setSelectedPose] = useState<string>('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [showAllCharacters, setShowAllCharacters] = useState(false);
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedFigure,
+    tokens,
+    generatorType: 'music-star',
+    onEmailImageGenerated: (emailImage, html) => {
+      console.log('Email-ready music star figure generated:', emailImage, html);
+    }
+  });
 
   // Initialize with first prompt
   useEffect(() => {
@@ -434,6 +447,36 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
         </div>
         
         <div className="flex flex-col space-y-4">
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <EmailPersonalizationPanel
+              imageUrl={generatedFigure}
+              personalizationTokens={[]} // Music star figures don't use tokens the same way
+              selectedProvider={emailPersonalization.selectedProvider}
+              template={emailPersonalization.template}
+              subject={emailPersonalization.subject}
+              linkText={emailPersonalization.linkText}
+              linkUrl={emailPersonalization.linkUrl}
+              bgColor={emailPersonalization.bgColor}
+              textColor={emailPersonalization.textColor}
+              accentColor={emailPersonalization.accentColor}
+              width={emailPersonalization.width}
+              imageHeight={emailPersonalization.imageHeight}
+              generatedHtml={emailPersonalization.generatedHtml}
+              isGenerating={emailPersonalization.isGenerating}
+              error={emailPersonalization.error}
+              recommendedTokens={emailPersonalization.recommendedTokens}
+              tokenValidation={emailPersonalization.tokenValidation}
+              onAddToken={() => {}} // Music star figures don't need token management
+              onRemoveToken={() => {}}
+              onUpdateToken={() => {}}
+              onUpdateSettings={emailPersonalization.updateSettings}
+              onGenerate={emailPersonalization.generateEmailImage}
+              onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+              onDownloadHtml={emailPersonalization.downloadHtml}
+            />
+          )}
+
           {/* Preview Image Area */}
           <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: "300px" }}>
             {generatedFigure ? (
@@ -460,6 +503,11 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
+
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
 
               <a
                 href={generatedFigure}

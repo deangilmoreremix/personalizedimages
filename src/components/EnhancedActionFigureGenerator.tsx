@@ -7,6 +7,9 @@ import { actionFigureTemplates, generateActionFigurePrompt, getRandomAccessories
 import { FontSelector } from './ui/FontSelector';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
 interface EnhancedActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -37,7 +40,17 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
   // Reference image
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedFigure,
+    tokens,
+    generatorType: 'action-figure',
+    onEmailImageGenerated: (emailImage, html) => {
+      console.log('Email-ready action figure generated:', emailImage, html);
+    }
+  });
+
   // Get the current template
   const getCurrentTemplate = () => {
     return actionFigureTemplates.find(t => t.id === selectedTemplate) || actionFigureTemplates[0];
@@ -424,13 +437,43 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
         </div>
         
         <div className="flex flex-col space-y-4">
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <EmailPersonalizationPanel
+              imageUrl={generatedFigure}
+              personalizationTokens={[]} // Action figures don't use tokens the same way
+              selectedProvider={emailPersonalization.selectedProvider}
+              template={emailPersonalization.template}
+              subject={emailPersonalization.subject}
+              linkText={emailPersonalization.linkText}
+              linkUrl={emailPersonalization.linkUrl}
+              bgColor={emailPersonalization.bgColor}
+              textColor={emailPersonalization.textColor}
+              accentColor={emailPersonalization.accentColor}
+              width={emailPersonalization.width}
+              imageHeight={emailPersonalization.imageHeight}
+              generatedHtml={emailPersonalization.generatedHtml}
+              isGenerating={emailPersonalization.isGenerating}
+              error={emailPersonalization.error}
+              recommendedTokens={emailPersonalization.recommendedTokens}
+              tokenValidation={emailPersonalization.tokenValidation}
+              onAddToken={() => {}} // Action figures don't need token management
+              onRemoveToken={() => {}}
+              onUpdateToken={() => {}}
+              onUpdateSettings={emailPersonalization.updateSettings}
+              onGenerate={emailPersonalization.generateEmailImage}
+              onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+              onDownloadHtml={emailPersonalization.downloadHtml}
+            />
+          )}
+
           {/* Preview Image Area */}
           <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: "350px" }}>
             {generatedFigure ? (
-              <img 
-                src={generatedFigure} 
-                alt="Generated Action Figure" 
-                className="max-w-full max-h-full object-contain" 
+              <img
+                src={generatedFigure}
+                alt="Generated Action Figure"
+                className="max-w-full max-h-full object-contain"
               />
             ) : (
               <div className="text-center p-6">
@@ -451,6 +494,11 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
+
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
 
               <a
                 href={generatedFigure}

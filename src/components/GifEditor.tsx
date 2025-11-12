@@ -1,9 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Pause, Square, Clock, RefreshCw, Download, Trash, Plus, Minus, Layers, Mail, Settings, Sparkles, Image as ImageIcon, Zap } from 'lucide-react';
+import { Upload, Play, Pause, Square, Clock, RefreshCw, Download, Trash, Plus, Minus, Layers, Mail, Settings, Sparkles, Image as ImageIcon, Zap, Dices } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { useDropzone } from 'react-dropzone';
 import gifshot from 'gifshot';
 import { FontSelector } from './ui/FontSelector';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, getColorClasses, commonStyles } from './ui/design-system';
 
 interface GifEditorProps {
   tokens: Record<string, string>;
@@ -45,16 +49,26 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
   const [isEmailOptimized, setIsEmailOptimized] = useState<boolean>(true);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [fileSize, setFileSize] = useState<number>(0);
-  const [emailPreviewMode, setEmailPreviewMode] = useState<boolean>(false);
-  const [emailTemplateType, setEmailTemplateType] = useState<string>('centered');
   const [showAdvancedSettings, setShowAdvancedSettings] = useState<boolean>(false);
   const [showFrameSettings, setShowFrameSettings] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const lastRenderTimeRef = useRef<number>(0);
-  
+
   const activeFrame = frames[activeFrameIndex];
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedGif,
+    tokens,
+    generatorType: 'gif',
+    onEmailImageGenerated: (emailImage, html) => {
+      // Handle email-ready GIF generation
+      console.log('Email-ready GIF generated:', emailImage, html);
+    }
+  });
 
   // Initialize with an empty frame
   useEffect(() => {
@@ -356,25 +370,27 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
         fontFamily: 'Arial',
         textAlign: 'center',
         textBaseline: 'middle'
-      }, function(obj) {
+      }, function(obj: any) {
         if (obj.error) {
           console.error('GIF generation error:', obj.error);
+          setError('Failed to generate GIF. Please try with fewer frames or different settings.');
           setIsGenerating(false);
           return;
         }
-        
+
         setGeneratedGif(obj.image);
-        
+
         // Calculate approximate file size
         const base64Data = obj.image.split(',')[1];
         const approximateFileSize = Math.round((base64Data.length * 3/4) / 1024); // KB
         setFileSize(approximateFileSize);
-        
+
         if (onGifGenerated) {
           onGifGenerated(obj.image);
         }
-        
+
         setIsGenerating(false);
+        setError(null); // Clear any previous errors
       });
     });
   };
@@ -428,77 +444,44 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
     setFrames(newFrames);
   };
   
-  const createEmailTemplatePreview = () => {
-    if (!generatedGif) return null;
-    
-    return (
-      <div className="p-4 bg-gray-200 rounded-lg overflow-auto max-h-[400px]">
-        <div className="bg-white p-4 rounded shadow-sm mx-auto" style={{ maxWidth: '600px' }}>
-          {emailTemplateType === 'centered' && (
-            <>
-              <div className="text-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Special Offer For You, {tokens['FIRSTNAME'] || 'Valued Customer'}</h2>
-                <p className="text-gray-600">We have a personalized offer just for you!</p>
-              </div>
-              <div className="text-center mb-4">
-                <img src={generatedGif} alt="Personalized animation" style={{ maxWidth: '100%', margin: '0 auto' }} />
-              </div>
-              <div className="text-center">
-                <button className="bg-primary-600 text-white px-4 py-2 rounded">Check It Out</button>
-              </div>
-            </>
-          )}
-          
-          {emailTemplateType === 'leftAligned' && (
-            <>
-              <div className="mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Hey {tokens['FIRSTNAME'] || 'there'}!</h2>
-                <p className="text-gray-600">Check out this special offer we've created just for you.</p>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4 mb-4">
-                <div className="md:w-1/2">
-                  <img src={generatedGif} alt="Personalized animation" style={{ maxWidth: '100%' }} />
-                </div>
-                <div className="md:w-1/2">
-                  <h3 className="text-lg font-semibold mb-2">Limited Time Offer</h3>
-                  <p className="text-gray-700 mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam at justo quis urna.</p>
-                  <button className="bg-primary-600 text-white px-4 py-2 rounded">Learn More</button>
-                </div>
-              </div>
-            </>
-          )}
-          
-          {emailTemplateType === 'announcement' && (
-            <>
-              <div className="text-center mb-6 bg-primary-50 p-4 rounded">
-                <h2 className="text-2xl font-bold text-primary-700">Important Announcement</h2>
-                <p className="text-primary-600">For {tokens['FIRSTNAME'] || 'our valued customer'}</p>
-              </div>
-              <div className="text-center mb-4">
-                <img src={generatedGif} alt="Personalized animation" style={{ maxWidth: '100%', margin: '0 auto' }} />
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded">
-                <p className="text-gray-700 mb-4">Please review this important information</p>
-                <button className="bg-primary-600 text-white px-6 py-2 rounded-lg">View Details</button>
-              </div>
-            </>
-          )}
-          
-          <div className="mt-6 pt-4 border-t border-gray-200 text-center text-gray-500 text-xs">
-            <p>© 2025 Your Company. All rights reserved.</p>
-            <p>You received this email because you signed up for our newsletter.</p>
-            <p><a href="#" className="text-primary-600">Unsubscribe</a></p>
+
+  return (
+    <div className={`${DESIGN_SYSTEM.components.section} ${getElevationClasses(3)} ${getAnimationClasses('smooth')}`}>
+      <div className={commonStyles.actionBar}>
+        <h3 className={commonStyles.sectionHeader}>
+          <Zap className="h-6 w-6 text-primary-500 mr-2" />
+          Animated GIF Personalization Editor
+        </h3>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              // Random animation style - could randomize frame duration, dimensions, etc.
+              const randomWidth = Math.floor(Math.random() * 200) + 300; // 300-500
+              const randomHeight = Math.floor(Math.random() * 200) + 300; // 300-500
+              const randomDuration = Math.floor(Math.random() * 300) + 200; // 200-500ms
+
+              setGifWidth(randomWidth);
+              setGifHeight(randomHeight);
+
+              // Update all frames with random duration
+              const newFrames = frames.map(frame => ({
+                ...frame,
+                duration: randomDuration
+              }));
+              setFrames(newFrames);
+            }}
+            className="text-xs text-primary-600 hover:text-primary-700 flex items-center"
+          >
+            <Dices className="w-3 h-3 mr-1" />
+            Surprise Me
+          </button>
+          <div className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium">
+            GIF Animation Tool
           </div>
         </div>
       </div>
-    );
-  };
 
-  return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <h3 className="text-xl font-bold mb-4">Animated GIF Personalization Editor</h3>
-      
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className={getGridClasses('creative')}>
         {/* Left side - Canvas and Timeline */}
         <div className="flex-1">
           {/* Canvas */}
@@ -557,9 +540,9 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
           </div>
           
           {/* Controls */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className={`${commonStyles.buttonGroup} mb-4 flex-wrap`}>
             <button
-              className="btn btn-outline flex items-center"
+              className={`${getButtonClasses('outlined')} ${DESIGN_SYSTEM.accessibility.focus}`}
               onClick={togglePlayback}
             >
               {isPlaying ? (
@@ -568,42 +551,42 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
                 <><Play className="w-4 h-4 mr-2" />Play</>
               )}
             </button>
-            
+
             <button
-              className="btn btn-outline flex items-center"
+              className={`${getButtonClasses('outlined')} ${DESIGN_SYSTEM.accessibility.focus}`}
               onClick={() => setActiveFrameIndex(Math.max(0, activeFrameIndex - 1))}
               disabled={activeFrameIndex <= 0}
             >
               <span className="mr-1">◀</span> Prev
             </button>
-            
-            <div className="px-2 py-1 bg-gray-100 rounded">
+
+            <div className="px-3 py-2 bg-gray-100 rounded-lg text-sm font-medium">
               {activeFrameIndex + 1} / {frames.length}
             </div>
-            
+
             <button
-              className="btn btn-outline flex items-center"
+              className={`${getButtonClasses('outlined')} ${DESIGN_SYSTEM.accessibility.focus}`}
               onClick={() => setActiveFrameIndex(Math.min(frames.length - 1, activeFrameIndex + 1))}
               disabled={activeFrameIndex >= frames.length - 1}
             >
               Next <span className="ml-1">▶</span>
             </button>
-            
+
             <div className="ml-auto flex gap-2">
               <button
-                className="btn btn-outline flex items-center"
+                className={`${getButtonClasses('outlined')} ${DESIGN_SYSTEM.accessibility.focus}`}
                 onClick={addTextToken}
               >
                 <Plus className="w-4 h-4 mr-1" /> Text Token
               </button>
-              
+
               <button
-                className="btn btn-primary flex items-center"
+                className={`${getButtonClasses('filled')} ${DESIGN_SYSTEM.accessibility.focus}`}
                 onClick={generateGif}
                 disabled={isGenerating || frames.length === 0}
               >
                 {isGenerating ? (
-                  <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
+                  <><div className={`${DESIGN_SYSTEM.components.loading.spinner} w-4 h-4 mr-2`}></div> Generating...</>
                 ) : (
                   <><Zap className="w-4 h-4 mr-2" /> Generate GIF</>
                 )}
@@ -737,14 +720,11 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
               <div className="flex justify-between items-center mb-3">
                 <h4 className="font-medium text-gray-700">Generated Animation</h4>
                 <div className="flex gap-2">
-                  <button
-                    className="text-xs px-2 py-1 bg-gray-100 rounded flex items-center"
-                    onClick={() => setEmailPreviewMode(!emailPreviewMode)}
-                  >
-                    <Mail className="w-3 h-3 mr-1" />
-                    {emailPreviewMode ? 'Hide' : 'Show'} Email Preview
-                  </button>
-                  
+                  <EmailPersonalizationToggle
+                    isActive={emailPersonalization.isActive}
+                    onToggle={emailPersonalization.toggle}
+                  />
+
                   <button
                     className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded flex items-center"
                     onClick={downloadGif}
@@ -755,50 +735,52 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
                 </div>
               </div>
               
-              {!emailPreviewMode ? (
-                <div className="flex justify-center">
-                  <img
-                    src={generatedGif}
-                    alt="Generated GIF"
-                    className="max-w-full max-h-[300px] rounded"
-                  />
-                </div>
-              ) : (
-                createEmailTemplatePreview()
-              )}
-              
-              {emailPreviewMode && (
-                <div className="mt-3 flex justify-center gap-2">
-                  <button
-                    className={`text-xs px-2 py-1 rounded ${emailTemplateType === 'centered' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'}`}
-                    onClick={() => setEmailTemplateType('centered')}
-                  >
-                    Centered Template
-                  </button>
-                  <button
-                    className={`text-xs px-2 py-1 rounded ${emailTemplateType === 'leftAligned' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'}`}
-                    onClick={() => setEmailTemplateType('leftAligned')}
-                  >
-                    Left Aligned
-                  </button>
-                  <button
-                    className={`text-xs px-2 py-1 rounded ${emailTemplateType === 'announcement' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'}`}
-                    onClick={() => setEmailTemplateType('announcement')}
-                  >
-                    Announcement
-                  </button>
-                </div>
-              )}
+              <div className="flex justify-center">
+                <img
+                  src={generatedGif}
+                  alt="Generated GIF"
+                  className="max-w-full max-h-[300px] rounded"
+                />
+              </div>
             </div>
           )}
         </div>
         
         {/* Right side - Settings */}
         <div className="w-full lg:w-80 space-y-4">
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <EmailPersonalizationPanel
+              imageUrl={generatedGif}
+              personalizationTokens={[]} // GIF editor doesn't use tokens the same way
+              selectedProvider={emailPersonalization.selectedProvider}
+              template={emailPersonalization.template}
+              subject={emailPersonalization.subject}
+              linkText={emailPersonalization.linkText}
+              linkUrl={emailPersonalization.linkUrl}
+              bgColor={emailPersonalization.bgColor}
+              textColor={emailPersonalization.textColor}
+              accentColor={emailPersonalization.accentColor}
+              width={emailPersonalization.width}
+              imageHeight={emailPersonalization.imageHeight}
+              generatedHtml={emailPersonalization.generatedHtml}
+              isGenerating={emailPersonalization.isGenerating}
+              error={emailPersonalization.error}
+              recommendedTokens={emailPersonalization.recommendedTokens}
+              tokenValidation={emailPersonalization.tokenValidation}
+              onAddToken={() => {}} // GIF editor doesn't need token management
+              onRemoveToken={() => {}}
+              onUpdateToken={() => {}}
+              onUpdateSettings={emailPersonalization.updateSettings}
+              onGenerate={emailPersonalization.generateEmailImage}
+              onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+              onDownloadHtml={emailPersonalization.downloadHtml}
+            />
+          )}
           {/* GIF Settings */}
-          <div className="card bg-gray-50">
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium">Animation Settings</h4>
+          <div className={`${DESIGN_SYSTEM.components.panel} ${commonStyles.contentArea}`}>
+            <div className={commonStyles.actionBar}>
+              <h4 className={DESIGN_SYSTEM.typography.h4}>Animation Settings</h4>
               <button
                 className="text-xs text-primary-600 hover:text-primary-700 flex items-center"
                 onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
@@ -890,9 +872,9 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
           
           {/* Token Settings */}
           {activeToken && activeFrame && (
-            <div className="card bg-gray-50">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="font-medium">Token Settings</h4>
+            <div className={`${DESIGN_SYSTEM.components.panel} ${commonStyles.contentArea}`}>
+              <div className={commonStyles.actionBar}>
+                <h4 className={DESIGN_SYSTEM.typography.h4}>Token Settings</h4>
                 <div className="flex gap-1">
                   <button
                     className="p-1 text-primary-600 hover:text-primary-800 rounded"
@@ -1011,22 +993,22 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
           )}
           
           {/* Personalization Tokens */}
-          <div className="card bg-gray-50">
-            <h4 className="font-medium mb-3">Personalization Tokens</h4>
+          <div className={`${DESIGN_SYSTEM.components.panel} ${commonStyles.contentArea}`}>
+            <h4 className={DESIGN_SYSTEM.typography.h4}>Personalization Tokens</h4>
             <div className="space-y-2">
-              <div className="p-2 bg-white rounded border border-gray-200">
+              <div className="p-3 bg-white rounded-lg border border-gray-200">
                 <div className="font-medium">[FIRSTNAME]</div>
                 <div className="text-xs text-gray-500">Current value: {tokens['FIRSTNAME'] || 'Not set'}</div>
               </div>
-              <div className="p-2 bg-white rounded border border-gray-200">
+              <div className="p-3 bg-white rounded-lg border border-gray-200">
                 <div className="font-medium">[LASTNAME]</div>
                 <div className="text-xs text-gray-500">Current value: {tokens['LASTNAME'] || 'Not set'}</div>
               </div>
-              <div className="p-2 bg-white rounded border border-gray-200">
+              <div className="p-3 bg-white rounded-lg border border-gray-200">
                 <div className="font-medium">[COMPANY]</div>
                 <div className="text-xs text-gray-500">Current value: {tokens['COMPANY'] || 'Not set'}</div>
               </div>
-              <div className="p-2 bg-white rounded border border-gray-200">
+              <div className="p-3 bg-white rounded-lg border border-gray-200">
                 <div className="font-medium">[EMAIL]</div>
                 <div className="text-xs text-gray-500">Current value: {tokens['EMAIL'] || 'Not set'}</div>
               </div>
@@ -1034,12 +1016,12 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
           </div>
           
           {/* Email Optimization Tips */}
-          <div className="card bg-indigo-50">
+          <div className={`${getColorClasses('info', '50')} p-4 rounded-lg`}>
             <div className="flex items-start gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-600 mt-0.5" />
+              <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
               <div>
-                <h4 className="font-medium text-indigo-700 mb-1">Email Optimization Tips</h4>
-                <ul className="text-xs text-indigo-700 space-y-1 list-disc pl-4">
+                <h4 className={`${DESIGN_SYSTEM.typography.h4} text-blue-700 mb-2`}>Email Optimization Tips</h4>
+                <ul className="text-sm text-blue-700 space-y-1 list-disc pl-4">
                   <li>Keep GIFs under 1MB for broad email client support</li>
                   <li>Avoid using too many frames (8-12 is optimal)</li>
                   <li>Use dimensions under a 600x400 for best viewing experience</li>
@@ -1047,7 +1029,7 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
                   <li>Consider using 2 or 3 frames for minimal file size</li>
                 </ul>
                 <button
-                  className="mt-2 text-xs py-1 px-2 bg-indigo-100 text-indigo-700 rounded"
+                  className="mt-3 text-sm py-2 px-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                   onClick={optimizeForEmail}
                 >
                   Apply Email-Safe Settings

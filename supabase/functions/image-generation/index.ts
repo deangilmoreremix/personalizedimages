@@ -68,44 +68,43 @@ serve(async (req) => {
         throw new Error(`Image generation failed: ${error.message}`)
       }
 
-    } else if (provider === 'gemini' && geminiKey && validateApiKey(geminiKey, 'gemini')) {
-      // Use Gemini for image generation
+    } else if (provider === 'gemini') {
+      // Gemini doesn't support native image generation, fall back to OpenAI
+      console.warn('Gemini does not support image generation, falling back to OpenAI DALL-E')
+
+      if (!openaiKey || !validateApiKey(openaiKey, 'openai')) {
+        return new Response(
+          JSON.stringify({ error: 'OpenAI API key required for image generation (Gemini fallback)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+        const response = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openaiKey}`
+          },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: sanitizedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : '') }] }],
-            generationConfig: {
-              responseMediaType: "IMAGE"
-            }
+            model: "dall-e-3",
+            prompt: sanitizedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
+            n: 1,
+            size: size,
+            quality: quality
           })
         })
 
         if (!response.ok) {
           const error = await response.json()
-          throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`)
+          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
         }
 
         const data = await response.json()
-
-        // Extract image from Gemini response
-        for (const candidate of data.candidates || []) {
-          for (const part of candidate.content?.parts || []) {
-            if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-              imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-              break
-            }
-          }
-          if (imageUrl) break
-        }
-
-        if (!imageUrl) {
-          throw new Error('No image found in Gemini response')
-        }
+        imageUrl = data.data[0].url
 
       } catch (error) {
-        console.error('Gemini image generation failed:', error)
+        console.error('OpenAI fallback image generation failed:', error)
         throw new Error(`Image generation failed: ${error.message}`)
       }
 

@@ -8,6 +8,8 @@ import { FontSelector } from './ui/FontSelector';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
+import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
+import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
@@ -35,6 +37,10 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
   const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
+
+  // Nano Banana editing
+  const [showNanoBanana, setShowNanoBanana] = useState(false);
+  const [showTokenPalette, setShowTokenPalette] = useState(false);
   
   // Personalization fields
   const [characterName, setCharacterName] = useState(tokens['FIRSTNAME'] || '');

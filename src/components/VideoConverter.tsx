@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Video, Play, Download, RefreshCw, Zap, Settings, Sparkles, DollarSign, Check, X, Info, Clock, Film, Clapperboard } from 'lucide-react';
+import { Video, Play, Download, RefreshCw, Zap, Settings, Sparkles, DollarSign, Check, X, Info, Clock, Film, Clapperboard, Wand2, Shapes } from 'lucide-react';
 import { VideoConversionOptions, VideoConversionResult, VideoEffect } from '../types/VideoTypes';
 import { convertImageToVideo, checkVideoProcessingStatus, getVideoConversionResult, getVideoPresets, createPaymentIntent } from '../utils/videoApi';
 import ReactPlayer from 'react-player';
+import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
+import TokenPalette from './shared/tokens/TokenPalette';
 
 interface VideoConverterProps {
   imageUrl: string | null;
@@ -32,6 +34,10 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [selectedPreset, setSelectedPreset] = useState<string>('zoom');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Nano Banana editing
+  const [showNanoBanana, setShowNanoBanana] = useState(false);
+  const [showTokenPalette, setShowTokenPalette] = useState(false);
   
   const presets = getVideoPresets();
   
@@ -75,7 +81,12 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
   const handleSelectPreset = (presetId: string) => {
     const preset = presets.find(p => p.id === presetId);
     if (preset) {
-      setConversionOptions(preset.options);
+      setConversionOptions({
+        ...preset.options,
+        effect: preset.options.effect as VideoEffect,
+        outputFormat: preset.options.outputFormat as 'mp4' | 'webm' | 'gif',
+        quality: preset.options.quality as 'high' | 'low' | 'medium'
+      });
       setSelectedPreset(presetId);
     }
   };
@@ -360,33 +371,53 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
           
           {/* Download Button */}
           {conversionResult?.status === 'completed' && (
-            <div className="flex gap-2">
-              {conversionResult.paymentStatus === 'completed' ? (
-                <a
-                  href={conversionResult.downloadUrl}
-                  download="video.mp4"
-                  className="btn btn-primary flex-1 flex items-center justify-center"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Video
-                </a>
-              ) : (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                {conversionResult.paymentStatus === 'completed' ? (
+                  <a
+                    href={conversionResult.downloadUrl}
+                    download="video.mp4"
+                    className="btn btn-primary flex-1 flex items-center justify-center"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Video
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    className="btn btn-primary flex-1 flex items-center justify-center"
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Purchase Download ($1)
+                  </button>
+                )}
+
                 <button
-                  onClick={() => setShowPaymentModal(true)}
-                  className="btn btn-primary flex-1 flex items-center justify-center"
+                  onClick={() => window.open(conversionResult.previewUrl)}
+                  className="btn btn-outline flex-1 flex items-center justify-center"
                 >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Purchase Download ($1)
+                  <Play className="w-4 h-4 mr-2" />
+                  View Full Size
                 </button>
-              )}
-              
-              <button
-                onClick={() => window.open(conversionResult.previewUrl)}
-                className="btn btn-outline flex-1 flex items-center justify-center"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                View Full Size
-              </button>
+              </div>
+
+              {/* Advanced Editing Options */}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => setShowNanoBanana(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  Nano Banana AI Edit
+                </button>
+                <button
+                  onClick={() => setShowTokenPalette(!showTokenPalette)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Shapes className="w-4 h-4" />
+                  {showTokenPalette ? 'Hide' : 'Show'} Tokens
+                </button>
+              </div>
             </div>
           )}
           
@@ -537,6 +568,42 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Nano Banana AI Editor */}
+      {showNanoBanana && imageUrl && (
+        <NanoBananaModal
+          imageUrl={imageUrl}
+          onSave={(editedImageUrl) => {
+            // For video converter, we might want to convert the edited image back to video
+            console.log('Edited image saved:', editedImageUrl);
+            setShowNanoBanana(false);
+          }}
+          onClose={() => setShowNanoBanana(false)}
+          moduleType="video"
+          tokens={{}} // Video converter doesn't use tokens the same way
+        />
+      )}
+
+      {/* Token Palette Panel */}
+      {showTokenPalette && (
+        <div className="mt-6">
+          <TokenPalette
+            tokens={{}} // Video converter doesn't use tokens the same way
+            onTokenUpdate={(key, value) => {
+              console.log('Token updated:', key, value);
+            }}
+            onTokenAdd={(token) => {
+              console.log('Token added:', token);
+            }}
+            onTokenDelete={(key) => {
+              console.log('Token deleted:', key);
+            }}
+            onTokenInsert={(tokenKey) => {
+              console.log('Token inserted:', tokenKey);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

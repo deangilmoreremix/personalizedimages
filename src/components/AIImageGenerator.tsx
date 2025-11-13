@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lightbulb, ChevronDown, ChevronUp, Image as ImageIcon, AlertCircle, HelpCircle, Sliders, Book, Wand2, Camera, RefreshCw, Scan, PaintBucket, Palette, FileVideo, Cpu, RotateCw, Shapes, Zap, Sparkles, X, Brain, Video, Download } from 'lucide-react';
+import { Lightbulb, ChevronDown, ChevronUp, Image as ImageIcon, AlertCircle, HelpCircle, Sliders, Book, Wand2, Camera, RefreshCw, Scan, PaintBucket, Palette, FileVideo, Cpu, RotateCw, Shapes, Zap, Sparkles, X, Brain, Video, Download, Tag } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   generateImageWithDalle,
@@ -20,6 +20,8 @@ import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
+import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
+import TokenPalette from './shared/tokens/TokenPalette';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
@@ -72,6 +74,10 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
   const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
+
+  // Nano Banana editing
+  const [showNanoBanana, setShowNanoBanana] = useState(false);
+  const [showTokenPalette, setShowTokenPalette] = useState(false);
 
   // Refs for cancelation
   const generationRef = useRef<(() => void) | null>(null);
@@ -801,6 +807,13 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               {/* Advanced Editing Options */}
               <div className="flex gap-3 flex-wrap">
                 <button
+                  onClick={() => setShowNanoBanana(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  Nano Banana AI Edit
+                </button>
+                <button
                   onClick={() => setShowSemanticMasking(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                 >
@@ -813,6 +826,13 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
                 >
                   <Sparkles className="w-4 h-4" />
                   Conversational Refinement
+                </button>
+                <button
+                  onClick={() => setShowTokenPalette(!showTokenPalette)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Tag className="w-4 h-4" />
+                  {showTokenPalette ? 'Hide' : 'Show'} Tokens
                 </button>
               </div>
             </div>
@@ -1002,6 +1022,48 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               onImageGenerated(imageUrl);
             }}
             onClose={() => setShowConversationalRefinement(false)}
+          />
+        </div>
+      )}
+
+      {/* Nano Banana AI Editor */}
+      {showNanoBanana && generatedImage && (
+        <NanoBananaModal
+          imageUrl={generatedImage}
+          onSave={(editedImageUrl) => {
+            setGeneratedImage(editedImageUrl);
+            onImageGenerated(editedImageUrl);
+            setShowNanoBanana(false);
+          }}
+          onClose={() => setShowNanoBanana(false)}
+          moduleType="ai-image"
+          tokens={tokens}
+        />
+      )}
+
+      {/* Token Palette Panel */}
+      {showTokenPalette && (
+        <div className="mt-6">
+          <TokenPalette
+            tokens={tokens}
+            onTokenUpdate={(key, value) => {
+              // Update token in parent component
+              const updatedTokens = { ...tokens, [key]: value };
+              // This would typically be handled by parent component
+              console.log('Token updated:', key, value);
+            }}
+            onTokenAdd={(token) => {
+              console.log('Token added:', token);
+            }}
+            onTokenDelete={(key) => {
+              console.log('Token deleted:', key);
+            }}
+            onTokenInsert={(tokenKey) => {
+              // Insert token into prompt
+              const tokenText = `[${tokenKey}]`;
+              const newPrompt = prompt + tokenText;
+              setPrompt(newPrompt);
+            }}
           />
         </div>
       )}

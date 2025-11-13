@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes, PaintBucket } from 'lucide-react';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes, PaintBucket, Tag } from 'lucide-react';
 import { generateGhibliStyleImage, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
@@ -8,6 +8,8 @@ import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
+import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
+import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
@@ -53,6 +55,10 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
   const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
+
+  // Nano Banana editing
+  const [showNanoBanana, setShowNanoBanana] = useState(false);
+  const [showTokenPalette, setShowTokenPalette] = useState(false);
 
   // Use configuration data
   const sceneOptions = ghibliConfig.scenes.map(scene => scene.label);
@@ -585,6 +591,13 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
               {/* Advanced Editing Options */}
               <div className="flex gap-3 flex-wrap">
                 <button
+                  onClick={() => setShowNanoBanana(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  Nano Banana AI Edit
+                </button>
+                <button
                   onClick={() => setShowSemanticMasking(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                 >
@@ -597,6 +610,13 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                 >
                   <Sparkles className="w-4 h-4" />
                   Conversational Refinement
+                </button>
+                <button
+                  onClick={() => setShowTokenPalette(!showTokenPalette)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Tag className="w-4 h-4" />
+                  {showTokenPalette ? 'Hide' : 'Show'} Tokens
                 </button>
               </div>
             </div>
@@ -746,6 +766,44 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
               }
             }}
             onClose={() => setShowConversationalRefinement(false)}
+          />
+        </div>
+      )}
+
+      {/* Nano Banana AI Editor */}
+      {showNanoBanana && generatedImage && (
+        <NanoBananaModal
+          imageUrl={generatedImage}
+          onSave={(editedImageUrl) => {
+            setGeneratedImage(editedImageUrl);
+            onImageGenerated(editedImageUrl);
+            setShowNanoBanana(false);
+          }}
+          onClose={() => setShowNanoBanana(false)}
+          moduleType="ghibli"
+          tokens={tokens}
+        />
+      )}
+
+      {/* Token Palette Panel */}
+      {showTokenPalette && (
+        <div className="mt-6">
+          <TokenPalette
+            tokens={tokens}
+            onTokenUpdate={(key, value) => {
+              console.log('Token updated:', key, value);
+            }}
+            onTokenAdd={(token) => {
+              console.log('Token added:', token);
+            }}
+            onTokenDelete={(key) => {
+              console.log('Token deleted:', key);
+            }}
+            onTokenInsert={(tokenKey) => {
+              const tokenText = `[${tokenKey}]`;
+              const newPrompt = prompt + tokenText;
+              setPrompt(newPrompt);
+            }}
           />
         </div>
       )}

@@ -35,6 +35,15 @@ serve(async (req) => {
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
+    console.log('🔑 API Keys check:', {
+      hasOpenAI: !!openaiKey,
+      openAIValid: openaiKey ? validateApiKey(openaiKey, 'openai') : false,
+      openAIPrefix: openaiKey ? openaiKey.substring(0, 10) + '...' : 'none',
+      hasGemini: !!geminiKey,
+      geminiValid: geminiKey ? validateApiKey(geminiKey, 'gemini') : false,
+      geminiPrefix: geminiKey ? geminiKey.substring(0, 10) + '...' : 'none'
+    })
+
     let imageUrl: string = ''
 
     if (provider === 'gpt-5' && openaiKey && validateApiKey(openaiKey, 'openai')) {

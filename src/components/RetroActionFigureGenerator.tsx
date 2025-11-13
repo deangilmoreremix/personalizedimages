@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, PaintBucket } from 'lucide-react';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, PaintBucket, Shapes } from 'lucide-react';
 import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
@@ -8,6 +8,8 @@ import ReferenceImageUploader from './ReferenceImageUploader';
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
+import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
+import TokenPalette from './shared/tokens/TokenPalette';
 
 interface RetroActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -31,6 +33,10 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
   const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
+
+  // Nano Banana editing
+  const [showNanoBanana, setShowNanoBanana] = useState(false);
+  const [showTokenPalette, setShowTokenPalette] = useState(false);
 
   // Initialize with first prompt
   useEffect(() => {
@@ -478,6 +484,13 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               {/* Advanced Editing Options */}
               <div className="flex gap-3 flex-wrap">
                 <button
+                  onClick={() => setShowNanoBanana(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <Zap className="w-4 h-4" />
+                  Nano Banana AI Edit
+                </button>
+                <button
                   onClick={() => setShowSemanticMasking(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                 >
@@ -490,6 +503,13 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                 >
                   <Sparkles className="w-4 h-4" />
                   Conversational Refinement
+                </button>
+                <button
+                  onClick={() => setShowTokenPalette(!showTokenPalette)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Shapes className="w-4 h-4" />
+                  {showTokenPalette ? 'Hide' : 'Show'} Tokens
                 </button>
               </div>
             </div>
@@ -602,6 +622,45 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               }
             }}
             onClose={() => setShowConversationalRefinement(false)}
+          />
+        </div>
+      )}
+
+      {/* Nano Banana AI Editor */}
+      {showNanoBanana && generatedFigure && (
+        <NanoBananaModal
+          imageUrl={generatedFigure}
+          onSave={(editedImageUrl) => {
+            setGeneratedFigure(editedImageUrl);
+            if (onImageGenerated) {
+              onImageGenerated(editedImageUrl);
+            }
+            setShowNanoBanana(false);
+          }}
+          onClose={() => setShowNanoBanana(false)}
+          moduleType="retro-action-figure"
+          tokens={tokens}
+        />
+      )}
+
+      {/* Token Palette Panel */}
+      {showTokenPalette && (
+        <div className="mt-6">
+          <TokenPalette
+            tokens={tokens}
+            onTokenUpdate={(key, value) => {
+              console.log('Token updated:', key, value);
+            }}
+            onTokenAdd={(token) => {
+              console.log('Token added:', token);
+            }}
+            onTokenDelete={(key) => {
+              console.log('Token deleted:', key);
+            }}
+            onTokenInsert={(tokenKey) => {
+              const tokenText = `[${tokenKey}]`;
+              setCustomPrompt(customPrompt + tokenText);
+            }}
           />
         </div>
       )}

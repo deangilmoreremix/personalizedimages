@@ -5,7 +5,7 @@
  * handling authentication, error management, and response normalization.
  */
 
-import { getApiKey, hasValidApiKey } from '../../env';
+import { getApiKey, hasValidApiKey } from '../../env.js';
 import type { AIProvider } from './types';
 
 export interface ApiRequest {

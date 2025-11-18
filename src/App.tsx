@@ -2,6 +2,8 @@ import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import ModernHeader from './components/layout/ModernHeader';
+import { ThemeProvider } from './components/ui/ThemeProvider';
+import UnifiedImageDashboard from './components/UnifiedImageDashboard';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
 import Benefits from './components/Benefits';
@@ -60,6 +62,7 @@ const AppLayout = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/editor" element={<EditorPage />} />
+          <Route path="/dashboard" element={<UnifiedImageDashboard />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/model-comparison" element={<MultiModelComparison tokens={{}} />} />
           <Route path="/batch-generation" element={<BatchGeneration tokens={{}} />} />
@@ -151,7 +154,11 @@ function FAQPage() {
 
 // App component without Router wrapping
 function App() {
-  return <AppLayout />;
+  return (
+    <ThemeProvider>
+      <AppLayout />
+    </ThemeProvider>
+  );
 }
 
 export default App;

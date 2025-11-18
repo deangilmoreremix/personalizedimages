@@ -1,6 +1,81 @@
-// Test API keys
-const OPENAI_KEY = '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';
-const GEMINI_KEY = 'AIzaSyCUcTq2wJAGuUvh06qy_QfA8YfCuaS93bM';
+// Test API keys using centralized environment loader
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+// Load environment variables from .env file
+function loadEnvFile() {
+  try {
+    const envPath = join(process.cwd(), '.env');
+    const envContent = readFileSync(envPath, 'utf8');
+    const envVars = {};
+
+    envContent.split('\n').forEach(line => {
+      const trimmedLine = line.trim();
+      if (trimmedLine && !trimmedLine.startsWith('#')) {
+        const [key, ...valueParts] = line.split('=');
+        if (key) {
+          envVars[key.trim()] = valueParts.join('=').trim();
+        }
+      }
+    });
+
+    return envVars;
+  } catch (error) {
+    console.warn('Could not read .env file, using process.env only');
+    return process.env;
+  }
+}
+
+// Merge environment sources with priority: .env file > process.env
+function loadEnvironment() {
+  const fileEnv = loadEnvFile();
+  const processEnv = process.env;
+
+  return { ...processEnv, ...fileEnv };
+}
+
+// Get API key for a specific provider with validation
+function getApiKey(provider) {
+  const config = loadEnvironment();
+
+  switch (provider) {
+    case 'openai':
+      return config.VITE_OPENAI_API_KEY || null;
+    case 'gemini':
+      return config.VITE_GEMINI_API_KEY || null;
+    case 'gemini-nano':
+      return config.VITE_GEMINI_NANO_API_KEY || null;
+    case 'leonardo':
+      return config.VITE_LEONARDO_API_KEY || null;
+    case 'giphy':
+      return config.VITE_GIPHY_API_KEY || null;
+    default:
+      return null;
+  }
+}
+
+// Check if a specific API key is available and valid
+function hasValidApiKey(provider) {
+  const config = loadEnvironment();
+
+  switch (provider) {
+    case 'openai':
+      return !!(config.VITE_OPENAI_API_KEY && config.VITE_OPENAI_API_KEY.startsWith('sk-'));
+    case 'gemini':
+    case 'gemini-nano':
+      const key = provider === 'gemini' ? config.VITE_GEMINI_API_KEY : config.VITE_GEMINI_NANO_API_KEY;
+      return !!(key && key.startsWith('AIza'));
+    case 'leonardo':
+      return !!config.VITE_LEONARDO_API_KEY;
+    case 'giphy':
+      return !!config.VITE_GIPHY_API_KEY;
+    default:
+      return false;
+  }
+}
+
+const OPENAI_KEY = getApiKey('openai') || '';
+const GEMINI_KEY = getApiKey('gemini') || '';
 
 console.log('Testing API Keys...\n');
 

@@ -1,35 +1,35 @@
 /**
  * Common API utilities and helper functions
+ * Updated to use centralized environment configuration
  */
 
+import { getApiKey, hasValidApiKey } from './env';
+
 // Helper function to get the GIPHY API key from environment variables
-export const getGiphyApiKey = () => import.meta.env.VITE_GIPHY_API_KEY || '';
+export const getGiphyApiKey = () => getApiKey('giphy') || '';
 
 // Helper function to get the OpenAI API key from environment variables
-export const getOpenAIApiKey = () => import.meta.env.VITE_OPENAI_API_KEY || '';
+export const getOpenAIApiKey = () => getApiKey('openai') || '';
 
 // Helper function to get the Gemini API key from environment variables
-export const getGeminiApiKey = () => import.meta.env.VITE_GEMINI_API_KEY || '';
+export const getGeminiApiKey = () => getApiKey('gemini') || '';
 
 // Helper function to get the Gemini Nano API key from environment variables
 // Note: Gemini Nano uses the same API key as regular Gemini
-export const getGeminiNanoApiKey = () => import.meta.env.VITE_GEMINI_API_KEY || '';
+export const getGeminiNanoApiKey = () => getApiKey('gemini-nano') || getApiKey('gemini') || '';
 
 // Helper function to check if an API key is available
 export const hasApiKey = (provider: string): boolean => {
   switch (provider) {
     case 'openai':
-      const openaiKey = getOpenAIApiKey();
-      return !!openaiKey && openaiKey.length > 20;
+      return hasValidApiKey('openai');
     case 'gemini':
     case 'imagen':
-      const geminiKey = getGeminiApiKey();
-      return !!geminiKey && geminiKey.length > 20;
+      return hasValidApiKey('gemini');
     case 'gemini-nano':
-      const geminiNanoKey = getGeminiNanoApiKey();
-      return !!geminiNanoKey && geminiNanoKey.length > 20;
+      return hasValidApiKey('gemini-nano') || hasValidApiKey('gemini');
     case 'giphy':
-      return !!getGiphyApiKey();
+      return hasValidApiKey('giphy');
     default:
       return false;
   }

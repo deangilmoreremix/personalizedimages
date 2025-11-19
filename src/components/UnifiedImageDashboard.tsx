@@ -47,6 +47,11 @@ import { generateImage, generateImageBatch, generateVariations } from '../utils/
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 import { useTheme } from './ui/ThemeProvider';
 import { LazyImage } from './ui/LazyImage';
+import { DroppableImage } from './ui/DroppableImage';
+import TokenPanel from './TokenPanel';
+import { useTokenApplication } from '../hooks/useTokenApplication';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
 // Types
 interface GenerationMode {
@@ -82,9 +87,25 @@ const UnifiedImageDashboard: React.FC = () => {
   // Theme hook
   const { theme, setTheme, isDark } = useTheme();
 
+  // Token application hook
+  const {
+    applyTokenToImage,
+    removeTokenFromImage,
+    getAppliedTokens,
+    exportImageWithEffects
+  } = useTokenApplication({
+    onTokenApplied: (imageId, appliedToken) => {
+      console.log(`Token applied to image ${imageId}:`, appliedToken);
+    },
+    onTokenRemoved: (imageId, tokenId) => {
+      console.log(`Token ${tokenId} removed from image ${imageId}`);
+    }
+  });
+
   // Core state
   const [currentMode, setCurrentMode] = useState<string>('ai-image');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showTokenPanel, setShowTokenPanel] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
@@ -93,9 +114,14 @@ const UnifiedImageDashboard: React.FC = () => {
   const [tokens, setTokens] = useState<Record<string, string>>({
     FIRSTNAME: 'John',
     COMPANY: 'Acme Corp',
-    EMAIL: 'john@acme.com'
+    EMAIL: 'john@acme.com',
+    CHARACTER_NAME: 'Alex',
+    STYLE: 'heroic',
+    POSE: 'action',
+    ENVIRONMENT: 'urban'
   });
   const [showPersonalization, setShowPersonalization] = useState(false);
+  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('basic');
 
   // UI state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -225,8 +251,52 @@ const UnifiedImageDashboard: React.FC = () => {
     setTokens(prev => ({ ...prev, [key]: value }));
   }, []);
 
+  // Handle personalization mode change
+  const handlePersonalizationModeChange = useCallback((mode: 'basic' | 'action-figure' | 'advanced') => {
+    setPersonalizationMode(mode);
+    if (mode === 'action-figure' && currentMode !== 'action-figure') {
+      setCurrentMode('action-figure');
+    }
+  }, [currentMode]);
+
+  // Get contextual tokens based on current mode
+  const getContextualTokens = useCallback(() => {
+    const baseTokens = {
+      FIRSTNAME: tokens.FIRSTNAME,
+      COMPANY: tokens.COMPANY,
+      EMAIL: tokens.EMAIL
+    };
+
+    if (currentMode === 'action-figure' || personalizationMode === 'action-figure') {
+      return {
+        ...baseTokens,
+        CHARACTER_NAME: tokens.CHARACTER_NAME,
+        STYLE: tokens.STYLE,
+        POSE: tokens.POSE,
+        ENVIRONMENT: tokens.ENVIRONMENT
+      };
+    }
+
+    return baseTokens;
+  }, [currentMode, personalizationMode, tokens]);
+
+  // Handle token drop on image
+  const handleTokenDrop = useCallback(async (imageId: string, token: any, position?: { x: number; y: number }) => {
+    try {
+      await applyTokenToImage(imageId, token, position);
+    } catch (error) {
+      console.error('Failed to apply token:', error);
+    }
+  }, [applyTokenToImage]);
+
+  // Handle token removal from image
+  const handleTokenRemove = useCallback((imageId: string, tokenId: string) => {
+    removeTokenFromImage(imageId, tokenId);
+  }, [removeTokenFromImage]);
+
   return (
-    <div className={`min-h-screen ${isDark ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <DndProvider backend={HTML5Backend}>
+      <div className={`min-h-screen ${isDark ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -271,13 +341,19 @@ const UnifiedImageDashboard: React.FC = () => {
             {/* Personalization Toggle */}
             <button
               onClick={() => setShowPersonalization(!showPersonalization)}
-              className={`p-2 border rounded-lg ${
+              className={`p-2 border rounded-lg transition-colors ${
                 showPersonalization
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                  : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                  : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}
+              title={showPersonalization ? `Hide Personalization (${personalizationMode})` : 'Show Personalization'}
             >
-              <User className="w-4 h-4" />
+              <div className="relative">
+                <User className="w-4 h-4" />
+                {showPersonalization && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full"></div>
+                )}
+              </div>
             </button>
           </div>
         </div>
@@ -285,8 +361,9 @@ const UnifiedImageDashboard: React.FC = () => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300`}>
-          <div className="p-4">
+        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col`}>
+          {/* Generation Modes */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-6">
               <h2 className={`font-semibold text-gray-900 dark:text-white ${sidebarCollapsed ? 'hidden' : ''}`}>
                 Generation Modes
@@ -326,6 +403,37 @@ const UnifiedImageDashboard: React.FC = () => {
               })}
             </div>
           </div>
+
+          {/* Token Panel */}
+          {showTokenPanel && (
+            <div className="flex-1 overflow-hidden">
+              <TokenPanel
+                tokens={tokens}
+                onTokensChange={setTokens}
+                isCollapsed={sidebarCollapsed}
+                onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+              />
+            </div>
+          )}
+
+          {/* Toggle Token Panel */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setShowTokenPanel(!showTokenPanel)}
+              className={`w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                showTokenPanel
+                  ? 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <Palette className="w-4 h-4" />
+              {!sidebarCollapsed && (
+                <span className="text-sm font-medium">
+                  {showTokenPanel ? 'Hide Tokens' : 'Show Tokens'}
+                </span>
+              )}
+            </button>
+          </div>
         </aside>
 
         {/* Main Content */}
@@ -333,9 +441,16 @@ const UnifiedImageDashboard: React.FC = () => {
           {/* Generation Panel */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {generationModes.find(m => m.id === currentMode)?.name || 'AI Image'} Generator
-              </h3>
+              <div className="flex items-center space-x-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {generationModes.find(m => m.id === currentMode)?.name || 'AI Image'} Generator
+                </h3>
+                {showPersonalization && (
+                  <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs rounded-full">
+                    Personalized
+                  </span>
+                )}
+              </div>
               {isGenerating && (
                 <div className="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -358,6 +473,24 @@ const UnifiedImageDashboard: React.FC = () => {
                 />
               </div>
 
+              {/* Personalized Prompt Preview */}
+              {showPersonalization && personalizationMode === 'action-figure' && (
+                <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-3 border border-indigo-200 dark:border-indigo-800">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-sm font-medium text-indigo-800 dark:text-indigo-200">
+                      Personalized Action Figure Prompt
+                    </span>
+                  </div>
+                  <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                    Create an action figure of <strong>{tokens.CHARACTER_NAME || 'Character'}</strong> in a{' '}
+                    <strong>{tokens.STYLE}</strong> style, striking a{' '}
+                    <strong>{tokens.POSE.replace('-', ' ')}</strong> pose in a{' '}
+                    <strong>{tokens.ENVIRONMENT}</strong> environment.
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <button
@@ -370,11 +503,15 @@ const UnifiedImageDashboard: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => setShowPersonalization(true)}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
+                    onClick={() => setShowPersonalization(!showPersonalization)}
+                    className={`px-4 py-2 border rounded-lg flex items-center space-x-2 transition-colors ${
+                      showPersonalization
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                        : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
                   >
                     <Shapes className="w-4 h-4" />
-                    <span>Personalize</span>
+                    <span>{showPersonalization ? 'Hide' : 'Show'} Personalization</span>
                   </button>
                 </div>
 
@@ -385,45 +522,250 @@ const UnifiedImageDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Personalization Panel */}
+          {/* Enhanced Personalization Panel */}
           {showPersonalization && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Personalization Tokens
-                </h3>
-                <button
-                  onClick={() => setShowPersonalization(false)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(tokens).map(([key, value]) => (
-                  <div key={key} className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {key}
-                    </label>
-                    <input
-                      type="text"
-                      value={value}
-                      onChange={(e) => updateToken(key, e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-6 overflow-hidden">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Personalization Studio
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handlePersonalizationModeChange('basic')}
+                        className={`px-3 py-1 text-xs rounded-full ${
+                          personalizationMode === 'basic'
+                            ? 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        Basic
+                      </button>
+                      <button
+                        onClick={() => handlePersonalizationModeChange('action-figure')}
+                        className={`px-3 py-1 text-xs rounded-full ${
+                          personalizationMode === 'action-figure'
+                            ? 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        Action Figure
+                      </button>
+                      <button
+                        onClick={() => handlePersonalizationModeChange('advanced')}
+                        className={`px-3 py-1 text-xs rounded-full ${
+                          personalizationMode === 'advanced'
+                            ? 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        Advanced
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="flex items-start space-x-2">
-                  <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Token Usage:</strong> Use tokens like {'{FIRSTNAME}'} in your prompts.
-                    They will be automatically replaced with personalized values.
-                  </div>
+                  <button
+                    onClick={() => setShowPersonalization(false)}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
+              </div>
+
+              <div className="p-6">
+                {personalizationMode === 'action-figure' ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Character Identity */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <User className="w-4 h-4 mr-2" />
+                          Character Identity
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Character Name
+                            </label>
+                            <input
+                              type="text"
+                              value={tokens.CHARACTER_NAME}
+                              onChange={(e) => updateToken('CHARACTER_NAME', e.target.value)}
+                              placeholder="e.g., Max Thunder, Luna Star"
+                              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Hero/Villain Style
+                            </label>
+                            <select
+                              value={tokens.STYLE}
+                              onChange={(e) => updateToken('STYLE', e.target.value)}
+                              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                              <option value="heroic">Heroic (Powerful, noble)</option>
+                              <option value="mysterious">Mysterious (Enigmatic, stealthy)</option>
+                              <option value="tech">Tech-Savvy (Gadgets, futuristic)</option>
+                              <option value="brutal">Brutal (Tough, intimidating)</option>
+                              <option value="agile">Agile (Fast, acrobatic)</option>
+                              <option value="wise">Wise (Mentor, magical)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action & Environment */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <Zap className="w-4 h-4 mr-2" />
+                          Action & Environment
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Action Pose
+                            </label>
+                            <select
+                              value={tokens.POSE}
+                              onChange={(e) => updateToken('POSE', e.target.value)}
+                              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                              <option value="power-pose">Power Pose (Confident stance)</option>
+                              <option value="combat-ready">Combat Ready (Fighting position)</option>
+                              <option value="flying">Flying (Dynamic motion)</option>
+                              <option value="stealth">Stealth (Sneaking, hiding)</option>
+                              <option value="victory">Victory (Celebrating win)</option>
+                              <option value="intense">Intense Focus (Concentrating)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Environment
+                            </label>
+                            <select
+                              value={tokens.ENVIRONMENT}
+                              onChange={(e) => updateToken('ENVIRONMENT', e.target.value)}
+                              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                              <option value="urban">Urban Cityscape</option>
+                              <option value="sci-fi">Sci-Fi Space Station</option>
+                              <option value="fantasy">Fantasy Landscape</option>
+                              <option value="post-apocalyptic">Post-Apocalyptic Ruins</option>
+                              <option value="underwater">Underwater Scene</option>
+                              <option value="mountain">Mountain Peak</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Visual Preview */}
+                    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-3">Preview Prompt</h4>
+                      <div className="bg-white dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          Create an action figure of <strong>{tokens.CHARACTER_NAME || 'Character'}</strong> in a{' '}
+                          <strong>{tokens.STYLE}</strong> style, striking a{' '}
+                          <strong>{tokens.POSE.replace('-', ' ')}</strong> pose in a{' '}
+                          <strong>{tokens.ENVIRONMENT}</strong> environment.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : personalizationMode === 'advanced' ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {Object.entries(getContextualTokens()).map(([key, value]) => (
+                        <div key={key} className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {key}
+                          </label>
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) => updateToken(key, e.target.value)}
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Brand Color
+                        </label>
+                        <input
+                          type="color"
+                          value={tokens.BRAND_COLOR || '#3B82F6'}
+                          onChange={(e) => updateToken('BRAND_COLOR', e.target.value)}
+                          className="w-full h-10 border border-gray-300 dark:border-gray-600 rounded cursor-pointer"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Font Style
+                        </label>
+                        <select
+                          value={tokens.FONT_STYLE || 'modern'}
+                          onChange={(e) => updateToken('FONT_STYLE', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="modern">Modern</option>
+                          <option value="classic">Classic</option>
+                          <option value="bold">Bold</option>
+                          <option value="elegant">Elegant</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Tone
+                        </label>
+                        <select
+                          value={tokens.TONE || 'professional'}
+                          onChange={(e) => updateToken('TONE', e.target.value)}
+                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="professional">Professional</option>
+                          <option value="casual">Casual</option>
+                          <option value="fun">Fun</option>
+                          <option value="serious">Serious</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Basic Mode */
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(getContextualTokens()).map(([key, value]) => (
+                        <div key={key} className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {key.replace('_', ' ')}
+                          </label>
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) => updateToken(key, e.target.value)}
+                            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                      <div className="flex items-start space-x-2">
+                        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-blue-800 dark:text-blue-200">
+                          <strong>How to use tokens:</strong> Use tokens like <code className="bg-blue-100 dark:bg-blue-800 px-1 py-0.5 rounded text-xs">{`{FIRSTNAME}`}</code> in your prompts.
+                          They will be automatically replaced with your personalized values.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -489,67 +831,19 @@ const UnifiedImageDashboard: React.FC = () => {
                     : 'space-y-4'
                 }>
                   {filteredImages.map((image) => (
-                    <div
+                    <DroppableImage
                       key={image.id}
-                      className={`relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ${
-                        viewMode === 'list' ? 'flex' : ''
-                      }`}
-                    >
-                      {/* Selection Checkbox */}
-                      <div className="absolute top-2 left-2 z-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedImages.has(image.id)}
-                          onChange={() => toggleImageSelection(image.id)}
-                          className="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500"
-                        />
-                      </div>
-
-                      {/* Image */}
-                      <div className={`${viewMode === 'list' ? 'w-32 h-32 flex-shrink-0' : 'aspect-square'}`}>
-                        <LazyImage
-                          src={image.url}
-                          alt={image.prompt}
-                          className="w-full h-full"
-                        />
-                      </div>
-
-                      {/* Overlay */}
-                      <div className={`absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 ${
-                        viewMode === 'list' ? 'flex items-center justify-center' : ''
-                      }`}>
-                        <div className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center space-x-2 ${
-                          viewMode === 'list' ? '' : 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2'
-                        }`}>
-                          <button className="p-2 bg-white rounded-full hover:bg-gray-100">
-                            <Eye className="w-4 h-4 text-gray-900" />
-                          </button>
-                          <button className="p-2 bg-white rounded-full hover:bg-gray-100">
-                            <Download className="w-4 h-4 text-gray-900" />
-                          </button>
-                          <button className="p-2 bg-white rounded-full hover:bg-gray-100">
-                            <Share2 className="w-4 h-4 text-gray-900" />
-                          </button>
-                          <button className="p-2 bg-white rounded-full hover:bg-gray-100">
-                            <Edit3 className="w-4 h-4 text-gray-900" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Info */}
-                      {viewMode === 'list' && (
-                        <div className="flex-1 p-4">
-                          <p className="text-sm text-gray-900 dark:text-white font-medium mb-1 truncate">
-                            {image.prompt}
-                          </p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                            <span>{image.mode}</span>
-                            <span>{image.metadata.provider}</span>
-                            <span>{image.timestamp.toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      image={image}
+                      isSelected={selectedImages.has(image.id)}
+                      onSelect={toggleImageSelection}
+                      onTokenDrop={handleTokenDrop}
+                      appliedTokens={getAppliedTokens(image.id).map(applied => applied.token)}
+                      onRemoveToken={handleTokenRemove}
+                      onDownload={(img) => console.log('Download:', img.url)}
+                      onShare={(img) => console.log('Share:', img.url)}
+                      onEdit={(img) => console.log('Edit:', img.url)}
+                      onView={(img) => console.log('View:', img.url)}
+                    />
                   ))}
                 </div>
               )}
@@ -557,7 +851,8 @@ const UnifiedImageDashboard: React.FC = () => {
           </div>
         </main>
       </div>
-    </div>
+      </div>
+    </DndProvider>
   );
 };
 

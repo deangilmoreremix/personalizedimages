@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { TokenData } from '../components/ui/DraggableToken';
+import { generateImage } from '../utils/api/image/generation';
+import { ImageGenerationRequest } from '../utils/api/core/types';
 
 export interface AppliedToken {
   id: string;
@@ -90,8 +92,43 @@ export const useTokenApplication = ({
     }
   }, []);
 
+  // Generate prompt that includes token effect
+  const generateTokenPrompt = useCallback((appliedToken: AppliedToken, basePrompt?: string): string => {
+    const { token, effect } = appliedToken;
+    let prompt = basePrompt || 'Apply the following effect to an image';
+
+    switch (effect.type) {
+      case 'text-overlay':
+        prompt += `. Add the text "${effect.parameters.text}" at position (${effect.parameters.position.x}%, ${effect.parameters.position.y}%) with ${effect.parameters.fontSize}px ${effect.parameters.fontFamily} font in ${effect.parameters.color} color`;
+        if (effect.parameters.strokeWidth > 0) {
+          prompt += ` with ${effect.parameters.strokeWidth}px ${effect.parameters.stroke} outline`;
+        }
+        break;
+
+      case 'filter':
+        prompt += `. Apply a ${effect.parameters.filterType} filter with ${Math.round(effect.parameters.intensity * 100)}% intensity using ${effect.parameters.blendMode} blend mode`;
+        break;
+
+      case 'style':
+        prompt += `. Transform the image with ${effect.parameters.stylePrompt} style at ${Math.round(effect.parameters.strength * 100)}% strength`;
+        if (effect.parameters.preserveComposition) {
+          prompt += ', preserving the original composition';
+        }
+        break;
+
+      case 'color-adjustment':
+        prompt += `. Apply ${effect.parameters.adjustmentType} with ${effect.parameters.color} color at ${Math.round(effect.parameters.opacity * 100)}% opacity`;
+        break;
+
+      default:
+        prompt += `. Apply ${token.displayName} effect: ${token.value}`;
+    }
+
+    return prompt;
+  }, []);
+
   // Apply token to image
-  const applyTokenToImage = useCallback((imageId: string, token: TokenData, position?: { x: number; y: number }) => {
+  const applyTokenToImage = useCallback(async (imageId: string, token: TokenData, position?: { x: number; y: number }) => {
     const effect = generateTokenEffect(token, position);
 
     const appliedToken: AppliedToken = {
@@ -102,6 +139,7 @@ export const useTokenApplication = ({
       effect
     };
 
+    // Add token to state immediately for UI feedback
     setAppliedTokens(prev => ({
       ...prev,
       [imageId]: [...(prev[imageId] || []), appliedToken]
@@ -109,15 +147,44 @@ export const useTokenApplication = ({
 
     onTokenApplied?.(imageId, appliedToken);
 
-    // Simulate processing delay for UI feedback
-    return new Promise<void>((resolve) => {
-      setTimeout(() => {
-        // In a real implementation, this would apply the effect to the image
-        console.log(`Applied ${token.type} effect to image ${imageId}:`, effect);
-        resolve();
-      }, 1500);
-    });
-  }, [generateTokenEffect, onTokenApplied]);
+    try {
+      // Generate a prompt that describes applying the token effect
+      const tokenPrompt = generateTokenPrompt(appliedToken);
+
+      console.log(`Applying ${token.type} effect to image ${imageId}:`, effect);
+
+      // Call the unified API to apply the token effect
+      const result = await generateImage(tokenPrompt, {
+        provider: 'gemini', // Default to Gemini for token processing
+        appliedTokens: [appliedToken] // Pass the applied token for backend processing
+      });
+
+      if (result.success && result.imageUrl) {
+        console.log(`Token applied successfully, new image URL: ${result.imageUrl}`);
+        return result.imageUrl;
+      } else {
+        throw new Error(result.error || 'Failed to apply token effect');
+      }
+    } catch (error) {
+      console.error('Failed to apply token:', error);
+      // Remove the token from state if application failed
+      setAppliedTokens(prev => {
+        const imageTokens = prev[imageId] || [];
+        const filteredTokens = imageTokens.filter(t => t.id !== appliedToken.id);
+
+        if (filteredTokens.length === 0) {
+          const { [imageId]: removed, ...rest } = prev;
+          return rest;
+        }
+
+        return {
+          ...prev,
+          [imageId]: filteredTokens
+        };
+      });
+      throw error;
+    }
+  }, [generateTokenEffect, generateTokenPrompt, onTokenApplied]);
 
   // Remove token from image
   const removeTokenFromImage = useCallback((imageId: string, tokenId: string) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Lightbulb, Dices, Paintbrush as PaintBrush, Shapes } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateImageWithDalle, generateImageWithGemini, generateCartoonImage, generateImageWithGeminiNano } from '../utils/api';
@@ -12,6 +12,7 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import PersonalizationPanel from './PersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
@@ -31,7 +32,8 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
   // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(true); // Start open for better UX
+  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('basic');
   const [personalizedContent, setPersonalizedContent] = useState('');
 
   // Advanced editing panels
@@ -145,9 +147,16 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   };
 
   // Get themes to display based on showAllThemes state
-  const displayedThemes = showAllThemes 
-    ? cartoonThemesConfig.themes 
+  const displayedThemes = showAllThemes
+    ? cartoonThemesConfig.themes
     : cartoonThemesConfig.themes.slice(0, 8);
+
+  // Handle token changes from personalization panel
+  const handleTokensChange = useCallback((newTokens: Record<string, string>) => {
+    // The CartoonImageGenerator uses tokens directly in the replaceTokens function
+    // so we don't need to update local state, tokens are passed as props
+    console.log('Tokens updated for cartoon generation:', newTokens);
+  }, []);
 
   return (
     <div className={`${DESIGN_SYSTEM.components.section} ${getElevationClasses(3)} ${getAnimationClasses('smooth')}`}>
@@ -160,6 +169,19 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           {cartoonThemesConfig.themes.length} Styles Available
         </div>
       </div>
+
+      {/* Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mb-6">
+          <PersonalizationPanel
+            tokens={tokens}
+            onTokensChange={handleTokensChange}
+            mode={personalizationMode}
+            onModeChange={setPersonalizationMode}
+            showPreview={false}
+          />
+        </div>
+      )}
 
       <div className={getGridClasses('creative')}>
         <div className="space-y-4">
@@ -313,7 +335,11 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           <div className="flex justify-end space-x-3">
             <button
               onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-              className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+              className={`text-xs flex items-center px-2 py-1 rounded ${
+                showPersonalizationPanel
+                  ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                  : 'text-purple-600 hover:text-purple-700'
+              }`}
             >
               <Shapes className="w-3 h-3 mr-1" />
               {showPersonalizationPanel ? "Hide" : "Show"} Personalization

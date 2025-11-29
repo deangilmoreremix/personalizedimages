@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes, PaintBucket, Tag } from 'lucide-react';
 import { generateGhibliStyleImage, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
@@ -11,6 +11,7 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import PersonalizationPanel from './PersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
@@ -38,7 +39,8 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
   // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(true); // Start open for better UX
+  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('basic');
   const [personalizedContent, setPersonalizedContent] = useState('');
 
   // Email personalization hook
@@ -234,9 +236,29 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
     setPrompt(newText);
   };
 
+  // Handle token changes from personalization panel
+  const handleTokensChange = useCallback((newTokens: Record<string, string>) => {
+    // The GhibliImageGenerator uses tokens directly in the generatePrompt function
+    // so we don't need to update local state, tokens are passed as props
+    console.log('Tokens updated for Ghibli generation:', newTokens);
+  }, []);
+
   return (
     <div className={DESIGN_SYSTEM.components.section}>
       <h3 className={commonStyles.sectionHeader}>Studio Ghibli Style Image Generator</h3>
+
+      {/* Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mb-6">
+          <PersonalizationPanel
+            tokens={tokens}
+            onTokensChange={handleTokensChange}
+            mode={personalizationMode}
+            onModeChange={setPersonalizationMode}
+            showPreview={false}
+          />
+        </div>
+      )}
 
       <div className={getGridClasses(2)}>
         <div className="space-y-4">
@@ -270,7 +292,11 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
               <div className="flex space-x-3">
                 <button
                   onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-                  className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+                  className={`text-xs flex items-center px-2 py-1 rounded ${
+                    showPersonalizationPanel
+                      ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                      : 'text-purple-600 hover:text-purple-700'
+                  }`}
                 >
                   <Shapes className="w-3 h-3 mr-1" />
                   {showPersonalizationPanel ? "Hide" : "Show"} Personalization

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Package, X, Shapes, PaintBucket } from 'lucide-react';
 import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
@@ -11,6 +11,7 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import PersonalizationPanel from './PersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
@@ -29,7 +30,8 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini');
 
   // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(true); // Start open for better UX
+  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('action-figure');
   const [personalizedContent, setPersonalizedContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
@@ -213,13 +215,62 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
     "Business Cards", "Headset", "Tablet", "Notebook", "Pen"
   ];
 
+  // Handle token changes from personalization panel
+  const handleTokensChange = useCallback((newTokens: Record<string, string>) => {
+    // Update local state with new token values
+    Object.entries(newTokens).forEach(([key, value]) => {
+      switch (key) {
+        case 'FIRSTNAME':
+          setCharacterName(value);
+          break;
+        case 'COMPANY':
+          setCompanyName(value);
+          break;
+        case 'CHARACTER_NAME':
+          setCharacterName(value);
+          break;
+        case 'STYLE':
+          setCustomPrompt(prev => prev.replace(/style:\s*\w+/i, `style: ${value}`));
+          break;
+        case 'POSE':
+          setCustomPrompt(prev => prev.replace(/pose:\s*[\w\s-]+/i, `pose: ${value.replace('-', ' ')}`));
+          break;
+        case 'ENVIRONMENT':
+          setCustomPrompt(prev => prev.replace(/environment:\s*[\w\s-]+/i, `environment: ${value}`));
+          break;
+      }
+    });
+  }, []);
+
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
       <h3 className="text-xl font-bold mb-4 flex items-center">
         <Box className="h-6 w-6 text-primary-500 mr-2" />
         Action Figure Creator
       </h3>
-      
+
+      {/* Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mb-6">
+          <PersonalizationPanel
+            tokens={{
+              FIRSTNAME: characterName,
+              COMPANY: companyName,
+              EMAIL: tokens.EMAIL || '',
+              CHARACTER_NAME: characterName,
+              STYLE: tokens.STYLE || 'heroic',
+              POSE: tokens.POSE || 'action',
+              ENVIRONMENT: tokens.ENVIRONMENT || 'urban'
+            }}
+            onTokensChange={handleTokensChange}
+            mode={personalizationMode}
+            onModeChange={setPersonalizationMode}
+            showPreview={true}
+            previewPrompt={customPrompt}
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           {/* Template Selection */}
@@ -414,11 +465,15 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
 
             <button
               onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-              className="btn btn-secondary flex items-center justify-center px-3"
+              className={`btn flex items-center justify-center px-3 ${
+                showPersonalizationPanel
+                  ? 'btn-primary'
+                  : 'btn-secondary'
+              }`}
               disabled={isGenerating}
             >
               <Shapes className="w-4 h-4 mr-2" />
-              Personalize
+              {showPersonalizationPanel ? 'Hide' : 'Show'} Personalization
             </button>
 
             <button

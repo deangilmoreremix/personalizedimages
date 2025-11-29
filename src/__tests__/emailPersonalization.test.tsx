@@ -1,14 +1,15 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from '../components/EmailPersonalizationToggle';
 import EmailPersonalizationPanel from '../components/EmailPersonalizationPanel';
 
 // Mock the email integration utilities
-jest.mock('../utils/emailIntegration', () => ({
-  integratePersonalizedImage: jest.fn(),
-  generateESPSetupGuide: jest.fn(),
-  validateESPCompatibility: jest.fn(),
+vi.mock('../utils/emailIntegration', () => ({
+  integratePersonalizedImage: vi.fn(),
+  generateESPSetupGuide: vi.fn(),
+  validateESPCompatibility: vi.fn(),
   EMAIL_SERVICE_PROVIDERS: {
     gmail: { name: 'Gmail', mergeTagFormat: '{{TOKEN}}' },
     mailchimp: { name: 'Mailchimp', mergeTagFormat: '*|TOKEN|*' }
@@ -61,7 +62,7 @@ const TestComponent: React.FC<{ generatorType?: string }> = ({ generatorType = '
 
 describe('Email Personalization Integration', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('renders email personalization toggle', () => {
@@ -164,7 +165,7 @@ describe('Email Personalization Integration', () => {
     // Mock clipboard
     Object.assign(navigator, {
       clipboard: {
-        writeText: jest.fn()
+        writeText: vi.fn()
       }
     });
 
@@ -179,11 +180,11 @@ describe('Email Personalization Integration', () => {
 
   test('handles HTML download functionality', () => {
     // Mock URL.createObjectURL and document methods
-    global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
-    global.URL.revokeObjectURL = jest.fn();
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    global.URL.revokeObjectURL = vi.fn();
 
-    const mockCreateElement = jest.spyOn(document, 'createElement');
-    const mockClick = jest.fn();
+    const mockCreateElement = vi.spyOn(document, 'createElement');
+    const mockClick = vi.fn();
     mockCreateElement.mockReturnValue({
       click: mockClick,
       href: '',
@@ -231,7 +232,7 @@ describe('EmailPersonalizationToggle Component', () => {
   });
 
   test('calls onToggle when clicked', () => {
-    const mockOnToggle = jest.fn();
+    const mockOnToggle = vi.fn();
     render(<EmailPersonalizationToggle isActive={false} onToggle={mockOnToggle} />);
 
     fireEvent.click(screen.getByText('📧 Make Email Ready'));

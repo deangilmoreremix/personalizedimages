@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes, PaintBucket } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
@@ -13,6 +13,7 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import PersonalizationPanel from './PersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
@@ -37,7 +38,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
   // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(true); // Start open for better UX
+  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('basic');
   const [personalizedContent, setPersonalizedContent] = useState('');
 
   // Advanced editing panels
@@ -285,6 +287,13 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
     setAiEnhancementPrompt(newText);
   };
 
+  // Handle token changes from personalization panel
+  const handleTokensChange = useCallback((newTokens: Record<string, string>) => {
+    // The MemeGenerator uses tokens directly in the replaceTokens function
+    // so we don't need to update local state, tokens are passed as props
+    console.log('Tokens updated for meme generation:', newTokens);
+  }, []);
+
   return (
     <div className={DESIGN_SYSTEM.components.section}>
       <div className={commonStyles.actionBar}>
@@ -300,6 +309,19 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           <span className="text-sm font-medium text-purple-700">New Feature</span>
         </motion.div>
       </div>
+
+      {/* Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mb-6">
+          <PersonalizationPanel
+            tokens={tokens}
+            onTokensChange={handleTokensChange}
+            mode={personalizationMode}
+            onModeChange={setPersonalizationMode}
+            showPreview={false}
+          />
+        </div>
+      )}
 
       <div className={DESIGN_SYSTEM.grid.sidebar}>
         {/* Canvas Column */}
@@ -479,7 +501,11 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                     <div className="flex items-center gap-2 pt-2 border-t border-purple-200">
                       <button
                         onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-                        className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
+                        className={`text-xs flex items-center px-2 py-1 rounded ${
+                          showPersonalizationPanel
+                            ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                            : 'text-purple-600 hover:text-purple-700'
+                        }`}
                       >
                         <Shapes className="w-3 h-3 mr-1" />
                         {showPersonalizationPanel ? "Hide" : "Show"} Personalization

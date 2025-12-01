@@ -32,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
 
 const useAuth = () => useContext(AuthContext);
 
+export { useAuth };
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);

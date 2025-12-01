@@ -1,29 +1,29 @@
 {
-  "timestamp": "2025-11-26T23:55:30.233Z",
+  "timestamp": "2025-11-30T00:07:21.748Z",
   "checks": [
     {
       "name": "database",
       "status": "pass",
       "message": "Database connection successful",
-      "timestamp": "2025-11-26T23:55:30.239Z"
+      "timestamp": "2025-11-30T00:07:21.751Z"
     },
     {
       "name": "api_endpoints",
-      "status": "pass",
-      "message": "Development server is running",
-      "timestamp": "2025-11-26T23:55:30.322Z"
+      "status": "warn",
+      "message": "Development server not accessible",
+      "timestamp": "2025-11-30T00:07:21.834Z"
     },
     {
       "name": "build_integrity",
       "status": "pass",
       "message": "Production build exists",
-      "timestamp": "2025-11-26T23:55:30.322Z"
+      "timestamp": "2025-11-30T00:07:21.834Z"
     },
     {
       "name": "performance",
       "status": "warn",
       "message": "No performance metrics available",
-      "timestamp": "2025-11-26T23:55:30.323Z"
+      "timestamp": "2025-11-30T00:07:21.835Z"
     }
   ],
   "overall": "warning"

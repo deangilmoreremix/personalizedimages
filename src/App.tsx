@@ -68,7 +68,7 @@ const AppLayout = () => {
           <Route path="/batch-generation" element={<BatchGeneration tokens={{}} />} />
           <Route path="/analytics" element={<AnalyticsDashboard />} />
           <Route path="/token-management" element={<TokenManagement currentTokens={{}} onTokensChange={() => {}} />} />
-          <Route path="/personalization" element={<UniversalPersonalizationPanel />} />
+          <Route path="/personalization" element={<UniversalPersonalizationPanel onClose={() => window.history.back()} />} />
           <Route path="/features/action-figures" element={<ActionFigurePage />} />
           <Route path="/features/retro-action-figures" element={<RetroActionFigurePage />} />
           <Route path="/features/music-star-action-figures" element={<MusicStarActionFigurePage />} />

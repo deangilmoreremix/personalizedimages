@@ -10,6 +10,9 @@ import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
 interface RetroActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -37,6 +40,16 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
   // Nano Banana editing
   const [showNanoBanana, setShowNanoBanana] = useState(false);
   const [showTokenPalette, setShowTokenPalette] = useState(false);
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedFigure,
+    tokens,
+    generatorType: 'action-figure',
+    onEmailImageGenerated: (emailImage, html) => {
+      console.log('Email-ready retro action figure generated:', emailImage, html);
+    }
+  });
 
   // Initialize with first prompt
   useEffect(() => {
@@ -428,13 +441,43 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
         </div>
         
         <div className="flex flex-col space-y-4">
+          {/* Email Personalization Panel */}
+          {emailPersonalization.isActive && (
+            <EmailPersonalizationPanel
+              imageUrl={generatedFigure}
+              personalizationTokens={[]} // Retro figures don't use tokens the same way
+              selectedProvider={emailPersonalization.selectedProvider}
+              template={emailPersonalization.template}
+              subject={emailPersonalization.subject}
+              linkText={emailPersonalization.linkText}
+              linkUrl={emailPersonalization.linkUrl}
+              bgColor={emailPersonalization.bgColor}
+              textColor={emailPersonalization.textColor}
+              accentColor={emailPersonalization.accentColor}
+              width={emailPersonalization.width}
+              imageHeight={emailPersonalization.imageHeight}
+              generatedHtml={emailPersonalization.generatedHtml}
+              isGenerating={emailPersonalization.isGenerating}
+              error={emailPersonalization.error}
+              recommendedTokens={emailPersonalization.recommendedTokens}
+              tokenValidation={emailPersonalization.tokenValidation}
+              onAddToken={() => {}} // Retro figures don't need token management
+              onRemoveToken={() => {}}
+              onUpdateToken={() => {}}
+              onUpdateSettings={emailPersonalization.updateSettings}
+              onGenerate={emailPersonalization.generateEmailImage}
+              onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+              onDownloadHtml={emailPersonalization.downloadHtml}
+            />
+          )}
+
           {/* Preview Image Area */}
           <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center" style={{ minHeight: "300px" }}>
             {generatedFigure ? (
-              <img 
-                src={generatedFigure} 
-                alt="Generated Retro Action Figure" 
-                className="max-w-full max-h-[400px] object-contain" 
+              <img
+                src={generatedFigure}
+                alt="Generated Retro Action Figure"
+                className="max-w-full max-h-[400px] object-contain"
               />
             ) : (
               <div className="text-center p-6">
@@ -444,7 +487,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
               </div>
             )}
           </div>
-          
+
           {/* Download Buttons */}
           {generatedFigure && (
             <div className="flex gap-2">
@@ -455,6 +498,11 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                 <ImageIcon className="w-4 h-4 mr-2" />
                 View Full Size
               </button>
+
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
 
               <a
                 href={generatedFigure}

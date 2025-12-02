@@ -19,6 +19,9 @@ import templatesService, { ActionFigureTemplate } from '../services/templatesSer
 import EnhancedImageEditorWithChoice from './EnhancedImageEditorWithChoice';
 import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
 interface UnifiedActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -72,6 +75,16 @@ export const UnifiedActionFigureGenerator: React.FC<UnifiedActionFigureGenerator
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
   const [showConversationalRefinement, setShowConversationalRefinement] = useState(false);
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedImage,
+    tokens,
+    generatorType: 'action-figure',
+    onEmailImageGenerated: (emailImage, html) => {
+      console.log('Email-ready unified action figure generated:', emailImage, html);
+    }
+  });
 
   // Load templates from Supabase
   useEffect(() => {
@@ -365,6 +378,36 @@ export const UnifiedActionFigureGenerator: React.FC<UnifiedActionFigureGenerator
   // Right Panel Content
   const rightPanelContent = (
     <div className="space-y-6">
+      {/* Email Personalization Panel */}
+      {emailPersonalization.isActive && (
+        <EmailPersonalizationPanel
+          imageUrl={generatedImage}
+          personalizationTokens={[]} // Action figures don't use tokens the same way
+          selectedProvider={emailPersonalization.selectedProvider}
+          template={emailPersonalization.template}
+          subject={emailPersonalization.subject}
+          linkText={emailPersonalization.linkText}
+          linkUrl={emailPersonalization.linkUrl}
+          bgColor={emailPersonalization.bgColor}
+          textColor={emailPersonalization.textColor}
+          accentColor={emailPersonalization.accentColor}
+          width={emailPersonalization.width}
+          imageHeight={emailPersonalization.imageHeight}
+          generatedHtml={emailPersonalization.generatedHtml}
+          isGenerating={emailPersonalization.isGenerating}
+          error={emailPersonalization.error}
+          recommendedTokens={emailPersonalization.recommendedTokens}
+          tokenValidation={emailPersonalization.tokenValidation}
+          onAddToken={() => {}} // Action figures don't need token management
+          onRemoveToken={() => {}}
+          onUpdateToken={() => {}}
+          onUpdateSettings={emailPersonalization.updateSettings}
+          onGenerate={emailPersonalization.generateEmailImage}
+          onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+          onDownloadHtml={emailPersonalization.downloadHtml}
+        />
+      )}
+
       {/* Image Preview */}
       <GeneratedImagePreview
         imageUrl={generatedImage}
@@ -383,6 +426,16 @@ export const UnifiedActionFigureGenerator: React.FC<UnifiedActionFigureGenerator
         onRegenerate={handleGenerate}
         generatorType="action figure"
       />
+
+      {/* Email Personalization Toggle */}
+      {generatedImage && (
+        <div className="flex justify-center">
+          <EmailPersonalizationToggle
+            isActive={emailPersonalization.isActive}
+            onToggle={emailPersonalization.toggle}
+          />
+        </div>
+      )}
 
       {/* Token Personalization Bar */}
       <TokenPersonalizationBar tokens={tokens} />

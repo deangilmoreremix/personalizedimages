@@ -12,6 +12,9 @@ import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import templatesService, { ActionFigureTemplate } from '../services/templatesService';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
 interface ActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -28,6 +31,17 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [personalizedContent, setPersonalizedContent] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedFigure,
+    tokens,
+    generatorType: 'action-figure',
+    onEmailImageGenerated: (emailImage, html) => {
+      // Handle email-ready action figure generation
+      console.log('Email-ready action figure generated:', emailImage, html);
+    }
+  });
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [figureStyle, setFigureStyle] = useState<string>('realistic');
   const [figureTheme, setFigureTheme] = useState<string>('superhero');
@@ -538,6 +552,11 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 View Full Size
               </button>
 
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
+
               <a
                 href={generatedFigure}
                 download="action-figure.png"
@@ -759,6 +778,38 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
               const tokenText = `[${tokenKey}]`;
               setPrompt(prompt + tokenText);
             }}
+          />
+        </div>
+      )}
+
+      {/* Email Personalization Panel */}
+      {emailPersonalization.isActive && (
+        <div className="mt-6">
+          <EmailPersonalizationPanel
+            imageUrl={generatedFigure}
+            personalizationTokens={[]} // Action figures don't use tokens the same way
+            selectedProvider={emailPersonalization.selectedProvider}
+            template={emailPersonalization.template}
+            subject={emailPersonalization.subject}
+            linkText={emailPersonalization.linkText}
+            linkUrl={emailPersonalization.linkUrl}
+            bgColor={emailPersonalization.bgColor}
+            textColor={emailPersonalization.textColor}
+            accentColor={emailPersonalization.accentColor}
+            width={emailPersonalization.width}
+            imageHeight={emailPersonalization.imageHeight}
+            generatedHtml={emailPersonalization.generatedHtml}
+            isGenerating={emailPersonalization.isGenerating}
+            error={emailPersonalization.error}
+            recommendedTokens={emailPersonalization.recommendedTokens}
+            tokenValidation={emailPersonalization.tokenValidation}
+            onAddToken={() => {}} // Action figures don't need token management
+            onRemoveToken={() => {}}
+            onUpdateToken={() => {}}
+            onUpdateSettings={emailPersonalization.updateSettings}
+            onGenerate={emailPersonalization.generateEmailImage}
+            onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+            onDownloadHtml={emailPersonalization.downloadHtml}
           />
         </div>
       )}

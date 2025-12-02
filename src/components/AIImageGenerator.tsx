@@ -24,6 +24,9 @@ import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
 interface AIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -70,6 +73,17 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   // Personalization panel state
   const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [personalizedContent, setPersonalizedContent] = useState('');
+
+  // Email personalization hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedImage,
+    tokens,
+    generatorType: 'ai-image',
+    onEmailImageGenerated: (emailImage, html) => {
+      // Handle email-ready AI image generation
+      console.log('Email-ready AI image generated:', emailImage, html);
+    }
+  });
 
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
@@ -774,6 +788,11 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
                 View Full Size
               </button>
 
+              <EmailPersonalizationToggle
+                isActive={emailPersonalization.isActive}
+                onToggle={emailPersonalization.toggle}
+              />
+
               <a
                 href={generatedImage}
                 download="ai-generated-image.png"
@@ -1064,6 +1083,38 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               const newPrompt = prompt + tokenText;
               setPrompt(newPrompt);
             }}
+          />
+        </div>
+      )}
+
+      {/* Email Personalization Panel */}
+      {emailPersonalization.isActive && (
+        <div className="mt-6">
+          <EmailPersonalizationPanel
+            imageUrl={generatedImage}
+            personalizationTokens={[]} // AI images don't use tokens the same way
+            selectedProvider={emailPersonalization.selectedProvider}
+            template={emailPersonalization.template}
+            subject={emailPersonalization.subject}
+            linkText={emailPersonalization.linkText}
+            linkUrl={emailPersonalization.linkUrl}
+            bgColor={emailPersonalization.bgColor}
+            textColor={emailPersonalization.textColor}
+            accentColor={emailPersonalization.accentColor}
+            width={emailPersonalization.width}
+            imageHeight={emailPersonalization.imageHeight}
+            generatedHtml={emailPersonalization.generatedHtml}
+            isGenerating={emailPersonalization.isGenerating}
+            error={emailPersonalization.error}
+            recommendedTokens={emailPersonalization.recommendedTokens}
+            tokenValidation={emailPersonalization.tokenValidation}
+            onAddToken={() => {}} // AI images don't need token management
+            onRemoveToken={() => {}}
+            onUpdateToken={() => {}}
+            onUpdateSettings={emailPersonalization.updateSettings}
+            onGenerate={emailPersonalization.generateEmailImage}
+            onCopyHtml={emailPersonalization.copyHtmlToClipboard}
+            onDownloadHtml={emailPersonalization.downloadHtml}
           />
         </div>
       )}

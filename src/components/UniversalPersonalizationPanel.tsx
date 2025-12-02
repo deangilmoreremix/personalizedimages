@@ -36,6 +36,7 @@ export interface PersonalizationTemplate {
 interface UniversalPersonalizationPanelProps {
   onContentGenerated?: (content: string, type: ContentType) => void;
   onTemplateSaved?: (template: PersonalizationTemplate) => void;
+  onClose?: () => void;
   initialContent?: string;
   initialContentType?: ContentType;
 }
@@ -356,9 +357,16 @@ const TabsContent: React.FC<{
 export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPanelProps> = ({
   onContentGenerated,
   onTemplateSaved,
+  onClose,
   initialContent = '',
   initialContentType = 'email'
 }) => {
+  // Handle backdrop click to close
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && onClose) {
+      onClose();
+    }
+  };
   // State Management
   const [contentType, setContentType] = useState<ContentType>(initialContentType);
   const [content, setContent] = useState(initialContent);
@@ -566,12 +574,24 @@ export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPan
   }, [content, contentType]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 space-y-6">
-      <Card>
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto" onClick={handleBackdropClick}>
+      <div className="w-full max-w-7xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto relative">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 hover:text-gray-800 transition-colors"
+          aria-label="Close panel"
+        >
+          ✕
+        </button>
+
+        <div className="p-6 space-y-6">
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="text-2xl">{config.icon}</span>
             Universal Personalization Panel
+            <span className="text-sm text-gray-500 ml-auto">💡 Hover for help</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -585,6 +605,16 @@ export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPan
 
             {/* Content Editor Tab */}
             <TabsContent value="editor" className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-blue-600 mt-0.5">💡</div>
+                  <div className="text-sm text-blue-800">
+                    <strong>How to use:</strong> Write your content and insert personalization tokens like [FIRSTNAME] or [EMAIL].
+                    Switch to the "Token Library" tab to browse available tokens, then click them to insert.
+                    Select a recipient from the "Recipients" tab to preview how your content will look.
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Content Type & Settings */}
                 <Card>
@@ -714,6 +744,16 @@ export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPan
 
             {/* Token Library Tab */}
             <TabsContent value="tokens" className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-green-600 mt-0.5">🎯</div>
+                  <div className="text-sm text-green-800">
+                    <strong>Token Library:</strong> Click any token button below to insert it into your content.
+                    Tokens like [FIRSTNAME] will be replaced with actual recipient data when sent.
+                    Use the Recipients tab to see how they look with real data.
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(tokenCategories).map(([category, tokens]) => (
                   <Card key={category}>
@@ -745,6 +785,15 @@ export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPan
 
             {/* Recipients Tab */}
             <TabsContent value="recipients" className="space-y-6">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-purple-600 mt-0.5">👥</div>
+                  <div className="text-sm text-purple-800">
+                    <strong>Recipients:</strong> Click on any recipient card to preview how your personalized content will look for that person.
+                    Use this to test different scenarios and ensure your tokens work correctly with real data.
+                  </div>
+                </div>
+              </div>
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Recipient Data</CardTitle>
@@ -781,6 +830,15 @@ export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPan
 
             {/* Preview & Export Tab */}
             <TabsContent value="preview" className="space-y-6">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-orange-600 mt-0.5">👁️</div>
+                  <div className="text-sm text-orange-800">
+                    <strong>Preview & Export:</strong> Select a recipient to see exactly how your personalized content will look.
+                    Click "Generate Final Content" to process the personalization. Use export options to download results.
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Preview */}
                 <Card>
@@ -882,6 +940,8 @@ export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPan
           </Tabs>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 };

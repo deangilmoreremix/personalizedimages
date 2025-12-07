@@ -729,6 +729,21 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
           />
         </div>
       )}
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={customPrompt || generateCompletePrompt()}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              setCustomPrompt(content);
+              setPersonalizedContent(content);
+              setShowPersonalizationPanel(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

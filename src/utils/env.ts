@@ -21,6 +21,7 @@ interface EnvironmentConfig {
   VITE_GEMINI_NANO_API_KEY?: string;
   VITE_LEONARDO_API_KEY?: string;
   VITE_GIPHY_API_KEY?: string;
+  VITE_FREEPIK_API_KEY?: string;
 
   // Assistant Configuration
   VITE_OPENAI_ASSISTANT_ID?: string;
@@ -54,6 +55,11 @@ const VALIDATION_RULES = {
     required: false,
     validator: (value: string) => !value || value.startsWith('AIza'),
     errorMessage: 'VITE_GEMINI_API_KEY must be a valid Google API key starting with "AIza"'
+  },
+  VITE_FREEPIK_API_KEY: {
+    required: false,
+    validator: (value: string) => !value || /^[A-Za-z0-9]{20,}$/.test(value),
+    errorMessage: 'VITE_FREEPIK_API_KEY must be a valid alphanumeric string of at least 20 characters'
   }
 };
 
@@ -135,6 +141,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     VITE_GEMINI_NANO_API_KEY: rawEnv.VITE_GEMINI_NANO_API_KEY,
     VITE_LEONARDO_API_KEY: rawEnv.VITE_LEONARDO_API_KEY,
     VITE_GIPHY_API_KEY: rawEnv.VITE_GIPHY_API_KEY,
+    VITE_FREEPIK_API_KEY: rawEnv.VITE_FREEPIK_API_KEY,
     VITE_OPENAI_ASSISTANT_ID: rawEnv.VITE_OPENAI_ASSISTANT_ID,
     VITE_STRIPE_PUBLISHABLE_KEY: rawEnv.VITE_STRIPE_PUBLISHABLE_KEY,
     VITE_ENABLE_DEBUG_MODE: rawEnv.VITE_ENABLE_DEBUG_MODE,
@@ -185,6 +192,8 @@ export function hasValidApiKey(provider: AIProvider): boolean {
       return !!config.VITE_LEONARDO_API_KEY;
     case 'giphy':
       return !!config.VITE_GIPHY_API_KEY;
+    case 'freepik':
+      return !!(config.VITE_FREEPIK_API_KEY && /^[A-Za-z0-9]{20,}$/.test(config.VITE_FREEPIK_API_KEY));
     default:
       return false;
   }
@@ -211,6 +220,8 @@ export function getApiKey(provider: AIProvider): string | null {
       return config.VITE_LEONARDO_API_KEY || null;
     case 'giphy':
       return config.VITE_GIPHY_API_KEY || null;
+    case 'freepik':
+      return config.VITE_FREEPIK_API_KEY || null;
     default:
       return null;
   }
@@ -236,7 +247,7 @@ export function getEnvironmentInfo(): {
   const validation = validateEnvironmentConfig();
   const config = getEnvironmentConfig();
 
-  const providers = ['openai', 'gemini', 'gemini-nano', 'leonardo', 'giphy'] as const;
+  const providers = ['openai', 'gemini', 'gemini-nano', 'leonardo', 'giphy', 'freepik'] as const;
   const availableProviders = providers.filter(provider => hasValidApiKey(provider));
 
   const requiredKeys = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'];
@@ -245,7 +256,8 @@ export function getEnvironmentInfo(): {
     'VITE_GEMINI_API_KEY',
     'VITE_GEMINI_NANO_API_KEY',
     'VITE_LEONARDO_API_KEY',
-    'VITE_GIPHY_API_KEY'
+    'VITE_GIPHY_API_KEY',
+    'VITE_FREEPIK_API_KEY'
   ];
 
   const missingKeys = [

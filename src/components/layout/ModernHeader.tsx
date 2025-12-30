@@ -130,7 +130,10 @@ const ModernHeader: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
+            <Link to="/dashboard" className="animated-underline text-primary-600 hover:text-primary-700 font-medium px-3 py-2 rounded-lg hover:bg-primary-50 transition-colors">
+              Dashboard
+            </Link>
             <Link to="/editor" className="animated-underline text-primary-600 hover:text-primary-700 font-medium px-3 py-2 rounded-lg hover:bg-primary-50 transition-colors">
               Editor
             </Link>

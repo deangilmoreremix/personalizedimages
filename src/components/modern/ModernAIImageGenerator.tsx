@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Sparkles, RefreshCw, Download, Heart, Folder, Tag, Image as ImageIcon } from 'lucide-react';
+import { Upload, Sparkles, RefreshCw, Download, Heart, Folder, Tag, Image as ImageIcon, Search } from 'lucide-react';
 import FullScreenLayout from '../layout/FullScreenLayout';
 import ModernTopHeader from '../layout/ModernTopHeader';
 import LeftPanel, { LeftPanelSection, LeftPanelFooter } from '../layout/LeftPanel';
@@ -8,7 +8,9 @@ import EmptyState from '../layout/EmptyState';
 import GuideContent from '../layout/GuideContent';
 import APIContent from '../layout/APIContent';
 import DroppableTextArea from '../DroppableTextArea';
+import AssetPicker from '../AssetPicker';
 import { TokenDragItem } from '../../types/DragTypes';
+import { useAssetIntegration } from '../../hooks/useAssetIntegration';
 import {
   generateImageWithDalle,
   generateImageWithGemini,
@@ -39,6 +41,13 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   const [quality, setQuality] = useState<'standard' | 'hd'>('standard');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [style, setStyle] = useState('natural');
+
+  // Asset integration
+  const assetIntegration = useAssetIntegration({
+    toolType: 'image-generator',
+    preferredTypes: ['image'],
+    autoTrackUsage: true
+  });
 
   const exampleImages = [
     'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=100',
@@ -174,7 +183,16 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
         </label>
 
         <div className="mt-3">
-          <p className="text-xs font-medium text-gray-700 mb-2">Example</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-gray-700">Reference Options</p>
+            <button
+              onClick={assetIntegration.openAssetPicker}
+              className="text-xs text-violet-600 hover:text-violet-700 flex items-center gap-1"
+            >
+              <Search className="w-3 h-3" />
+              Browse Asset Library
+            </button>
+          </div>
           <div className="flex gap-2 flex-wrap">
             {exampleImages.map((img, idx) => (
               <img
@@ -490,6 +508,20 @@ print(data['imageUrl'])`
             apiContent={apiContent}
           />
         }
+      />
+
+      {/* Asset Picker Modal */}
+      <AssetPicker
+        isOpen={assetIntegration.isAssetPickerOpen}
+        onClose={assetIntegration.closeAssetPicker}
+        onSelect={async (asset) => {
+          // Integrate the selected asset
+          const integratedAsset = await assetIntegration.integrateAsset(asset, 'reference-image');
+          setReferenceImage(integratedAsset.url);
+          assetIntegration.closeAssetPicker();
+        }}
+        title="Choose Reference Asset"
+        assetType="image"
       />
     </>
   );

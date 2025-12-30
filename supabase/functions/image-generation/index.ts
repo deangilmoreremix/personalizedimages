@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { corsHeaders, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
 
 console.log("Image Generation Edge Function loaded")
 
@@ -69,12 +69,64 @@ function processAppliedTokens(basePrompt: string, appliedTokens: AppliedToken[])
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin')
+  const corsHeaders = getCorsHeaders(origin)
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    // Authenticate user
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError) {
+      return new Response(
+        JSON.stringify({ error: authError }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check rate limit
+    const rateLimit = checkRateLimit(user.id, true)
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: 'Rate limit exceeded',
+          retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.resetTime.toString()
+          }
+        }
+      )
+    }
+
+    // Check user credits
+    const creditCheck = checkCredits(user.id)
+    if (!creditCheck.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: 'Daily credit limit exceeded',
+          remainingCredits: creditCheck.remainingCredits,
+          resetTime: new Date(creditCheck.resetTime).toISOString()
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'X-Credits-Remaining': creditCheck.remainingCredits.toString(),
+            'X-Credits-Reset': creditCheck.resetTime.toString()
+          }
+        }
+      )
+    }
     const { prompt, provider = 'gpt-5', size = '1024x1024', style, quality = 'standard', appliedTokens }: ImageGenerationRequest = await req.json()
 
     // Validate and sanitize inputs
@@ -138,7 +190,8 @@ serve(async (req) => {
 
       } catch (error) {
         console.error('GPT-5 image generation failed:', error)
-        throw new Error(`Image generation failed: ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        throw new Error(`Image generation failed: ${errorMessage}`)
       }
 
     } else if (provider === 'gemini') {
@@ -178,7 +231,8 @@ serve(async (req) => {
 
       } catch (error) {
         console.error('OpenAI fallback image generation failed:', error)
-        throw new Error(`Image generation failed: ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        throw new Error(`Image generation failed: ${errorMessage}`)
       }
 
     } else if (provider === 'openai' && openaiKey && validateApiKey(openaiKey, 'openai')) {
@@ -209,7 +263,8 @@ serve(async (req) => {
 
       } catch (error) {
         console.error('OpenAI image generation failed:', error)
-        throw new Error(`Image generation failed: ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        throw new Error(`Image generation failed: ${errorMessage}`)
       }
 
     } else {
@@ -226,15 +281,23 @@ serve(async (req) => {
         provider,
         size,
         style: sanitizedStyle,
-        quality
+        quality,
+        creditsRemaining: creditCheck.remainingCredits
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          'X-Credits-Remaining': creditCheck.remainingCredits.toString()
+        }
+      }
     )
 
   } catch (error) {
     console.error('Image Generation Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

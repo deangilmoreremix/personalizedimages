@@ -18,6 +18,9 @@ export const getGeminiApiKey = () => getApiKey('gemini') || '';
 // Note: Gemini Nano uses the same API key as regular Gemini
 export const getGeminiNanoApiKey = () => getApiKey('gemini-nano') || getApiKey('gemini') || '';
 
+// Helper function to get the Freepik API key from environment variables
+export const getFreepikApiKey = () => getApiKey('freepik') || '';
+
 // Helper function to check if an API key is available
 export const hasApiKey = (provider: string): boolean => {
   switch (provider) {
@@ -30,6 +33,8 @@ export const hasApiKey = (provider: string): boolean => {
       return hasValidApiKey('gemini-nano') || hasValidApiKey('gemini');
     case 'giphy':
       return hasValidApiKey('giphy');
+    case 'freepik':
+      return hasValidApiKey('freepik');
     default:
       return false;
   }

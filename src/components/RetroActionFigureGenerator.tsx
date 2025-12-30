@@ -10,6 +10,7 @@ import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
@@ -24,7 +25,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('gemini');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [selectedAdditions, setSelectedAdditions] = useState<string[]>([]);
@@ -32,6 +33,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
   const [selectedPose, setSelectedPose] = useState<string>('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [showAllCharacters, setShowAllCharacters] = useState(false);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
 
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
@@ -273,26 +275,57 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               AI Model
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-indigo-600 text-white' 
+                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai'
+                  ? 'bg-indigo-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
                 DALL-E 3
               </button>
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-indigo-600 text-white' 
+                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini'
+                  ? 'bg-indigo-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
                 Gemini AI
               </button>
+              <button
+                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini-nano'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini-nano')}
+              >
+                Gemini Nano
+              </button>
             </div>
           </div>
-          
+
+          {/* Universal Personalization Panel */}
+          <div>
+            <button
+              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+              className="btn btn-outline w-full flex items-center justify-center"
+            >
+              <Shapes className="w-4 h-4 mr-2" />
+              {showPersonalizationPanel ? 'Hide' : 'Show'} Personalization Panel
+            </button>
+
+            {showPersonalizationPanel && (
+              <div className="mt-4">
+                <UniversalPersonalizationPanel
+                  initialContent={customPrompt}
+                  initialContentType="prompt-ai"
+                  onContentGenerated={(content) => {
+                    setCustomPrompt(content);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Reference Image Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

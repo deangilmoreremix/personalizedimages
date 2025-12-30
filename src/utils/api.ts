@@ -2,7 +2,7 @@
 // It supports direct API calls and edge function calls through Supabase
 
 import { callEdgeFunction, isSupabaseConfigured, supabase } from './supabaseClient';
-import { getGeminiApiKey, getOpenAIApiKey, getGiphyApiKey, hasApiKey, blobToBase64 } from './apiUtils';
+import { getGeminiApiKey, getOpenAIApiKey, getGiphyApiKey, getFreepikApiKey, hasApiKey, blobToBase64 } from './apiUtils';
 import { generateImageWithGeminiNano as generateImageWithGeminiNanoService, editImageWithGeminiNano as editImageWithGeminiNanoService, generateVariationsWithGeminiNano as generateVariationsWithGeminiNanoService, GeminiNanoConfig, ImageEditOptions, ImageGenerationOptions } from './geminiNanoApi';
 
 /**
@@ -473,6 +473,126 @@ export async function generateImageWithGeminiNano(
   } catch (error) {
     console.error('Error generating image with Gemini Nano:', error);
     throw new Error('Invalid provider specified for action figure generation');
+  }
+}
+
+/**
+ * Fetch resources from Freepik API
+ */
+export async function fetchFreepikResources(options: {
+  keywords?: string
+  content_type?: 'photo' | 'vector' | 'psd' | 'icon' | 'video'
+  orientation?: 'horizontal' | 'vertical' | 'square'
+  license?: string
+  page?: number
+  per_page?: number
+}): Promise<{
+  resources: Array<{
+    id: number
+    title: string
+    url: string
+    filename: string
+    thumbnailUrl: string | null
+    type: string | null
+    orientation: string | null
+    width: number | null
+    height: number | null
+    downloads: number
+    likes: number
+    author: string | null
+    publishedAt: string | null
+    license: string | null
+  }>
+  meta: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+  }
+}> {
+  try {
+    console.log('📚 Fetching Freepik resources');
+
+    // Try edge function first
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await callEdgeFunction('freepik-resources', options);
+
+        if (result && result.resources) {
+          return {
+            resources: result.resources,
+            meta: result.meta
+          };
+        }
+      } catch (edgeError) {
+        console.warn('Edge function failed for Freepik resources:', edgeError);
+        // Continue to direct API fallback
+      }
+    }
+
+    // Fall back to direct API call
+    const apiKey = getFreepikApiKey();
+    if (!apiKey) {
+      throw new Error('Freepik API key is required. Please configure VITE_FREEPIK_API_KEY in your environment variables.');
+    }
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (options.keywords) params.append('keywords', options.keywords);
+    if (options.content_type) params.append('content_type', options.content_type);
+    if (options.orientation) params.append('orientation', options.orientation);
+    if (options.license) params.append('license', options.license);
+    if (options.page && options.page > 1) params.append('page', options.page.toString());
+    if (options.per_page && options.per_page !== 20) params.append('per_page', options.per_page.toString());
+
+    const response = await fetch(`https://api.freepik.com/v1/resources?${params}`, {
+      method: 'GET',
+      headers: {
+        'x-freepik-api-key': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      let errorMessage = `${response.status} `;
+
+      try {
+        const errorData = await response.json();
+        errorMessage += errorData.message || 'Unknown error';
+      } catch {
+        errorMessage += 'Unknown error';
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+
+    // Transform response to match our interface
+    const transformedData = data.data?.map((resource: any) => ({
+      id: resource.id,
+      title: resource.title,
+      url: resource.url,
+      filename: resource.filename,
+      thumbnailUrl: resource.image?.source?.url || null,
+      type: resource.image?.type || null,
+      orientation: resource.image?.orientation || null,
+      width: resource.image?.source?.size ? parseInt(resource.image.source.size.split('x')[0]) : null,
+      height: resource.image?.source?.size ? parseInt(resource.image.source.size.split('x')[1]) : null,
+      downloads: resource.stats?.downloads || 0,
+      likes: resource.stats?.likes || 0,
+      author: resource.author?.name || null,
+      publishedAt: resource.meta?.published_at || null,
+      license: resource.licenses?.[0]?.type || null
+    })) || [];
+
+    return {
+      resources: transformedData,
+      meta: data.meta
+    };
+  } catch (error) {
+    console.error('Error fetching Freepik resources:', error);
+    throw error;
   }
 }
 

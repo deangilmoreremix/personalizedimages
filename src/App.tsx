@@ -49,6 +49,7 @@ import TokenManagement from './components/TokenManagement';
 import UniversalPersonalizationPanel from './components/UniversalPersonalizationPanel';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import AdminDashboard from './pages/AdminDashboard';
+import { AssetProvider } from './contexts/AssetContext';
 
 // Component for conditionally rendering footer and other components
 const AppLayout = () => {
@@ -156,7 +157,9 @@ function FAQPage() {
 function App() {
   return (
     <ThemeProvider>
-      <AppLayout />
+      <AssetProvider>
+        <AppLayout />
+      </AssetProvider>
     </ThemeProvider>
   );
 }

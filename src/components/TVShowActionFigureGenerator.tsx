@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Tv, PaintBucket } from 'lucide-react';
-import { generateActionFigure } from '../utils/api';
+import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Tv, PaintBucket, Shapes } from 'lucide-react';
+import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import tvPrompts from '../data/tvShowActionFigures';
@@ -11,6 +11,7 @@ import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
 interface TVShowActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -22,7 +23,11 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedFigure, setGeneratedFigure] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('gemini');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini');
+
+  // Personalization panel state
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  const [personalizedContent, setPersonalizedContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [selectedAdditions, setSelectedAdditions] = useState<string[]>([]);
@@ -272,22 +277,30 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
             <label className="block text-sm font-medium text-gray-700 mb-1">
               AI Model
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'openai' 
-                  ? 'bg-blue-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'openai'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
                 DALL-E 3
               </button>
               <button
-                className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini' 
-                  ? 'bg-blue-600 text-white' 
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('gemini')}
               >
                 Gemini AI
+              </button>
+              <button
+                className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini-nano'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setSelectedProvider('gemini-nano')}
+              >
+                Gemini Nano
               </button>
             </div>
           </div>
@@ -308,13 +321,22 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
           
           {/* Advanced Options */}
           <div>
-            <button
-              onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-              className="text-xs text-gray-600 hover:text-blue-600 flex items-center"
-            >
-              <SlidersHorizontal className="w-3 h-3 mr-1" />
-              {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+                className="text-xs text-blue-600 hover:text-blue-700 flex items-center"
+              >
+                <Shapes className="w-3 h-3 mr-1" />
+                {showPersonalizationPanel ? "Hide" : "Show"} Personalization
+              </button>
+              <button
+                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                className="text-xs text-gray-600 hover:text-blue-600 flex items-center"
+              >
+                <SlidersHorizontal className="w-3 h-3 mr-1" />
+                {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
+              </button>
+            </div>
             
             {showAdvancedOptions && (
               <div className="mt-3 p-4 bg-gray-50 rounded-lg space-y-4">
@@ -654,6 +676,21 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
               }
             }}
             onClose={() => setShowConversationalRefinement(false)}
+          />
+        </div>
+      )}
+
+      {/* Universal Personalization Panel */}
+      {showPersonalizationPanel && (
+        <div className="mt-6">
+          <UniversalPersonalizationPanel
+            initialContent={customPrompt || generateCompletePrompt()}
+            initialContentType="prompt-ai"
+            onContentGenerated={(content, type) => {
+              setCustomPrompt(content);
+              setPersonalizedContent(content);
+              setShowPersonalizationPanel(false);
+            }}
           />
         </div>
       )}

@@ -10,6 +10,32 @@ vi.mock('../utils/emailIntegration', () => ({
   integratePersonalizedImage: vi.fn(),
   generateESPSetupGuide: vi.fn(),
   validateESPCompatibility: vi.fn(),
+  EMAIL_PROVIDERS: {
+    gmail: {
+      name: 'Gmail',
+      mergeTagFormat: '{{TOKEN}}',
+      imageTagFormat: '<img src="{IMAGE_URL}" alt="{ALT_TEXT}">',
+      supportedTokens: ['FIRSTNAME', 'LASTNAME', 'EMAIL', 'COMPANY']
+    },
+    mailchimp: {
+      name: 'Mailchimp',
+      mergeTagFormat: '*|TOKEN|*',
+      imageTagFormat: '<img src="*|IMAGE_URL|*" alt="*|ALT_TEXT|*">',
+      supportedTokens: ['FNAME', 'LNAME', 'EMAIL', 'COMPANY', 'MMERGE1', 'MMERGE2']
+    },
+    outlook: {
+      name: 'Outlook',
+      mergeTagFormat: '{{TOKEN}}',
+      imageTagFormat: '<img src="{IMAGE_URL}" alt="{ALT_TEXT}">',
+      supportedTokens: ['FIRSTNAME', 'LASTNAME', 'EMAIL', 'COMPANY', 'JOBTITLE']
+    },
+    sendgrid: {
+      name: 'SendGrid',
+      mergeTagFormat: '{{TOKEN}}',
+      imageTagFormat: '<img src="{{IMAGE_URL}}" alt="{{ALT_TEXT}}">',
+      supportedTokens: ['first_name', 'last_name', 'email', 'company']
+    }
+  },
   EMAIL_SERVICE_PROVIDERS: {
     gmail: { name: 'Gmail', mergeTagFormat: '{{TOKEN}}' },
     mailchimp: { name: 'Mailchimp', mergeTagFormat: '*|TOKEN|*' }
@@ -67,7 +93,7 @@ describe('Email Personalization Integration', () => {
 
   test('renders email personalization toggle', () => {
     render(<TestComponent />);
-    expect(screen.getByText('📧 Make Email Ready')).toBeInTheDocument();
+    expect(screen.getByText('Make Email Ready')).toBeInTheDocument();
   });
 
   test('toggles email personalization panel', () => {
@@ -143,7 +169,7 @@ describe('Email Personalization Integration', () => {
   test('handles color changes', () => {
     render(<TestComponent />);
 
-    fireEvent.click(screen.getByText('📧 Make Email Ready'));
+    fireEvent.click(screen.getByText('Make Email Ready'));
 
     // Background color input should be present
     const bgColorInput = screen.getByDisplayValue('#f9fafb');
@@ -153,7 +179,7 @@ describe('Email Personalization Integration', () => {
   test('shows recommended tokens', () => {
     render(<TestComponent />);
 
-    fireEvent.click(screen.getByText('📧 Make Email Ready'));
+    fireEvent.click(screen.getByText('Make Email Ready'));
 
     // Should show token recommendations
     expect(screen.getByText('Recommended Tokens')).toBeInTheDocument();
@@ -171,7 +197,7 @@ describe('Email Personalization Integration', () => {
 
     render(<TestComponent />);
 
-    fireEvent.click(screen.getByText('📧 Make Email Ready'));
+    fireEvent.click(screen.getByText('Make Email Ready'));
 
     // Copy HTML button should be present
     const copyButton = screen.getByText('Copy HTML');

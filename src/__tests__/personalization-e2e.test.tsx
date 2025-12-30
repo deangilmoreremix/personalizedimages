@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from './test-utils.test';
 import { describe, it, expect, vi } from 'vitest';
+import { mockTokenReplacement, mockValidation, mockTokens } from './test-utils.test';
 
 // Mock the API calls
 vi.mock('../utils/api', () => ({
@@ -55,16 +56,7 @@ vi.mock('../hooks/useEmailPersonalization', () => ({
   })
 }));
 
-// Test data
-const mockTokens = {
-  FIRSTNAME: 'John',
-  LASTNAME: 'Doe',
-  COMPANY: 'Acme Corp',
-  EMAIL: 'john@acme.com',
-  TITLE: 'CEO',
-  CITY: 'New York',
-  COUNTRY: 'USA'
-};
+// Test data is imported from test-utils.test.tsx
 
 describe('Personalization E2E Tests', () => {
   describe('PersonalizationPanel Component', () => {
@@ -89,33 +81,29 @@ describe('Personalization E2E Tests', () => {
     });
 
     it('switches between personalization modes', async () => {
-      const PersonalizationPanel = (await import('../components/PersonalizationPanel')).default;
+      const UniversalPersonalizationPanel = (await import('../components/UniversalPersonalizationPanel')).default;
 
       render(
-        <PersonalizationPanel
-          tokens={mockTokens}
-          onTokensChange={vi.fn()}
-          mode="action-figure"
-          onModeChange={vi.fn()}
-          showPreview={true}
+        <UniversalPersonalizationPanel
+          initialContent="Test content"
+          initialContentType="prompt-ai"
+          onContentGenerated={vi.fn()}
         />
       );
 
       // Check that action figure mode elements are present
-      expect(screen.getByText('Action Figure Style')).toBeInTheDocument();
-      expect(screen.getByText('Character Style')).toBeInTheDocument();
+      expect(screen.getByText('Action Figure')).toBeInTheDocument();
+      expect(screen.getByText('Character Identity')).toBeInTheDocument();
     });
 
     it('displays token usage instructions', async () => {
-      const PersonalizationPanel = (await import('../components/PersonalizationPanel')).default;
+      const UniversalPersonalizationPanel = (await import('../components/UniversalPersonalizationPanel')).default;
 
       render(
-        <PersonalizationPanel
-          tokens={mockTokens}
-          onTokensChange={vi.fn()}
-          mode="basic"
-          onModeChange={vi.fn()}
-          showPreview={true}
+        <UniversalPersonalizationPanel
+          initialContent="Test content"
+          initialContentType="prompt-ai"
+          onContentGenerated={vi.fn()}
         />
       );
 
@@ -127,29 +115,23 @@ describe('Personalization E2E Tests', () => {
   describe('Token Replacement Functionality', () => {
     it('replaces tokens in text correctly', () => {
       // Test the replaceTokens utility function
-      const { replaceTokens } = require('../utils/tokenReplacement');
-
       const template = 'Hello [FIRSTNAME] [LASTNAME] from [COMPANY]!';
-      const result = replaceTokens(template, mockTokens);
+      const result = mockTokenReplacement.replaceTokens(template, mockTokens);
 
       expect(result).toBe('Hello John Doe from Acme Corp!');
     });
 
     it('handles missing tokens gracefully', () => {
-      const { replaceTokens } = require('../utils/tokenReplacement');
-
       const template = 'Hello [FIRSTNAME] [MISSING_TOKEN]!';
-      const result = replaceTokens(template, mockTokens);
+      const result = mockTokenReplacement.replaceTokens(template, mockTokens);
 
       expect(result).toBe('Hello John [MISSING_TOKEN]!');
     });
 
     it('handles empty token values', () => {
-      const { replaceTokens } = require('../utils/tokenReplacement');
-
       const tokensWithEmpty = { ...mockTokens, FIRSTNAME: '' };
       const template = 'Hello [FIRSTNAME]!';
-      const result = replaceTokens(template, tokensWithEmpty);
+      const result = mockTokenReplacement.replaceTokens(template, tokensWithEmpty);
 
       expect(result).toBe('Hello !');
     });
@@ -171,7 +153,7 @@ describe('Personalization E2E Tests', () => {
       render(<MemeGenerator tokens={mockTokens} onMemeGenerated={vi.fn()} />);
 
       // Should have personalization toggle
-      expect(screen.getByText(/personalization/i)).toBeInTheDocument();
+      expect(screen.getByText('Show Personalization')).toBeInTheDocument();
     });
 
     it('CartoonImageGenerator includes personalization panel', async () => {
@@ -180,7 +162,7 @@ describe('Personalization E2E Tests', () => {
       render(<CartoonImageGenerator tokens={mockTokens} onImageGenerated={vi.fn()} />);
 
       // Should have personalization toggle
-      expect(screen.getByText(/personalization/i)).toBeInTheDocument();
+      expect(screen.getByText('Show Personalization')).toBeInTheDocument();
     });
 
     it('GhibliImageGenerator includes personalization panel', async () => {
@@ -189,25 +171,21 @@ describe('Personalization E2E Tests', () => {
       render(<GhibliImageGenerator tokens={mockTokens} onImageGenerated={vi.fn()} />);
 
       // Should have personalization toggle
-      expect(screen.getByText(/personalization/i)).toBeInTheDocument();
+      expect(screen.getByText('Show Personalization')).toBeInTheDocument();
     });
   });
 
   describe('Token Validation', () => {
     it('validates required tokens', () => {
-      const { validateTokens } = require('../utils/validation');
-
-      const result = validateTokens(mockTokens, ['FIRSTNAME', 'EMAIL']);
+      const result = mockValidation.validateTokens(mockTokens, ['FIRSTNAME', 'EMAIL']);
 
       expect(result.isValid).toBe(true);
       expect(result.missingTokens).toEqual([]);
     });
 
     it('identifies missing required tokens', () => {
-      const { validateTokens } = require('../utils/validation');
-
       const incompleteTokens = { FIRSTNAME: 'John' }; // Missing EMAIL
-      const result = validateTokens(incompleteTokens, ['FIRSTNAME', 'EMAIL']);
+      const result = mockValidation.validateTokens(incompleteTokens, ['FIRSTNAME', 'EMAIL']);
 
       expect(result.isValid).toBe(false);
       expect(result.missingTokens).toContain('EMAIL');
@@ -216,8 +194,6 @@ describe('Personalization E2E Tests', () => {
 
   describe('Performance', () => {
     it('token replacement is fast', () => {
-      const { replaceTokens } = require('../utils/tokenReplacement');
-
       let largeTemplate = 'Hello [FIRSTNAME] [LASTNAME]! Welcome to [COMPANY] in [CITY], [COUNTRY]. Your email is [EMAIL] and your title is [TITLE].'.repeat(10);
       const largeTokens: Record<string, string> = { ...mockTokens };
 
@@ -228,7 +204,7 @@ describe('Personalization E2E Tests', () => {
       }
 
       const startTime = performance.now();
-      const result = replaceTokens(largeTemplate, largeTokens);
+      const result = mockTokenReplacement.replaceTokens(largeTemplate, largeTokens);
       const endTime = performance.now();
 
       // Should complete in less than 50ms for reasonable performance

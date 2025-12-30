@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Pause, Square, Clock, RefreshCw, Download, Trash, Plus, Minus, Layers, Mail, Settings, Sparkles, Image as ImageIcon, Zap, Dices } from 'lucide-react';
+import { Upload, Play, Pause, Square, Clock, RefreshCw, Download, Trash, Plus, Minus, Layers, Mail, Settings, Sparkles, Image as ImageIcon, Zap, Dices, Shapes } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { useDropzone } from 'react-dropzone';
 import gifshot from 'gifshot';
@@ -7,6 +7,9 @@ import { FontSelector } from './ui/FontSelector';
 import { useUniversalAIFeatures } from '../hooks/useUniversalAIFeatures';
 import { useUniversalEmailSystem } from '../hooks/useUniversalEmailSystem';
 import EmailHtmlGenerator from './EmailHtmlGenerator';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import EmailPersonalizationToggle from './EmailPersonalizationToggle';
+import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, getColorClasses, commonStyles } from './ui/design-system';
 
 interface GifEditorProps {
@@ -52,6 +55,7 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState<boolean>(false);
   const [showFrameSettings, setShowFrameSettings] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState<boolean>(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -874,7 +878,30 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
               )}
             </div>
           </div>
-          
+
+          {/* Universal Personalization Panel */}
+          <div>
+            <button
+              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+              className="btn btn-outline w-full flex items-center justify-center"
+            >
+              <Shapes className="w-4 h-4 mr-2" />
+              {showPersonalizationPanel ? 'Hide' : 'Show'} Personalization Panel
+            </button>
+
+            {showPersonalizationPanel && (
+              <div className="mt-4">
+                <UniversalPersonalizationPanel
+                  initialContent=""
+                  initialContentType="prompt-ai"
+                  onContentGenerated={(content) => {
+                    console.log('Generated content:', content);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Token Settings */}
           {activeToken && activeFrame && (
             <div className={`${DESIGN_SYSTEM.components.panel} ${commonStyles.contentArea}`}>

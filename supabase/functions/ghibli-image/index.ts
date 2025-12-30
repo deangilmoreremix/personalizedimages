@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
-
-console.log("Ghibli Image Edge Function loaded")
+import { getCorsHeaders, authenticateUser, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 interface GhibliImageRequest {
   prompt: string
@@ -10,18 +8,28 @@ interface GhibliImageRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  const origin = req.headers.get('origin')
+  const corsHeaders = getCorsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    // Authenticate user
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError) {
+      return new Response(
+        JSON.stringify({ error: authError }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { prompt, provider, referenceImageUrl }: GhibliImageRequest = await req.json()
 
-    // Validate and sanitize input
-    if (!prompt || typeof prompt !== 'string') {
+    if (!prompt?.trim()) {
       return new Response(
-        JSON.stringify({ error: 'Valid prompt is required' }),
+        JSON.stringify({ error: 'Prompt is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -35,25 +43,22 @@ serve(async (req) => {
       )
     }
 
-    // Get and validate API keys
+    // Get API keys
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
-    if ((!openaiKey || !validateApiKey(openaiKey, 'openai')) &&
-        (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
+    if (!openaiKey && !geminiKey) {
       return new Response(
-        JSON.stringify({ error: 'Valid API keys not configured' }),
+        JSON.stringify({ error: 'API keys not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Enhance prompt for Ghibli style
     const enhancedPrompt = `Studio Ghibli style animation: ${sanitizedPrompt}. Soft colors, whimsical atmosphere, detailed backgrounds, watercolor style painting, magical elements, inspired by Hayao Miyazaki's art direction.`
 
-    let imageUrl: string = ''
+    let imageUrl = ''
 
     if (provider === 'openai' && openaiKey) {
-      // Use OpenAI DALL-E
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -137,7 +142,7 @@ serve(async (req) => {
 
     } else {
       return new Response(
-        JSON.stringify({ error: `Provider ${provider} not available or API key missing` }),
+        JSON.stringify({ error: `Provider ${provider} not available` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -149,8 +154,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Ghibli Image Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

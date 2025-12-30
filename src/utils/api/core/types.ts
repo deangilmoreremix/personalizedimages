@@ -4,7 +4,7 @@
  * Shared type definitions for the unified API system.
  */
 
-export type AIProvider = 'openai' | 'gemini' | 'gemini-nano' | 'imagen' | 'leonardo' | 'giphy';
+export type AIProvider = 'openai' | 'gemini' | 'gemini-nano' | 'imagen' | 'leonardo' | 'giphy' | 'freepik';
 
 // Base request interface
 export interface ImageGenerationRequest {

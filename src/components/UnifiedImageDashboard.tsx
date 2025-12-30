@@ -52,6 +52,7 @@ import TokenPanel from './TokenPanel';
 import { useTokenApplication } from '../hooks/useTokenApplication';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import FreepikResourceGallery from './FreepikResourceGallery';
 
 // Types
 interface GenerationMode {
@@ -171,6 +172,13 @@ const UnifiedImageDashboard: React.FC = () => {
       icon: Video,
       description: 'Animate static images',
       category: 'video'
+    },
+    {
+      id: 'stock',
+      name: 'Asset Library',
+      icon: ImageIcon,
+      description: 'Browse Freepik stock images',
+      category: 'image'
     }
   ], []);
 
@@ -687,7 +695,8 @@ const UnifiedImageDashboard: React.FC = () => {
           )}
 
           {/* Generation Panel */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          {currentMode !== 'stock' && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -769,86 +778,98 @@ const UnifiedImageDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
 
-          {/* Gallery */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Generated Images ({filteredImages.length})
-                  </h3>
+        {/* Gallery */}
+          {currentMode === 'stock' ? (
+            <FreepikResourceGallery
+              onResourceSelect={(resource) => {
+                console.log('Selected Freepik resource:', resource);
+                // Here you could add the resource to generated images or handle selection
+              }}
+              maxHeight="calc(100vh - 300px)"
+              showFilters={true}
+            />
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Generated Images ({filteredImages.length})
+                    </h3>
 
-                  {selectedImages.size > 0 && (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedImages.size} selected
-                      </span>
-                      <button
-                        onClick={handleBatchDownload}
-                        className="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 flex items-center space-x-1"
-                      >
-                        <Download className="w-3 h-3" />
-                        <span>Download</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                    {selectedImages.size > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {selectedImages.size} selected
+                        </span>
+                        <button
+                          onClick={handleBatchDownload}
+                          className="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 flex items-center space-x-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="flex items-center space-x-2">
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  >
-                    <option value="all">All Types</option>
-                    {generationModes.map(mode => (
-                      <option key={mode.id} value={mode.id}>
-                        {mode.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center space-x-2">
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    >
+                      <option value="all">All Types</option>
+                      {generationModes.map(mode => (
+                        <option key={mode.id} value={mode.id}>
+                          {mode.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Image Grid/List */}
-            <div className="p-4">
-              {filteredImages.length === 0 ? (
-                <div className="text-center py-12">
-                  <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No images yet
-                  </h4>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Generate your first image to get started!
-                  </p>
-                </div>
-              ) : (
-                <div className={
-                  viewMode === 'grid'
-                    ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
-                    : 'space-y-4'
-                }>
-                  {filteredImages.map((image) => (
-                    <DroppableImage
-                      key={image.id}
-                      image={image}
-                      isSelected={selectedImages.has(image.id)}
-                      onSelect={toggleImageSelection}
-                      onTokenDrop={handleTokenDrop}
-                      appliedTokens={getAppliedTokens(image.id).map(applied => applied.token)}
-                      onRemoveToken={handleTokenRemove}
-                      onDownload={(img) => console.log('Download:', img.url)}
-                      onShare={(img) => console.log('Share:', img.url)}
-                      onEdit={(img) => console.log('Edit:', img.url)}
-                      onView={(img) => console.log('View:', img.url)}
-                    />
-                  ))}
-                </div>
-              )}
+              {/* Image Grid/List */}
+              <div className="p-4">
+                {filteredImages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      No images yet
+                    </h4>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Generate your first image to get started!
+                    </p>
+                  </div>
+                ) : (
+                  <div className={
+                    viewMode === 'grid'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
+                      : 'space-y-4'
+                  }>
+                    {filteredImages.map((image) => (
+                      <DroppableImage
+                        key={image.id}
+                        image={image}
+                        isSelected={selectedImages.has(image.id)}
+                        onSelect={toggleImageSelection}
+                        onTokenDrop={handleTokenDrop}
+                        appliedTokens={getAppliedTokens(image.id).map(applied => applied.token)}
+                        onRemoveToken={handleTokenRemove}
+                        onDownload={(img) => console.log('Download:', img.url)}
+                        onShare={(img) => console.log('Share:', img.url)}
+                        onEdit={(img) => console.log('Edit:', img.url)}
+                        onView={(img) => console.log('View:', img.url)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
       </div>

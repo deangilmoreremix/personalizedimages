@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Image as ImageIcon, Text, Wand2, Download, RefreshCcw, Layers, Trash, Sparkles } from 'lucide-react';
+import { Upload, Image as ImageIcon, Text, Wand2, Download, RefreshCcw, Layers, Trash, Sparkles, Shapes } from 'lucide-react';
 import AIImageGenerator from './AIImageGenerator';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
 interface PersonalizationToken {
   id: string;
@@ -24,6 +25,7 @@ const ImageEditor: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [isAIPanel, setIsAIPanel] = useState(false);
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -279,6 +281,29 @@ const ImageEditor: React.FC = () => {
             >
               AI Generator
             </button>
+          </div>
+
+          {/* Universal Personalization Panel */}
+          <div>
+            <button
+              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+              className="btn btn-outline w-full flex items-center justify-center mb-4"
+            >
+              <Shapes className="w-4 h-4 mr-2" />
+              {showPersonalizationPanel ? 'Hide' : 'Show'} Personalization Panel
+            </button>
+
+            {showPersonalizationPanel && (
+              <div className="mb-4">
+                <UniversalPersonalizationPanel
+                  initialContent=""
+                  initialContentType="prompt-ai"
+                  onContentGenerated={(content) => {
+                    console.log('Generated content:', content);
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {isAIPanel ? (

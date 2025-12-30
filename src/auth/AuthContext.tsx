@@ -40,53 +40,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isSupabaseInitialized, setIsSupabaseInitialized] = useState(false);
 
-  // Initialize Supabase once when component mounts
+  // Initialize Supabase and get session
   useEffect(() => {
-    const initializeSupabase = async () => {
+    const initialize = async () => {
       try {
-        // Initialize Supabase client
         const initialized = initSupabase();
-        console.log('Supabase initialization:', initialized ? 'successful' : 'failed');
         setIsSupabaseInitialized(initialized);
-        
-        if (initialized) {
-          // Only attempt to get the session if Supabase is initialized
-          await getInitialSession();
-        } else {
-          // If initialization failed, stop loading
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error initializing Supabase:', error);
-        setIsSupabaseInitialized(false);
-        setLoading(false);
-      }
-    };
 
-    // Function to get initial session
-    const getInitialSession = async () => {
-      try {
-        if (!supabase) {
-          console.error('Supabase client not initialized');
-          setLoading(false);
-          return;
-        }
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user || null);
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        if (initialized && supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          setSession(session);
+          setUser(session?.user || null);
+
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
         }
       } catch (error) {
-        console.error('Error getting initial session:', error);
+        console.error('Auth initialization error:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    initializeSupabase();
+    initialize();
   }, []);
 
   // Set up auth state change listener when Supabase is initialized
@@ -119,51 +96,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Fetch user profile from the database
   const fetchProfile = async (userId: string) => {
+    if (!supabase) return;
+
     try {
-      if (!supabase) {
-        console.error('Supabase client not initialized');
-        return;
-      }
-      
-      console.log("Fetching profile for user:", userId);
-      
-      // First try to get from profiles table
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-        
-      if (profileError) {
-        console.log("Error fetching from profiles:", profileError);
-        
-        // If not found in profiles, try users table
-        if (profileError.code === 'PGRST116') {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-          if (userError) {
-            console.error('Error fetching user data:', userError);
-            
-            // If profile doesn't exist yet, wait and retry once
-            if (userError.code === 'PGRST116') {
-              console.log("Profile not found, retrying in 1 second...");
-              setTimeout(() => fetchProfile(userId), 1000);
-            }
-            return;
-          }
-          
-          console.log("User data fetched successfully:", userData);
-          setProfile(userData);
-          return;
-        }
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        return;
       }
-      
-      console.log("Profile fetched successfully:", profileData);
-      setProfile(profileData);
+
+      setProfile(data);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
     }

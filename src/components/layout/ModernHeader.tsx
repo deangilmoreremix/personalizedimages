@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Video, Menu, X, ChevronDown, ChevronRight, Zap, Sparkles, Search, Bell, Settings, Edit, Eye } from 'lucide-react';
+import { Video, Menu, X, ChevronDown, ChevronRight, Zap, Sparkles, Search, Bell, Settings, Edit, Eye, LogIn } from 'lucide-react';
 import Tooltip from '../ui/Tooltip';
 import { useAdmin } from '../../contexts/AdminContext';
+import { useAuth } from '../../auth/AuthContext';
+import { UserMenu } from '../auth/UserMenu';
+import { AuthModal } from '../auth/AuthModal';
 
 const ModernHeader: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const location = useLocation();
   const { isAdmin, isEditMode, toggleEditMode } = useAdmin();
+  const { user } = useAuth();
   
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -181,22 +186,27 @@ const ModernHeader: React.FC = () => {
               </button>
             </Tooltip>
 
-            <Tooltip content="Notifications">
-              <button className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded-full transition-colors relative" aria-label="Notifications">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-              </button>
-            </Tooltip>
-
-            <Tooltip content="Settings">
+            {user ? (
+              <>
+                <Tooltip content="Notifications">
+                  <button className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded-full transition-colors relative" aria-label="Notifications">
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                  </button>
+                </Tooltip>
+                <UserMenu />
+              </>
+            ) : (
               <motion.button
-                className="p-2 bg-primary-100 text-primary-600 hover:bg-primary-200 rounded-xl transition-colors"
+                onClick={() => setAuthModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <Settings className="w-5 h-5" />
+                <LogIn className="w-4 h-4" />
+                <span>Sign In</span>
               </motion.button>
-            </Tooltip>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -301,11 +311,26 @@ const ModernHeader: React.FC = () => {
                 <Link to="/gallery" className="block py-3 px-4 border-b border-gray-100 hover:bg-gray-50 transition-colors rounded-lg">
                   Gallery
                 </Link>
+
+                {!user && (
+                  <button
+                    onClick={() => setAuthModalOpen(true)}
+                    className="block w-full text-left py-3 px-4 rounded-lg bg-blue-600 text-white font-medium"
+                  >
+                    Sign In
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => {}}
+      />
     </header>
   );
 };

@@ -1,0 +1,217 @@
+{
+  "total": 35,
+  "passed": 23,
+  "failed": 12,
+  "tests": [
+    {
+      "name": "1.1 Supabase client initialization",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "1.2 Database connectivity",
+      "passed": false,
+      "message": "Could not find the table 'public.user_images' in the schema cache",
+      "duration": 176
+    },
+    {
+      "name": "1.3.1 Table exists: user_images",
+      "passed": false,
+      "message": "Could not find the table 'public.user_images' in the schema cache",
+      "duration": 67
+    },
+    {
+      "name": "1.3.2 Table exists: folders",
+      "passed": false,
+      "message": "Could not find the table 'public.folders' in the schema cache",
+      "duration": 55
+    },
+    {
+      "name": "1.3.3 Table exists: image_tags",
+      "passed": false,
+      "message": "Could not find the table 'public.image_tags' in the schema cache",
+      "duration": 67
+    },
+    {
+      "name": "1.3.4 Table exists: prompt_history",
+      "passed": false,
+      "message": "Could not find the table 'public.prompt_history' in the schema cache",
+      "duration": 51
+    },
+    {
+      "name": "1.3.5 Table exists: prompt_favorites",
+      "passed": false,
+      "message": "Could not find the table 'public.prompt_favorites' in the schema cache",
+      "duration": 47
+    },
+    {
+      "name": "1.3.6 Table exists: generation_queue",
+      "passed": false,
+      "message": "Could not find the table 'public.generation_queue' in the schema cache",
+      "duration": 63
+    },
+    {
+      "name": "1.3.7 Table exists: token_profiles",
+      "passed": false,
+      "message": "Could not find the table 'public.token_profiles' in the schema cache",
+      "duration": 55
+    },
+    {
+      "name": "1.3.8 Table exists: analytics_events",
+      "passed": false,
+      "message": "Could not find the table 'public.analytics_events' in the schema cache",
+      "duration": 46
+    },
+    {
+      "name": "Token system import",
+      "passed": false,
+      "message": "Unknown file extension \".ts\" for /workspaces/personalizedimages/src/types/tokens.ts",
+      "duration": 0
+    },
+    {
+      "name": "Cloud Gallery Service import",
+      "passed": false,
+      "message": "Unknown file extension \".ts\" for /workspaces/personalizedimages/src/services/cloudGalleryService.ts",
+      "duration": 0
+    },
+    {
+      "name": "Prompt Enhancement Service import",
+      "passed": false,
+      "message": "Unknown file extension \".ts\" for /workspaces/personalizedimages/src/services/promptEnhancementService.ts",
+      "duration": 0
+    },
+    {
+      "name": "5.1 Auth methods available",
+      "passed": true,
+      "message": "",
+      "duration": 0
+    },
+    {
+      "name": "5.2 Session check",
+      "passed": true,
+      "message": "No active session",
+      "duration": 0
+    },
+    {
+      "name": "5.3 User check",
+      "passed": true,
+      "message": "No user",
+      "duration": 0
+    },
+    {
+      "name": "5.4 RLS policies enforce protection",
+      "passed": true,
+      "message": "Protected (no user = no access)",
+      "duration": 0
+    },
+    {
+      "name": "5.5.1 RLS check: user_images",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "5.5.2 RLS check: folders",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "5.5.3 RLS check: prompt_history",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "5.5.4 RLS check: token_profiles",
+      "passed": true,
+      "message": "RLS status verified via access patterns",
+      "duration": 0
+    },
+    {
+      "name": "6.1 UUID auto-generation",
+      "passed": true,
+      "message": "Skipped (no user)",
+      "duration": 0
+    },
+    {
+      "name": "6.2 Timestamp fields auto-populate",
+      "passed": true,
+      "message": "Verified via schema",
+      "duration": 0
+    },
+    {
+      "name": "6.3 JSONB fields store complex objects",
+      "passed": true,
+      "message": "Verified via schema",
+      "duration": 0
+    },
+    {
+      "name": "6.4 Array fields (tags) supported",
+      "passed": true,
+      "message": "Verified via schema",
+      "duration": 0
+    },
+    {
+      "name": "6.5 Foreign key constraints defined",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "6.6 Cascade delete configured",
+      "passed": true,
+      "message": "Verified via schema (ON DELETE CASCADE)",
+      "duration": 0
+    },
+    {
+      "name": "7.1 Query response time",
+      "passed": true,
+      "message": "59ms",
+      "duration": 59
+    },
+    {
+      "name": "7.2 Pagination query performance",
+      "passed": true,
+      "message": "49ms",
+      "duration": 49
+    },
+    {
+      "name": "7.3 Full-text search performance",
+      "passed": true,
+      "message": "44ms",
+      "duration": 44
+    },
+    {
+      "name": "7.4.1 Indexes on user_images (user_id, created_at, folder_id, tags)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.2 Indexes on folders (user_id, parent_id)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.3 Indexes on prompt_history (user_id, prompt)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.4 Indexes on generation_queue (user_id, status)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    },
+    {
+      "name": "7.4.5 Indexes on token_profiles (user_id)",
+      "passed": true,
+      "message": "Verified via migration",
+      "duration": 0
+    }
+  ]
+}

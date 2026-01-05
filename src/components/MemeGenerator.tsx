@@ -13,10 +13,11 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
-import PersonalizationPanel from './PersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import PersonalizationToggle from './PersonalizationToggle';
 import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
@@ -37,10 +38,8 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   // Model selection
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
-  // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(true); // Start open for better UX
-  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('basic');
   const [personalizedContent, setPersonalizedContent] = useState('');
+  const { shouldShowPanel } = usePersonalizationPreferences('meme');
 
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
@@ -310,18 +309,6 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
         </motion.div>
       </div>
 
-      {/* Personalization Panel */}
-      {showPersonalizationPanel && (
-        <div className="mb-6">
-          <PersonalizationPanel
-            tokens={tokens}
-            onTokensChange={handleTokensChange}
-            mode={personalizationMode}
-            onModeChange={setPersonalizationMode}
-            showPreview={false}
-          />
-        </div>
-      )}
 
       <div className={DESIGN_SYSTEM.grid.sidebar}>
         {/* Canvas Column */}
@@ -499,17 +486,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
 
                     {/* Personalization Toggle */}
                     <div className="flex items-center gap-2 pt-2 border-t border-purple-200">
-                      <button
-                        onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-                        className={`text-xs flex items-center px-2 py-1 rounded ${
-                          showPersonalizationPanel
-                            ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                            : 'text-purple-600 hover:text-purple-700'
-                        }`}
-                      >
-                        <Shapes className="w-3 h-3 mr-1" />
-                        {showPersonalizationPanel ? "Hide" : "Show"} Personalization
-                      </button>
+                      <PersonalizationToggle generatorType="meme" size="sm" />
                     </div>
                   </div>
                 )}
@@ -938,7 +915,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
       </div>
 
       {/* Universal Personalization Panel */}
-      {showPersonalizationPanel && (
+      {shouldShowPanel && (
         <div className="mt-6">
           <UniversalPersonalizationPanel
             initialContent={`${topText}\n${bottomText}`}
@@ -948,7 +925,6 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
               setTopText(lines[0] || '');
               setBottomText(lines[1] || '');
               setPersonalizedContent(content);
-              setShowPersonalizationPanel(false);
             }}
           />
         </div>

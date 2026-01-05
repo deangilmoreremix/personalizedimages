@@ -14,6 +14,7 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 
 interface WrestlingActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -33,7 +34,9 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
   const [selectedPose, setSelectedPose] = useState<string>('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [showAllCharacters, setShowAllCharacters] = useState(false);
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
+  // Personalization panel state - now uses preferences
+  const { shouldShowPanel, generatorSettings, updateGeneratorPreferences, markAsExperienced } = usePersonalizationPreferences('action-figure');
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(shouldShowPanel);
 
   // Email personalization hook
   const emailPersonalization = useEmailPersonalization({
@@ -312,7 +315,12 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
           {/* Universal Personalization Panel */}
           <div>
             <button
-              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+              onClick={() => {
+                const newState = !showPersonalizationPanel;
+                setShowPersonalizationPanel(newState);
+                updateGeneratorPreferences({ autoShowPanel: newState });
+                if (newState) markAsExperienced();
+              }}
               className="btn btn-outline w-full flex items-center justify-center"
             >
               <Shapes className="w-4 h-4 mr-2" />

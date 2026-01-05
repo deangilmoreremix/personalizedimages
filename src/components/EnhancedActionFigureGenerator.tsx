@@ -11,10 +11,11 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
-import PersonalizationPanel from './PersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import PersonalizationToggle from './PersonalizationToggle';
 
 interface EnhancedActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -29,10 +30,8 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini');
 
-  // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(true); // Start open for better UX
-  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('action-figure');
   const [personalizedContent, setPersonalizedContent] = useState('');
+  const { shouldShowPanel } = usePersonalizationPreferences('enhanced-action-figure');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
@@ -249,27 +248,6 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
         Action Figure Creator
       </h3>
 
-      {/* Personalization Panel */}
-      {showPersonalizationPanel && (
-        <div className="mb-6">
-          <PersonalizationPanel
-            tokens={{
-              FIRSTNAME: characterName,
-              COMPANY: companyName,
-              EMAIL: tokens.EMAIL || '',
-              CHARACTER_NAME: characterName,
-              STYLE: tokens.STYLE || 'heroic',
-              POSE: tokens.POSE || 'action',
-              ENVIRONMENT: tokens.ENVIRONMENT || 'urban'
-            }}
-            onTokensChange={handleTokensChange}
-            mode={personalizationMode}
-            onModeChange={setPersonalizationMode}
-            showPreview={true}
-            previewPrompt={customPrompt}
-          />
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
@@ -463,18 +441,7 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
               Randomize Options
             </button>
 
-            <button
-              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-              className={`btn flex items-center justify-center px-3 ${
-                showPersonalizationPanel
-                  ? 'btn-primary'
-                  : 'btn-secondary'
-              }`}
-              disabled={isGenerating}
-            >
-              <Shapes className="w-4 h-4 mr-2" />
-              {showPersonalizationPanel ? 'Hide' : 'Show'} Personalization
-            </button>
+            <PersonalizationToggle generatorType="enhanced-action-figure" />
 
             <button
               onClick={handleGenerateActionFigure}
@@ -746,7 +713,7 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
       )}
 
       {/* Universal Personalization Panel */}
-      {showPersonalizationPanel && (
+      {shouldShowPanel && (
         <div className="mt-6">
           <UniversalPersonalizationPanel
             initialContent={generateCompletePrompt()}
@@ -754,7 +721,6 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
             onContentGenerated={(content, type) => {
               setCustomPrompt(content);
               setPersonalizedContent(content);
-              setShowPersonalizationPanel(false);
             }}
           />
         </div>

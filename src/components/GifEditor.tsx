@@ -6,6 +6,7 @@ import gifshot from 'gifshot';
 import { FontSelector } from './ui/FontSelector';
 import { useUniversalAIFeatures } from '../hooks/useUniversalAIFeatures';
 import { useUniversalEmailSystem } from '../hooks/useUniversalEmailSystem';
+import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailHtmlGenerator from './EmailHtmlGenerator';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
@@ -77,6 +78,13 @@ const GifEditor: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }) => {
     imageUrl: generatedGif,
     tokens,
     personalizationTokens: activeFrame?.tokens || []
+  });
+
+  // Email Personalization Hook
+  const emailPersonalization = useEmailPersonalization({
+    imageUrl: generatedGif,
+    tokens,
+    generatorType: 'gif'
   });
 
   // Initialize with an empty frame

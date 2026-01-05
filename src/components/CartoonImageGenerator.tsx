@@ -12,10 +12,11 @@ import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
-import PersonalizationPanel from './PersonalizationPanel';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import PersonalizationToggle from './PersonalizationToggle';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
 interface CartoonImageGeneratorProps {
@@ -31,10 +32,8 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
-  // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(true); // Start open for better UX
-  const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('basic');
   const [personalizedContent, setPersonalizedContent] = useState('');
+  const { shouldShowPanel } = usePersonalizationPreferences('cartoon');
 
   // Advanced editing panels
   const [showSemanticMasking, setShowSemanticMasking] = useState(false);
@@ -170,18 +169,6 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
         </div>
       </div>
 
-      {/* Personalization Panel */}
-      {showPersonalizationPanel && (
-        <div className="mb-6">
-          <PersonalizationPanel
-            tokens={tokens}
-            onTokensChange={handleTokensChange}
-            mode={personalizationMode}
-            onModeChange={setPersonalizationMode}
-            showPreview={false}
-          />
-        </div>
-      )}
 
       <div className={getGridClasses('creative')}>
         <div className="space-y-4">
@@ -333,17 +320,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           
           {/* Additional options toggle */}
           <div className="flex justify-end space-x-3">
-            <button
-              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-              className={`text-xs flex items-center px-2 py-1 rounded ${
-                showPersonalizationPanel
-                  ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                  : 'text-purple-600 hover:text-purple-700'
-              }`}
-            >
-              <Shapes className="w-3 h-3 mr-1" />
-              {showPersonalizationPanel ? "Hide" : "Show"} Personalization
-            </button>
+            <PersonalizationToggle generatorType="cartoon" size="sm" />
             <button
               onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
               className="text-xs text-gray-600 hover:text-primary-600 flex items-center"
@@ -599,7 +576,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
       </div>
 
       {/* Universal Personalization Panel */}
-      {showPersonalizationPanel && (
+      {shouldShowPanel && (
         <div className="mt-6">
           <UniversalPersonalizationPanel
             initialContent={customPrompt || prompt}
@@ -607,7 +584,6 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
             onContentGenerated={(content, type) => {
               setCustomPrompt(content);
               setPersonalizedContent(content);
-              setShowPersonalizationPanel(false);
             }}
           />
         </div>

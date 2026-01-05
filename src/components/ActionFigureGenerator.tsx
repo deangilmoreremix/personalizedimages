@@ -13,8 +13,10 @@ import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import templatesService, { ActionFigureTemplate } from '../services/templatesService';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import PersonalizationToggle from './PersonalizationToggle';
 
 interface ActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -27,9 +29,8 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
-  // Personalization panel state
-  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(false);
   const [personalizedContent, setPersonalizedContent] = useState('');
+  const { shouldShowPanel } = usePersonalizationPreferences('action-figure');
   const [error, setError] = useState<string | null>(null);
 
   // Email personalization hook
@@ -266,13 +267,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 <SlidersHorizontal className="w-3 h-3 mr-1" />
                 {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
               </button>
-              <button
-                onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
-                className="text-xs text-purple-600 hover:text-purple-700 flex items-center"
-              >
-                <Shapes className="w-3 h-3 mr-1" />
-                {showPersonalizationPanel ? "Hide" : "Show"} Personalization
-              </button>
+              <PersonalizationToggle generatorType="action-figure" size="sm" />
             </div>
             <div className="grid grid-cols-3 gap-2 mb-2">
               <button
@@ -698,7 +693,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
       </div>
 
       {/* Universal Personalization Panel */}
-      {showPersonalizationPanel && (
+      {shouldShowPanel && (
         <div className="mt-6">
           <UniversalPersonalizationPanel
             initialContent={prompt}
@@ -706,7 +701,6 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
             onContentGenerated={(content, type) => {
               setPrompt(content);
               setPersonalizedContent(content);
-              setShowPersonalizationPanel(false);
             }}
           />
         </div>

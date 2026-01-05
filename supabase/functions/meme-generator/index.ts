@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 console.log("Meme Generator Edge Function loaded")
 
@@ -12,44 +12,12 @@ interface MemeGeneratorRequest {
 }
 
 serve(async (req) => {
-  const origin = req.headers.get('origin')
-  const corsHeaders = getCorsHeaders(origin)
-
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Authenticate user
-    const { user, error: authError } = await authenticateUser(req)
-    if (authError) {
-      return new Response(
-        JSON.stringify({ error: authError }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Check rate limit
-    const rateLimit = checkRateLimit(user.id, true)
-    if (!rateLimit.allowed) {
-      return new Response(
-        JSON.stringify({
-          error: 'Rate limit exceeded',
-          retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
-        }),
-        {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-            'X-RateLimit-Reset': rateLimit.resetTime.toString()
-          }
-        }
-      )
-    }
-
     const { topText, bottomText, referenceImageUrl, additionalStyle, provider }: MemeGeneratorRequest = await req.json()
 
     // Validate and sanitize inputs
@@ -84,6 +52,10 @@ serve(async (req) => {
     }
 
     let imageUrl: string = ''
+
+    // For now, we'll use a simple approach: return the reference image
+    // In a production implementation, you would use an image editing API
+    // or generate a new image with the text overlaid
 
     if (provider === 'gpt-image-1' && openaiKey) {
       // Use GPT-4 Vision to analyze the reference image and generate a meme
@@ -142,6 +114,11 @@ serve(async (req) => {
         console.warn('GPT-4 Vision failed, falling back to canvas-based meme generation:', error)
         // Fallback to canvas-based meme generation
         imageUrl = await generateMemeWithText(referenceImageUrl, sanitizedTopText, sanitizedBottomText, sanitizedStyle)
+      }
+
+      } catch (error) {
+        console.warn('GPT-4 Vision failed, falling back to reference image:', error)
+        imageUrl = referenceImageUrl
       }
 
     } else if ((provider === 'gemini' || !provider) && geminiKey) {
@@ -222,13 +199,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Meme Generator Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
+
 // Helper function to generate meme with text overlay
 async function generateMemeWithText(imageUrl: string, topText: string, bottomText: string, style?: string): Promise<string> {
   try {

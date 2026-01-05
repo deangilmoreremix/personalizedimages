@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Image as ImageIcon, Text, Wand2, Download, RefreshCcw, Layers, Trash, Sparkles, Shapes } from 'lucide-react';
 import AIImageGenerator from './AIImageGenerator';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 
 interface PersonalizationToken {
   id: string;

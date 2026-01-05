@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Sparkles, Download, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { Sparkles, Download, Image as ImageIcon, RefreshCw, Shapes } from 'lucide-react';
 import { generateImageWithDalle, generateImageWithGemini } from '../utils/api';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
+import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
+import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
 interface AIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -16,6 +18,10 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('openai');
+
+  // Personalization panel state - now uses preferences
+  const { shouldShowPanel, updateGeneratorPreferences, markAsExperienced } = usePersonalizationPreferences('ai-image');
+  const [showPersonalizationPanel, setShowPersonalizationPanel] = useState(shouldShowPanel);
 
   const emailPersonalization = useEmailPersonalization({
     imageUrl: generatedImage,
@@ -87,23 +93,38 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
             </div>
           )}
 
-          <button
-            onClick={handleGenerateImage}
-            disabled={isGenerating || !prompt.trim()}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <>
-                <RefreshCw className="inline w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="inline w-4 h-4 mr-2" />
-                Generate Image
-              </>
-            )}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const newState = !showPersonalizationPanel;
+                setShowPersonalizationPanel(newState);
+                updateGeneratorPreferences({ autoShowPanel: newState });
+                if (newState) markAsExperienced();
+              }}
+              className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded hover:bg-gray-200 flex items-center justify-center"
+            >
+              <Shapes className="w-4 h-4 mr-2" />
+              {showPersonalizationPanel ? 'Hide' : 'Show'} Personalization
+            </button>
+
+            <button
+              onClick={handleGenerateImage}
+              disabled={isGenerating || !prompt.trim()}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="inline w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="inline w-4 h-4 mr-2" />
+                  Generate Image
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4">

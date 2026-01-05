@@ -12,6 +12,8 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'terser',
+    sourcemap: true, // Enable source maps for production debugging
+    chunkSizeWarningLimit: 600, // Increase limit to 600KB to reduce warnings
     rollupOptions: {
       output: {
         manualChunks: (id) => {

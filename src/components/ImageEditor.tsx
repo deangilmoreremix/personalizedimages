@@ -1,8 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Upload, Image as ImageIcon, Text, Wand2, Download, RefreshCcw, Layers, Trash, Sparkles, Shapes } from 'lucide-react';
-import AIImageGenerator from './AIImageGenerator';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
+
+// Lazy load AIImageGenerator to avoid bundle conflicts
+const AIImageGenerator = lazy(() => import('./AIImageGenerator'));
+
+// Loading component for AI generator
+const AIGeneratorLoading = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="text-center">
+      <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading AI Generator...</p>
+    </div>
+  </div>
+);
 
 interface PersonalizationToken {
   id: string;
@@ -308,10 +320,12 @@ const ImageEditor: React.FC = () => {
           </div>
 
           {isAIPanel ? (
-            <AIImageGenerator
-              tokens={previewData}
-              onImageGenerated={handleAIGeneratedImage}
-            />
+            <Suspense fallback={<AIGeneratorLoading />}>
+              <AIImageGenerator
+                tokens={previewData}
+                onImageGenerated={handleAIGeneratedImage}
+              />
+            </Suspense>
           ) : (
             <>
               <div className="card bg-gray-50">

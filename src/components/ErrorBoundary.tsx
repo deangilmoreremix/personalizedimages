@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -32,11 +32,53 @@ class ErrorBoundary extends Component<Props, State> {
     // Log error for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
+    // Report error to monitoring service in production
+    this.reportError(error, errorInfo);
+
     // Call optional error handler
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
   }
+
+  // Report errors to monitoring service
+  private reportError = async (error: Error, errorInfo: ErrorInfo) => {
+    try {
+      // Only report in production
+      if (import.meta.env.PROD) {
+        const errorReport = {
+          message: error.message,
+          stack: error.stack,
+          componentStack: errorInfo.componentStack,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          userId: this.getUserId(), // Implement based on your auth system
+        };
+
+        // Send to error monitoring service (implement based on your monitoring solution)
+        // Example: Sentry, LogRocket, or custom endpoint
+        console.warn('Error reported to monitoring service:', errorReport);
+
+        // You can implement actual error reporting here:
+        // await fetch('/api/errors', { method: 'POST', body: JSON.stringify(errorReport) });
+      }
+    } catch (reportingError) {
+      // Don't let error reporting break the app
+      console.error('Failed to report error:', reportingError);
+    }
+  };
+
+  // Get user ID for error context (implement based on your auth)
+  private getUserId = (): string | null => {
+    try {
+      // Implement based on your authentication system
+      // Example: return auth.currentUser?.id || null;
+      return null; // Placeholder
+    } catch {
+      return null;
+    }
+  };
 
   handleRetry = () => {
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
@@ -69,7 +111,7 @@ class ErrorBoundary extends Component<Props, State> {
               We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.
             </p>
 
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-3 justify-center flex-wrap">
               <button
                 onClick={this.handleRetry}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -85,6 +127,16 @@ class ErrorBoundary extends Component<Props, State> {
                 <Home className="w-4 h-4" />
                 Go Home
               </button>
+
+              {import.meta.env.PROD && (
+                <button
+                  onClick={() => this.reportError(this.state.error!, this.state.errorInfo!)}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                >
+                  <Bug className="w-4 h-4" />
+                  Report Issue
+                </button>
+              )}
             </div>
 
             {/* Development error details */}

@@ -35,12 +35,12 @@ const Hero: React.FC = () => {
   };
 
   const floatingIcons = [
-    { icon: <Sparkles className="text-purple-400" />, delay: 0 },
-    { icon: <TrendingUp className="text-indigo-400" />, delay: 0.5 },
-    { icon: <Mail className="text-blue-400" />, delay: 1 },
+    { icon: <Sparkles className="text-amber-400" />, delay: 0 },
+    { icon: <TrendingUp className="text-blue-400" />, delay: 0.5 },
+    { icon: <Mail className="text-sky-400" />, delay: 1 },
     { icon: <BarChart2 className="text-cyan-400" />, delay: 1.5 },
     { icon: <Users className="text-teal-400" />, delay: 2 },
-    { icon: <Clock className="text-green-400" />, delay: 2.5 },
+    { icon: <Clock className="text-emerald-400" />, delay: 2.5 },
   ];
 
   return (
@@ -57,7 +57,7 @@ const Hero: React.FC = () => {
         <FloatingShape
           shape="blob"
           size="120px"
-          color="rgba(125, 100, 255, 0.1)"
+          color="rgba(59, 130, 246, 0.1)"
           x={15} y={20} delay={1.2}
           duration={7}
           className="top-1/4 right-1/4"
@@ -571,7 +571,7 @@ const Hero: React.FC = () => {
                 Multi-Channel Personalization
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-sky-50 text-sky-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },

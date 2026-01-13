@@ -3,7 +3,7 @@
  * Advanced image editing using OpenAI's latest models with vision capabilities
  */
 
-import { getOpenAIApiKey } from './apiUtils';
+import { getOpenAIApiKey, hasApiKey } from './apiUtils';
 
 export interface GPT5EditOptions {
   mode: 'enhance' | 'adjust' | 'transform' | 'effects' | 'custom';
@@ -28,13 +28,20 @@ export interface GPT5EditResult {
  * GPT-4o Image Editor Service Class
  */
 export class GPT5ImageEditorService {
-  private apiKey: string;
+  private apiKey: string | null;
   private baseUrl = 'https://api.openai.com/v1';
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || getOpenAIApiKey();
+    this.apiKey = apiKey || getOpenAIApiKey() || null;
+  }
+
+  isAvailable(): boolean {
+    return !!this.apiKey;
+  }
+
+  private ensureApiKey(): void {
     if (!this.apiKey) {
-      throw new Error('OpenAI API key is required for GPT-5 image editing');
+      throw new Error('OpenAI API key is required for GPT-5 image editing. Please configure VITE_OPENAI_API_KEY in your environment.');
     }
   }
 
@@ -47,8 +54,9 @@ export class GPT5ImageEditorService {
     imageUrl: string,
     options: GPT5EditOptions
   ): Promise<GPT5EditResult> {
+    this.ensureApiKey();
     try {
-      console.log('🎨 Editing image with GPT-4o + DALL-E 3:', { imageUrl, options });
+      console.log('Editing image with GPT-4o + DALL-E 3:', { imageUrl, options });
 
       // Step 1: Analyze the image with GPT-4o Vision
       const analysisPrompt = this.createAnalysisPrompt(options);
@@ -240,8 +248,9 @@ export class GPT5ImageEditorService {
     imageUrl: string,
     count: number = 3
   ): Promise<string[]> {
+    this.ensureApiKey();
     try {
-      console.log('🔄 Creating variations with GPT-4o + DALL-E 3');
+      console.log('Creating variations with GPT-4o + DALL-E 3');
 
       // Analyze the original image
       const analysisPrompt = 'Describe this image in detail, including composition, colors, style, and mood. Then create 3 different DALL-E 3 prompts for variations that maintain the core subject but explore different styles, angles, or color schemes.';
@@ -265,20 +274,35 @@ export class GPT5ImageEditorService {
   }
 }
 
-// Export singleton instance
-export const gpt5ImageEditor = new GPT5ImageEditorService();
+let _gpt5ImageEditorInstance: GPT5ImageEditorService | null = null;
 
-// Export convenience functions
+function getGPT5ImageEditor(): GPT5ImageEditorService {
+  if (!_gpt5ImageEditorInstance) {
+    _gpt5ImageEditorInstance = new GPT5ImageEditorService();
+  }
+  return _gpt5ImageEditorInstance;
+}
+
+export const gpt5ImageEditor = {
+  isAvailable: () => hasApiKey('openai'),
+  editImage: (imageUrl: string, options: GPT5EditOptions) =>
+    getGPT5ImageEditor().editImage(imageUrl, options),
+  createVariations: (imageUrl: string, count?: number) =>
+    getGPT5ImageEditor().createVariations(imageUrl, count),
+};
+
 export const editImageWithGPT5 = (
   imageUrl: string,
   options: GPT5EditOptions
 ): Promise<GPT5EditResult> => {
-  return gpt5ImageEditor.editImage(imageUrl, options);
+  return getGPT5ImageEditor().editImage(imageUrl, options);
 };
 
 export const createVariationsWithGPT5 = (
   imageUrl: string,
   count?: number
 ): Promise<string[]> => {
-  return gpt5ImageEditor.createVariations(imageUrl, count);
+  return getGPT5ImageEditor().createVariations(imageUrl, count);
 };
+
+export const isGPT5EditorAvailable = (): boolean => hasApiKey('openai');

@@ -187,7 +187,7 @@
   height: 8px;
   width: 8px;
   margin: 0 1px;
-  background-color: #3b82f6;
+  background-color: #9333ea;
   border-radius: 50%;
   display: block;
   opacity: 0.4;
@@ -345,11 +345,11 @@
 
 /* Gradient text */
 .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-secondary-500 inline-block;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-violet-500 inline-block;
 }
 
 .gradient-text-accent {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-accent-500 inline-block;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-fuchsia-500 inline-block;
 }
 
 /* Fancy dividers */
@@ -374,7 +374,7 @@
 
 .animated-underline::after {
   content: '';
-  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary-400 to-secondary-500 transition-all duration-300 ease-out;
+  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-500 to-violet-500 transition-all duration-300 ease-out;
 }
 
 .animated-underline:hover::after {

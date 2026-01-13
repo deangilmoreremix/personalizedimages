@@ -10,20 +10,20 @@ const Footer: React.FC = () => {
       }}></div>
       
       {/* Light effect */}
-      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-96 h-40 bg-primary-600/30 rounded-full filter blur-[100px] opacity-20"></div>
+      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-96 h-40 bg-purple-600/30 rounded-full filter blur-[100px] opacity-20"></div>
       
       <div className="container-custom relative z-10">
         <div className="grid md:grid-cols-4 gap-8 mb-12">
           <div>
             <div className="flex items-center mb-6">
-              <div className="bg-gradient-to-r from-primary-500 to-secondary-500 p-2 rounded-lg">
+              <div className="bg-gradient-to-r from-purple-500 to-violet-500 p-2 rounded-lg">
                 <Image className="h-8 w-8 text-white" />
               </div>
               <span className="ml-3 text-2xl font-bold gradient-text">
                 VideoRemix
               </span>
             </div>
-            <p className="text-gray-400 mb-6 border-l-2 border-primary-500 pl-4">
+            <p className="text-gray-400 mb-6 border-l-2 border-purple-500 pl-4">
               Personalize your marketing content to boost engagement and conversions with revolutionary AI-powered tools.
             </p>
             <div className="flex space-x-4">
@@ -42,7 +42,7 @@ const Footer: React.FC = () => {
 
           <div>
             <h4 className="text-lg font-bold mb-5 flex items-center">
-              <span className="w-8 h-0.5 bg-primary-500 rounded-full inline-block mr-2"></span>
+              <span className="w-8 h-0.5 bg-purple-500 rounded-full inline-block mr-2"></span>
               Products
             </h4>
             <ul className="space-y-3">
@@ -54,15 +54,15 @@ const Footer: React.FC = () => {
                 {name: "Smart Campaigns", highlight: false}
               ].map((item, index) => (
                 <li key={index}>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className={`text-gray-400 hover:text-white transition-colors flex items-center ${
-                      item.highlight ? "text-primary-400" : ""
+                      item.highlight ? "text-purple-400" : ""
                     }`}
                   >
-                    {item.highlight && <CheckCircle className="w-4 h-4 mr-2 text-primary-500" />}
+                    {item.highlight && <CheckCircle className="w-4 h-4 mr-2 text-purple-500" />}
                     {item.name}
-                    {item.highlight && <span className="ml-2 text-xs px-1.5 py-0.5 bg-primary-500/20 text-primary-300 rounded">New</span>}
+                    {item.highlight && <span className="ml-2 text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">New</span>}
                   </a>
                 </li>
               ))}
@@ -71,14 +71,14 @@ const Footer: React.FC = () => {
 
           <div>
             <h4 className="text-lg font-bold mb-5 flex items-center">
-              <span className="w-8 h-0.5 bg-secondary-500 rounded-full inline-block mr-2"></span>
+              <span className="w-8 h-0.5 bg-violet-500 rounded-full inline-block mr-2"></span>
               Resources
             </h4>
             <ul className="space-y-3">
               {[
-                {name: "Knowledge Base", icon: <Globe className="w-4 h-4 mr-2 text-secondary-400" />},
-                {name: "Tutorials", icon: <MessageSquare className="w-4 h-4 mr-2 text-secondary-400" />},
-                {name: "Blog", icon: <HelpCircle className="w-4 h-4 mr-2 text-secondary-400" />},
+                {name: "Knowledge Base", icon: <Globe className="w-4 h-4 mr-2 text-violet-400" />},
+                {name: "Tutorials", icon: <MessageSquare className="w-4 h-4 mr-2 text-violet-400" />},
+                {name: "Blog", icon: <HelpCircle className="w-4 h-4 mr-2 text-violet-400" />},
                 {name: "Webinars", icon: null},
                 {name: "Case Studies", icon: null}
               ].map((item, index) => (
@@ -94,25 +94,25 @@ const Footer: React.FC = () => {
 
           <div>
             <h4 className="text-lg font-bold mb-5 flex items-center">
-              <span className="w-8 h-0.5 bg-accent-500 rounded-full inline-block mr-2"></span>
+              <span className="w-8 h-0.5 bg-fuchsia-500 rounded-full inline-block mr-2"></span>
               Contact Us
             </h4>
             <p className="text-gray-400 mb-4">Have questions? We're here to help!</p>
             <a href="mailto:support@videoremix.io" className="flex items-center mb-4 text-gray-400 hover:text-white transition-colors bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50">
-              <Mail className="h-5 w-5 mr-2 text-accent-400" />
+              <Mail className="h-5 w-5 mr-2 text-fuchsia-400" />
               support@videoremix.io
             </a>
-            
-            <div className="bg-gradient-to-r from-primary-500/20 to-secondary-500/20 rounded-lg p-4 backdrop-blur-sm">
+
+            <div className="bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-lg p-4 backdrop-blur-sm">
               <h5 className="font-medium mb-2 text-white">Newsletter</h5>
               <p className="text-sm text-gray-300 mb-3">Get product updates and news</p>
               <form className="flex space-x-2">
-                <input 
-                  type="email" 
-                  placeholder="Your email" 
-                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 flex-grow"
+                <input
+                  type="email"
+                  placeholder="Your email"
+                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 flex-grow"
                 />
-                <button type="submit" className="bg-primary-600 hover:bg-primary-700 p-2 rounded-lg">
+                <button type="submit" className="bg-purple-600 hover:bg-purple-700 p-2 rounded-lg">
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </form>

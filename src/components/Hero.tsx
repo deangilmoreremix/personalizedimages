@@ -35,21 +35,21 @@ const Hero: React.FC = () => {
   };
 
   const floatingIcons = [
-    { icon: <Sparkles className="text-amber-400" />, delay: 0 },
-    { icon: <TrendingUp className="text-blue-400" />, delay: 0.5 },
-    { icon: <Mail className="text-sky-400" />, delay: 1 },
-    { icon: <BarChart2 className="text-cyan-400" />, delay: 1.5 },
-    { icon: <Users className="text-teal-400" />, delay: 2 },
-    { icon: <Clock className="text-emerald-400" />, delay: 2.5 },
+    { icon: <Sparkles className="text-purple-400" />, delay: 0 },
+    { icon: <TrendingUp className="text-violet-400" />, delay: 0.5 },
+    { icon: <Mail className="text-purple-500" />, delay: 1 },
+    { icon: <BarChart2 className="text-violet-500" />, delay: 1.5 },
+    { icon: <Users className="text-purple-400" />, delay: 2 },
+    { icon: <Clock className="text-violet-400" />, delay: 2.5 },
   ];
 
   return (
-    <section className="pt-28 pb-20 md:pt-32 md:pb-24 bg-gradient-to-br from-primary-50/50 to-secondary-50/50 overflow-hidden relative">
+    <section className="pt-28 pb-20 md:pt-32 md:pb-24 bg-white overflow-hidden relative">
       {/* Animated background elements */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-primary-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-float"></div>
-        <div className="absolute bottom-20 right-10 w-72 h-72 bg-secondary-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-float animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-accent-200/10 rounded-full mix-blend-multiply filter blur-3xl animate-float animation-delay-3000"></div>
+        <div className="absolute top-20 left-10 w-64 h-64 bg-purple-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-float"></div>
+        <div className="absolute bottom-20 right-10 w-72 h-72 bg-violet-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-float animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-fuchsia-200/10 rounded-full mix-blend-multiply filter blur-3xl animate-float animation-delay-3000"></div>
 
         <AnimatedIcons iconType="mixed" density="high" />
 
@@ -57,7 +57,7 @@ const Hero: React.FC = () => {
         <FloatingShape
           shape="blob"
           size="120px"
-          color="rgba(59, 130, 246, 0.1)"
+          color="rgba(147, 51, 234, 0.1)"
           x={15} y={20} delay={1.2}
           duration={7}
           className="top-1/4 right-1/4"
@@ -66,7 +66,7 @@ const Hero: React.FC = () => {
         <FloatingShape
           shape="circle"
           size="80px"
-          color="rgba(255, 122, 0, 0.1)"
+          color="rgba(139, 92, 246, 0.1)"
           x={20} y={15} delay={0.5}
           duration={8}
           className="bottom-1/3 left-1/5"
@@ -75,7 +75,7 @@ const Hero: React.FC = () => {
         <FloatingShape
           shape="triangle"
           size="60px"
-          color="rgba(0, 200, 255, 0.1)"
+          color="rgba(192, 38, 211, 0.1)"
           x={15} y={25} delay={2}
           duration={9}
           className="top-1/3 right-1/5"
@@ -94,10 +94,10 @@ const Hero: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="absolute -right-16 -top-12 text-accent-500 rotate-12 hidden md:block"
+              className="absolute -right-16 -top-12 text-purple-500 rotate-12 hidden md:block"
             >
               <MousePointer className="w-8 h-8" />
-              <div className="absolute -top-12 -right-8 w-24 border-t-2 border-dashed border-accent-500 rotate-12"></div>
+              <div className="absolute -top-12 -right-8 w-24 border-t-2 border-dashed border-purple-500 rotate-12"></div>
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -109,7 +109,7 @@ const Hero: React.FC = () => {
             </motion.div>
 
             <motion.span
-              className="inline-block mb-3 px-4 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-medium"
+              className="inline-block mb-3 px-4 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
@@ -122,7 +122,7 @@ const Hero: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.5 }}
-                className="text-primary-600 inline-block mb-2"
+                className="text-purple-600 inline-block mb-2"
               >
                 Create 1:1 Personalized Experiences
               </motion.span>{" "}
@@ -145,7 +145,7 @@ const Hero: React.FC = () => {
                   initial={{ width: 0 }}
                   animate={{ width: '100%' }}
                   transition={{ delay: 1.4, duration: 0.8 }}
-                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"
+                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-purple-500 to-violet-500 rounded-full"
                 ></motion.div>
               </motion.span>
             </h1>
@@ -178,7 +178,7 @@ const Hero: React.FC = () => {
                     <input
                       type="text"
                       placeholder="Your First Name"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
@@ -187,7 +187,7 @@ const Hero: React.FC = () => {
                     <input
                       type="email"
                       placeholder="Your Email"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -233,7 +233,7 @@ const Hero: React.FC = () => {
                     Here's your personalized content. Imagine sending this level of personalization to all your customers!
                   </motion.p>
                   <motion.div
-                    className="relative overflow-hidden bg-gradient-to-r from-primary-500 to-secondary-600 p-6 rounded-xl text-white text-center mb-6"
+                    className="relative overflow-hidden bg-gradient-to-r from-purple-500 to-violet-600 p-6 rounded-xl text-white text-center mb-6"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.6, duration: 0.5 }}
@@ -299,7 +299,7 @@ const Hero: React.FC = () => {
                   className="flex items-center space-x-1.5 text-sm text-gray-600 bg-white/50 backdrop-blur-sm px-3 py-1.5 rounded-full"
                 >
                   <motion.span
-                    className="text-primary-600"
+                    className="text-purple-600"
                     animate={{ rotate: [0, 10, -10, 0] }}
                     transition={{
                       repeat: Infinity,
@@ -329,7 +329,7 @@ const Hero: React.FC = () => {
               transition={{ duration: 1, delay: 0.6 }}
             >
               <motion.div
-                className="absolute -top-10 -left-10 w-40 h-40 bg-primary-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+                className="absolute -top-10 -left-10 w-40 h-40 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"
                 animate={{
                   y: [0, -20, 0],
                   x: [0, 20, 0]
@@ -343,7 +343,7 @@ const Hero: React.FC = () => {
               />
 
               <motion.div
-                className="absolute -bottom-10 -right-10 w-40 h-40 bg-secondary-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"
+                className="absolute -bottom-10 -right-10 w-40 h-40 bg-violet-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"
                 animate={{
                   y: [0, 20, 0],
                   x: [0, -20, 0]
@@ -358,7 +358,7 @@ const Hero: React.FC = () => {
               />
 
               <motion.div
-                className="absolute top-1/3 -right-10 w-24 h-24 bg-accent-200 rounded-full mix-blend-multiply filter blur-lg opacity-70"
+                className="absolute top-1/3 -right-10 w-24 h-24 bg-fuchsia-200 rounded-full mix-blend-multiply filter blur-lg opacity-70"
                 animate={{
                   y: [0, 30, 0],
                   x: [0, -10, 0],
@@ -392,7 +392,7 @@ const Hero: React.FC = () => {
                   duration: 1
                 }}
               >
-                <Upload className="text-primary-500 w-4 h-4 mr-2" />
+                <Upload className="text-purple-500 w-4 h-4 mr-2" />
               </motion.div>
               <span className="text-xs">Personalized Reference Images</span>
             </motion.div>
@@ -415,7 +415,7 @@ const Hero: React.FC = () => {
                   delay: 0.5
                 }}
               >
-                <Zap className="text-secondary-500 w-4 h-4 mr-2" />
+                <Zap className="text-violet-500 w-4 h-4 mr-2" />
               </motion.div>
               <span className="text-xs">Personalized AI Generation</span>
             </motion.div>
@@ -438,7 +438,7 @@ const Hero: React.FC = () => {
                   delay: 1
                 }}
               >
-                <Image className="text-accent-500 w-4 h-4 mr-2" />
+                <Image className="text-fuchsia-500 w-4 h-4 mr-2" />
               </motion.div>
               <span className="text-xs">Dynamic Personalization Tokens</span>
             </motion.div>
@@ -466,7 +466,7 @@ const Hero: React.FC = () => {
               className="relative z-10 responsive-image"
             >
               <motion.div
-                className="absolute -top-6 -left-6 text-accent-500 rotate-12"
+                className="absolute -top-6 -left-6 text-purple-500 rotate-12"
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1.4, duration: 0.5, type: "spring" }}
@@ -490,7 +490,7 @@ const Hero: React.FC = () => {
               transition={{ delay: 1.5, duration: 0.6 }}
               className="absolute -right-12 top-1/4 glass-panel py-2 px-3 rounded-lg shadow-lg flex items-center z-20 text-sm"
             >
-              <TrendingUp className="text-success-500 w-4 h-4 mr-2" />
+              <TrendingUp className="text-green-500 w-4 h-4 mr-2" />
               <span>+985% CTR</span>
             </motion.div>
 
@@ -500,7 +500,7 @@ const Hero: React.FC = () => {
               transition={{ delay: 1.7, duration: 0.6 }}
               className="absolute -left-8 bottom-1/3 glass-panel py-2 px-3 rounded-lg shadow-lg flex items-center z-20 text-sm"
             >
-              <Users className="text-primary-500 w-4 h-4 mr-2" />
+              <Users className="text-purple-500 w-4 h-4 mr-2" />
               <span>Personalized for Each User</span>
             </motion.div>
           </motion.div>
@@ -519,7 +519,7 @@ const Hero: React.FC = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -532,7 +532,7 @@ const Hero: React.FC = () => {
                 1:1 Personalization
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-secondary-50 text-secondary-700 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-violet-50 text-violet-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -545,7 +545,7 @@ const Hero: React.FC = () => {
                 Dynamic Content Tokens
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-accent-50 text-accent-700 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-fuchsia-50 text-fuchsia-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -558,7 +558,7 @@ const Hero: React.FC = () => {
                 985% Higher Engagement
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },
@@ -571,7 +571,7 @@ const Hero: React.FC = () => {
                 Multi-Channel Personalization
               </motion.span>
               <motion.span
-                className="glow-badge px-3 py-1.5 bg-sky-50 text-sky-700 rounded-full text-sm"
+                className="glow-badge px-3 py-1.5 bg-violet-50 text-violet-700 rounded-full text-sm"
                 whileHover={{ y: -3 }}
                 variants={{
                   initial: { opacity: 0, y: 10 },

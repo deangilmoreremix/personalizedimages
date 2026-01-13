@@ -196,17 +196,7 @@ const ModernHeader: React.FC = () => {
                 </Tooltip>
                 <UserMenu />
               </>
-            ) : (
-              <motion.button
-                onClick={() => setAuthModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </motion.button>
-            )}
+            ) : null}
           </div>
 
           {/* Mobile Menu Button */}
@@ -312,14 +302,6 @@ const ModernHeader: React.FC = () => {
                   Gallery
                 </Link>
 
-                {!user && (
-                  <button
-                    onClick={() => setAuthModalOpen(true)}
-                    className="block w-full text-left py-3 px-4 rounded-lg bg-blue-600 text-white font-medium"
-                  >
-                    Sign In
-                  </button>
-                )}
               </div>
             </motion.div>
           )}

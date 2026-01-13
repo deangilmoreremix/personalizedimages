@@ -50,6 +50,7 @@ import UniversalPersonalizationPanel from './components/UniversalPersonalization
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import AdminDashboard from './pages/AdminDashboard';
 import { AssetProvider } from './contexts/AssetContext';
+import { StockImageProvider } from './contexts/StockImageContext';
 
 // Component for conditionally rendering footer and other components
 const AppLayout = () => {
@@ -157,9 +158,11 @@ function FAQPage() {
 function App() {
   return (
     <ThemeProvider>
-      <AssetProvider>
-        <AppLayout />
-      </AssetProvider>
+      <StockImageProvider>
+        <AssetProvider>
+          <AppLayout />
+        </AssetProvider>
+      </StockImageProvider>
     </ThemeProvider>
   );
 }

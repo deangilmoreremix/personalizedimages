@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Sparkles, RefreshCw, Download, Heart, Folder, Tag, Image as ImageIcon, Search } from 'lucide-react';
+import { Upload, Sparkles, RefreshCw, Download, Heart, Folder, Tag, Image as ImageIcon, Search, ImagePlus } from 'lucide-react';
 import FullScreenLayout from '../layout/FullScreenLayout';
 import ModernTopHeader from '../layout/ModernTopHeader';
 import LeftPanel, { LeftPanelSection, LeftPanelFooter } from '../layout/LeftPanel';
@@ -9,8 +9,10 @@ import GuideContent from '../layout/GuideContent';
 import APIContent from '../layout/APIContent';
 import DroppableTextArea from '../DroppableTextArea';
 import AssetPicker from '../AssetPicker';
+import { StockImagePicker } from '../shared/StockImagePicker';
 import { TokenDragItem } from '../../types/DragTypes';
 import { useAssetIntegration } from '../../hooks/useAssetIntegration';
+import { StockResource } from '../../services/stockImageService';
 import {
   generateImageWithDalle,
   generateImageWithGemini,
@@ -48,6 +50,16 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
     preferredTypes: ['image'],
     autoTrackUsage: true
   });
+
+  // Stock image picker
+  const [isStockPickerOpen, setIsStockPickerOpen] = useState(false);
+
+  const handleStockImageSelect = (resource: StockResource) => {
+    if (resource.thumbnailUrl) {
+      setReferenceImage(resource.thumbnailUrl);
+    }
+    setIsStockPickerOpen(false);
+  };
 
   const exampleImages = [
     'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=100',
@@ -185,13 +197,22 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
         <div className="mt-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-medium text-gray-700">Reference Options</p>
-            <button
-              onClick={assetIntegration.openAssetPicker}
-              className="text-xs text-violet-600 hover:text-violet-700 flex items-center gap-1"
-            >
-              <Search className="w-3 h-3" />
-              Browse Asset Library
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsStockPickerOpen(true)}
+                className="text-xs text-violet-600 hover:text-violet-700 flex items-center gap-1"
+              >
+                <ImagePlus className="w-3 h-3" />
+                Stock Images
+              </button>
+              <button
+                onClick={assetIntegration.openAssetPicker}
+                className="text-xs text-violet-600 hover:text-violet-700 flex items-center gap-1"
+              >
+                <Search className="w-3 h-3" />
+                Asset Library
+              </button>
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap">
             {exampleImages.map((img, idx) => (
@@ -515,13 +536,22 @@ print(data['imageUrl'])`
         isOpen={assetIntegration.isAssetPickerOpen}
         onClose={assetIntegration.closeAssetPicker}
         onSelect={async (asset) => {
-          // Integrate the selected asset
           const integratedAsset = await assetIntegration.integrateAsset(asset, 'reference-image');
           setReferenceImage(integratedAsset.url);
           assetIntegration.closeAssetPicker();
         }}
         title="Choose Reference Asset"
         assetType="image"
+      />
+
+      {/* Stock Image Picker Modal */}
+      <StockImagePicker
+        isOpen={isStockPickerOpen}
+        onClose={() => setIsStockPickerOpen(false)}
+        onSelect={handleStockImageSelect}
+        title="Browse Stock Images"
+        moduleName="ai-image-generator"
+        allowedTypes={['photo', 'vector']}
       />
     </>
   );

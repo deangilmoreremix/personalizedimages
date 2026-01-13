@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchFreepikResources } from '../utils/api';
+import stockImageService, { StockResource } from '../services/stockImageService';
 
 // Asset Types
 export interface Asset {
@@ -105,33 +105,33 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
     loadUserLibrary();
   }, []);
 
+  const mapStockResourceToAsset = (resource: StockResource): Asset => ({
+    id: `stock-${resource.id}`,
+    source: 'stock',
+    externalId: resource.id.toString(),
+    type: resource.type === 'photo' ? 'image' : (resource.type as Asset['type']) || 'image',
+    title: resource.title,
+    thumbnailUrl: resource.thumbnailUrl,
+    downloadUrl: resource.url,
+    width: resource.width,
+    height: resource.height,
+    orientation: resource.orientation as Asset['orientation'],
+    author: resource.author,
+    downloads: resource.downloads,
+    likes: resource.likes,
+    license: resource.license,
+    createdAt: new Date(resource.publishedAt || Date.now()),
+    metadata: {
+      freepikId: resource.id,
+      filename: resource.filename
+    }
+  });
+
   const loadInitialAssets = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Load Freepik assets as initial set
-      const freepikAssets = await fetchFreepikResources({ per_page: 50 });
-      const formattedAssets: Asset[] = freepikAssets.resources.map(resource => ({
-        id: `stock-${resource.id}`,
-        source: 'stock',
-        externalId: resource.id.toString(),
-        type: resource.type === 'photo' ? 'image' : (resource.type as Asset['type']) || 'image',
-        title: resource.title,
-        thumbnailUrl: resource.thumbnailUrl,
-        downloadUrl: resource.url,
-        width: resource.width,
-        height: resource.height,
-        orientation: resource.orientation as Asset['orientation'],
-        author: resource.author,
-        downloads: resource.downloads,
-        likes: resource.likes,
-        license: resource.license,
-        createdAt: new Date(resource.publishedAt || Date.now()),
-        metadata: {
-          freepikId: resource.id,
-          filename: resource.filename
-        }
-      }));
-
+      const result = await stockImageService.search({ per_page: 50 });
+      const formattedAssets: Asset[] = result.resources.map(mapStockResourceToAsset);
       setAvailableAssets(formattedAssets);
     } catch (error) {
       console.error('Failed to load initial assets:', error);
@@ -162,40 +162,18 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
     try {
       const { query: searchQuery, type, orientation, source, limit = 20, offset = 0 } = query;
 
-      // Search stock assets
       if (source === 'stock' || source === 'all' || !source) {
-        const freepikQuery: any = { per_page: limit };
-        if (searchQuery) freepikQuery.keywords = searchQuery;
-        if (type && type !== 'all') freepikQuery.content_type = type === 'image' ? 'photo' : type;
-        if (orientation) freepikQuery.orientation = orientation;
+        const result = await stockImageService.search({
+          keywords: searchQuery,
+          content_type: type && type !== 'all' ? (type === 'image' ? 'photo' : type as 'photo' | 'vector' | 'psd' | 'icon' | 'video') : undefined,
+          orientation: orientation,
+          per_page: limit,
+          page: Math.floor(offset / limit) + 1
+        });
 
-        const freepikResults = await fetchFreepikResources(freepikQuery);
-        const formattedResults: Asset[] = freepikResults.resources.map(resource => ({
-          id: `stock-${resource.id}`,
-          source: 'stock',
-          externalId: resource.id.toString(),
-          type: resource.type === 'photo' ? 'image' : (resource.type as Asset['type']) || 'image',
-          title: resource.title,
-          thumbnailUrl: resource.thumbnailUrl,
-          downloadUrl: resource.url,
-          width: resource.width,
-          height: resource.height,
-          orientation: resource.orientation as Asset['orientation'],
-          author: resource.author,
-          downloads: resource.downloads,
-          likes: resource.likes,
-          license: resource.license,
-          createdAt: new Date(resource.publishedAt || Date.now()),
-          metadata: {
-            freepikId: resource.id,
-            filename: resource.filename
-          }
-        }));
-
-        return formattedResults;
+        return result.resources.map(mapStockResourceToAsset);
       }
 
-      // Search user library
       if (source === 'user_upload') {
         return userLibrary
           .filter(asset =>

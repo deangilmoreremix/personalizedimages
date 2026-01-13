@@ -11,42 +11,42 @@ const benefits = [
     icon: <Mail className="h-8 w-8 text-white" />,
     title: 'Personalized Marketing Emails',
     description: 'Add personalized images & videos to each marketing email for 9X higher engagement',
-    bgColor: 'bg-primary-600',
+    bgColor: 'bg-purple-600',
   },
   {
     id: 2,
     icon: <Facebook className="h-8 w-8 text-white" />,
     title: 'Personalized Facebook Content',
     description: 'Send personalized images in Facebook messages, Groups, and Pages for each recipient.',
-    bgColor: 'bg-secondary-600',
+    bgColor: 'bg-violet-600',
   },
   {
     id: 3,
     icon: <Linkedin className="h-8 w-8 text-white" />,
     title: 'Personalized LinkedIn Outreach',
     description: 'Send personalized images in LinkedIn messages to stand out from generic outreach',
-    bgColor: 'bg-accent-500',
+    bgColor: 'bg-fuchsia-600',
   },
   {
     id: 4,
     icon: <TrendingUp className="h-8 w-8 text-white" />,
     title: 'Drive Personalized Conversion',
     description: 'Personalized images have been shown to increase click-through rates by up to 985%.',
-    bgColor: 'bg-primary-700',
+    bgColor: 'bg-purple-700',
   },
   {
     id: 5,
     icon: <UserPlus className="h-8 w-8 text-white" />,
     title: 'Boost Personalized Opt-Ins',
     description: 'Personalized campaigns have shown up to a 10-fold ROI improvement for big brands.',
-    bgColor: 'bg-secondary-700',
+    bgColor: 'bg-violet-700',
   },
   {
     id: 6,
     icon: <MousePointer className="h-8 w-8 text-white" />,
     title: 'Personalized CTAs That Convert',
     description: 'Add clickable personalized call-to-actions inside your images, engaging your customers more.',
-    bgColor: 'bg-accent-600',
+    bgColor: 'bg-fuchsia-700',
   },
 ];
 
@@ -55,25 +55,25 @@ const newFeatures = [
     icon: <Upload className="h-6 w-6 text-white" />,
     title: 'Personalized Reference Upload',
     description: 'Use customer photos as reference for AI-generated personalized content',
-    bgColor: 'bg-green-600',
+    bgColor: 'bg-purple-500',
   },
   {
     icon: <Image className="h-6 w-6 text-white" />,
     title: 'Personalized Ghibli Style',
     description: 'Create personalized whimsical Ghibli-inspired scenes for each customer',
-    bgColor: 'bg-blue-600',
+    bgColor: 'bg-violet-500',
   },
   {
     icon: <Wand2 className="h-6 w-6 text-white" />,
     title: 'Personalized Meme Generator',
     description: 'AI-powered personalized meme creation with customer data',
-    bgColor: 'bg-purple-600',
+    bgColor: 'bg-fuchsia-500',
   },
   {
     icon: <Sparkles className="h-6 w-6 text-white" />,
     title: 'Extended Personalization Tokens',
     description: 'More powerful token system for rich multi-field personalization',
-    bgColor: 'bg-pink-600',
+    bgColor: 'bg-purple-600',
   },
 ];
 
@@ -110,30 +110,30 @@ const Benefits: React.FC = () => {
         {/* Interactive background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <AnimatedIcons density="low" />
-          
+
           {/* Additional floating shapes */}
-          <FloatingShape 
-            shape="circle" 
-            size="100px" 
-            color="rgba(99, 102, 241, 0.05)" 
-            x={15} y={15} 
-            className="top-20 right-20" 
+          <FloatingShape
+            shape="circle"
+            size="100px"
+            color="rgba(147, 51, 234, 0.05)"
+            x={15} y={15}
+            className="top-20 right-20"
           />
-          
-          <FloatingShape 
-            shape="square" 
-            size="70px" 
-            color="rgba(79, 70, 229, 0.05)" 
-            x={20} y={25} 
-            className="bottom-40 left-32" 
+
+          <FloatingShape
+            shape="square"
+            size="70px"
+            color="rgba(139, 92, 246, 0.05)"
+            x={20} y={25}
+            className="bottom-40 left-32"
           />
-          
-          <FloatingShape 
-            shape="blob" 
-            size="120px" 
-            color="rgba(249, 115, 22, 0.05)" 
-            x={25} y={15} 
-            className="top-40 left-1/4" 
+
+          <FloatingShape
+            shape="blob"
+            size="120px"
+            color="rgba(192, 38, 211, 0.05)"
+            x={25} y={15}
+            className="top-40 left-1/4"
           />
         </div>
 
@@ -143,23 +143,23 @@ const Benefits: React.FC = () => {
           transition={{ duration: 0.6 }}
           className="max-w-3xl mx-auto text-center mb-16"
         >
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.5 }}
             className="mb-6 inline-block"
           >
-            <span className="px-4 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-medium">
+            <span className="px-4 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
               Personalized Customer Engagement
             </span>
           </motion.div>
-          
+
           <h2 className="mb-4">How can you keep each customer's attention?</h2>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: '100px' }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="h-1 bg-primary-500 mx-auto mb-6 rounded-full"
+            className="h-1 bg-purple-500 mx-auto mb-6 rounded-full"
           ></motion.div>
           
           <p className="text-xl mb-8 text-gray-600">
@@ -214,13 +214,13 @@ const Benefits: React.FC = () => {
               </motion.div>
             ))}
           </div>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.8 }}
             className="text-center mt-8"
           >
-            <p className="text-xl font-semibold text-primary-600">
+            <p className="text-xl font-semibold text-purple-600">
               VideoRemix is an easy-to-use platform for image personalization.
             </p>
             <motion.a 
@@ -310,13 +310,13 @@ const Benefits: React.FC = () => {
         >
           <div className="text-center mb-10">
             <motion.span
-              className="inline-block mb-3 px-4 py-1.5 bg-accent-100 text-accent-700 rounded-full text-sm font-medium"
+              className="inline-block mb-3 px-4 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
               <motion.span
-                animate={{ 
+                animate={{
                   scale: [1, 1.1, 1],
                   opacity: [0.8, 1, 0.8]
                 }}

@@ -32,7 +32,7 @@ const CTASection: React.FC<CTASectionProps> = ({
   return (
     <section className="py-20 relative overflow-hidden">
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-secondary-700"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-violet-700"></div>
       
       {/* Decorative elements */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -120,9 +120,9 @@ const CTASection: React.FC<CTASectionProps> = ({
                   <div className="text-3xl font-bold text-white mb-1">$49<span className="text-xl">/mo</span></div>
                   <div className="text-white/70 mb-4">Save 20% with annual billing</div>
                   
-                  <motion.a 
-                    href={buttonLink} 
-                    className="block py-3 px-6 rounded-xl bg-white text-primary-600 font-bold hover:shadow-lg transition-all"
+                  <motion.a
+                    href={buttonLink}
+                    className="block py-3 px-6 rounded-xl bg-white text-purple-600 font-bold hover:shadow-lg transition-all"
                     whileHover={{ y: -3, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)" }}
                   >
                     {buttonText}
@@ -145,11 +145,11 @@ const CTASection: React.FC<CTASectionProps> = ({
                 animate={inView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
                 transition={{ duration: 0.5, delay: 1, type: "spring" }}
               >
-                <div className="bg-accent-500 text-white rounded-lg px-3 py-2 flex items-center text-sm font-medium transform rotate-6 shadow-lg">
+                <div className="bg-fuchsia-500 text-white rounded-lg px-3 py-2 flex items-center text-sm font-medium transform rotate-6 shadow-lg">
                   <Gift className="w-4 h-4 mr-2" />
                   <span>14-day free personalization trial</span>
                 </div>
-                <div className="w-2 h-12 bg-accent-500 ml-6 rounded-b-full"></div>
+                <div className="w-2 h-12 bg-fuchsia-500 ml-6 rounded-b-full"></div>
               </motion.div>
             </div>
           </motion.div>

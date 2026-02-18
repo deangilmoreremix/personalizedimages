@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import AppTest from './App.test.tsx';
 import './index.css';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -33,19 +34,26 @@ setupNetworkListeners(
   () => console.log('Network: Gone offline')
 );
 
+// Use TEST mode to verify rendering works
+const TEST_MODE = false;
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <AdminProvider>
-        <BrowserRouter>
-          <AiAssistantProvider>
-            <DndProvider backend={backend}>
-              <App />
-              <DragLayer />
-            </DndProvider>
-          </AiAssistantProvider>
-        </BrowserRouter>
-      </AdminProvider>
-    </AuthProvider>
+    {TEST_MODE ? (
+      <AppTest />
+    ) : (
+      <AuthProvider>
+        <AdminProvider>
+          <BrowserRouter>
+            <AiAssistantProvider>
+              <DndProvider backend={backend}>
+                <App />
+                <DragLayer />
+              </DndProvider>
+            </AiAssistantProvider>
+          </BrowserRouter>
+        </AdminProvider>
+      </AuthProvider>
+    )}
   </StrictMode>
 );

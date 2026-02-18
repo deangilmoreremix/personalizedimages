@@ -112,7 +112,7 @@ const AppLayout = () => {
 // Home page component that combines all sections
 function HomePage() {
   return (
-    <>
+    <div className="min-h-screen bg-white">
       <Hero />
       <FloatingFeatures />
       <HowItWorks />
@@ -125,7 +125,7 @@ function HomePage() {
       <Testimonials />
       <FAQ />
       <CTASection />
-    </>
+    </div>
   );
 }
 
@@ -160,7 +160,9 @@ function App() {
     <ThemeProvider>
       <StockImageProvider>
         <AssetProvider>
-          <AppLayout />
+          <div className="min-h-screen bg-gray-50">
+            <AppLayout />
+          </div>
         </AssetProvider>
       </StockImageProvider>
     </ThemeProvider>

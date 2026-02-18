@@ -49,6 +49,7 @@ import TokenManagement from './components/TokenManagement';
 import UniversalPersonalizationPanel from './components/UniversalPersonalizationPanel';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import AdminDashboard from './pages/AdminDashboard';
+import AIToolsHub from './pages/AIToolsHub';
 import { AssetProvider } from './contexts/AssetContext';
 import { StockImageProvider } from './contexts/StockImageContext';
 
@@ -100,6 +101,7 @@ const AppLayout = () => {
           <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/testimonials" element={<TestimonialsPage />} />
           <Route path="/faq" element={<FAQPage />} />
+          <Route path="/ai-tools" element={<AIToolsHub />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>

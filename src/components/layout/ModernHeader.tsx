@@ -126,11 +126,18 @@ const ModernHeader: React.FC = () => {
                     label="Meme Generator"
                     description="Create personalized memes"
                   />
-                  <DropdownItem 
-                    to="/features/crazy-image" 
+                  <DropdownItem
+                    to="/features/crazy-image"
                     icon={<Sparkles className="w-4 h-4 text-orange-600" />}
                     label="Crazy Image Generator"
                     description="Generate wild creative images"
+                  />
+                  <div className="border-t border-gray-100 my-1" />
+                  <DropdownItem
+                    to="/ai-tools"
+                    icon={<Zap className="w-4 h-4 text-teal-600" />}
+                    label="AI Tools Hub"
+                    description="Upscale, relight, style transfer & more"
                   />
                 </div>
               </div>
@@ -292,6 +299,7 @@ const ModernHeader: React.FC = () => {
                     <Link to="/features/cartoon-style" className="p-2 rounded hover:bg-gray-50">Cartoon Style</Link>
                     <Link to="/features/meme-generator" className="p-2 rounded hover:bg-gray-50">Meme Generator</Link>
                     <Link to="/features/crazy-image" className="p-2 rounded hover:bg-gray-50">Crazy Images</Link>
+                    <Link to="/ai-tools" className="p-2 rounded hover:bg-gray-50 text-teal-600 font-medium col-span-2">AI Tools Hub</Link>
                   </div>
                 </div>
                 

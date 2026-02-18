@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Dices, ChevronDown, ChevronUp, Zap, Layers, Shapes } from 'lucide-react';
+import { Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Dices, ChevronDown, ChevronUp, Zap, Layers, Shapes, Search } from 'lucide-react';
 import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
@@ -17,6 +17,9 @@ import { usePersonalizationPreferences } from '../hooks/usePersonalizationPrefer
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import PersonalizationToggle from './PersonalizationToggle';
+import { StockImageButton } from './shared/StockImageButton';
+import { StockResource } from '../services/stockImageService';
+import { FreepikCompliance } from '../utils/freepikCompliance';
 
 interface ActionFigureGeneratorProps {
   tokens: Record<string, string>;

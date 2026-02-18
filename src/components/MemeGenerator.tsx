@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes, PaintBucket } from 'lucide-react';
+import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes, PaintBucket, Search } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { generateMemeWithReference, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
@@ -20,6 +20,10 @@ import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import PersonalizationToggle from './PersonalizationToggle';
 import memeConfig, { getAllTemplates, getQuickTemplate } from '../data/memeTemplates';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
+import { StockImageButton } from './shared/StockImageButton';
+import { StockResource } from '../services/stockImageService';
+import { FreepikCompliance } from '../utils/freepikCompliance';
+import { FreepikAttribution } from './shared/FreepikAttribution';
 
 interface MemeGeneratorProps {
   tokens: Record<string, string>;
@@ -60,7 +64,10 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   const [useAiEnhancement, setUseAiEnhancement] = useState(false);
   const [aiEnhancementPrompt, setAiEnhancementPrompt] = useState('');
   const [textTransform, setTextTransform] = useState('uppercase');
-  
+
+  // Freepik integration
+  const [freepikBackground, setFreepikBackground] = useState<StockResource | null>(null);
+
   // Use templates from configuration
   const templates = getAllTemplates();
 
@@ -85,6 +92,14 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   const handleTemplateSelect = (templateUrl: string) => {
     setMemeImage(templateUrl);
     setGeneratedMeme(null); // Reset generated meme when template changes
+    setFreepikBackground(null); // Clear Freepik selection when using template
+  };
+
+  const handleFreepikBackgroundSelect = (resource: StockResource) => {
+    setFreepikBackground(resource);
+    setMemeImage(resource.previewUrl || resource.thumbnailUrl || '');
+    setGeneratedMeme(null);
+    FreepikCompliance.trackFreepikUsage(resource.id, 'meme-generator', 'derivative');
   };
 
   const handleGenerateMeme = async () => {
@@ -383,6 +398,28 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                 />
               </motion.div>
             </div>
+
+            {/* Freepik Background Search */}
+            <div className="mt-4 flex items-center gap-2">
+              <StockImageButton
+                onSelect={handleFreepikBackgroundSelect}
+                buttonText="Browse Professional Backgrounds"
+                buttonIcon={Search}
+                defaultSearchTerm="funny meme"
+                buttonClassName="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2"
+              />
+            </div>
+
+            {freepikBackground && (
+              <div className="mt-3">
+                <FreepikAttribution
+                  resources={[freepikBackground]}
+                  isPremiumUser={false}
+                  variant="inline"
+                  showComplianceInfo={false}
+                />
+              </div>
+            )}
           </div>
           
           {/* Controls */}

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Sparkles, Download, Image as ImageIcon, RefreshCw, Shapes } from 'lucide-react';
+import { Sparkles, Download, Image as ImageIcon, RefreshCw, Shapes, Search } from 'lucide-react';
 import { generateImageWithDalle, generateImageWithGemini } from '../utils/api';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
+import { StockImageButton } from './shared/StockImageButton';
+import { StockResource } from '../services/stockImageService';
+import { FreepikCompliance } from '../utils/freepikCompliance';
+import { FreepikAttribution } from './shared/FreepikAttribution';
 
 interface AIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -18,6 +22,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('openai');
+  const [referenceImage, setReferenceImage] = useState<StockResource | null>(null);
 
   // Personalization panel state - now uses preferences
   const { shouldShowPanel, updateGeneratorPreferences, markAsExperienced } = usePersonalizationPreferences('ai-image');
@@ -29,6 +34,11 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
     generatorType: 'ai-image'
   });
 
+  const handleReferenceImageSelect = (resource: StockResource) => {
+    setReferenceImage(resource);
+    FreepikCompliance.trackFreepikUsage(resource.id, 'ai-image-generator', 'reference');
+  };
+
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
       setError('Please enter a prompt');
@@ -39,9 +49,14 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
     setIsGenerating(true);
 
     try {
+      let enhancedPrompt = prompt;
+      if (referenceImage) {
+        enhancedPrompt = `${prompt} (using reference image: ${referenceImage.title || 'Freepik image'})`;
+      }
+
       const imageUrl = selectedProvider === 'openai'
-        ? await generateImageWithDalle(prompt)
-        : await generateImageWithGemini(prompt);
+        ? await generateImageWithDalle(enhancedPrompt)
+        : await generateImageWithGemini(enhancedPrompt);
 
       setGeneratedImage(imageUrl);
       onImageGenerated(imageUrl);
@@ -85,6 +100,51 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               className="w-full p-2 border rounded"
               rows={4}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Reference Image (Optional)</label>
+            <div className="flex gap-2">
+              <StockImageButton
+                onSelect={handleReferenceImageSelect}
+                buttonText={referenceImage ? "Change Reference" : "Browse Freepik"}
+                buttonIcon={Search}
+                defaultSearchTerm={prompt || 'professional'}
+              />
+              {referenceImage && (
+                <button
+                  onClick={() => setReferenceImage(null)}
+                  className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {referenceImage && (
+              <div className="mt-2 p-2 border rounded bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={referenceImage.thumbnailUrl || ''}
+                    alt={referenceImage.title}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {referenceImage.title}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      AI will use this as visual inspiration
+                    </p>
+                  </div>
+                </div>
+                <FreepikAttribution
+                  resources={[referenceImage]}
+                  isPremiumUser={false}
+                  variant="inline"
+                  className="mt-2"
+                />
+              </div>
+            )}
           </div>
 
           {error && (

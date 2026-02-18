@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, X, Heart, Download, Grid, List, Filter, Loader2, Image, Camera, PenTool, Layers, Video } from 'lucide-react';
 import { useStockImages, useStockFavorites } from '../../hooks/useStockImages';
 import { StockResource, StockSearchOptions } from '../../services/stockImageService';
+import { FreepikAttribution } from './FreepikAttribution';
 
 interface StockImagePickerProps {
   isOpen: boolean;
@@ -336,7 +337,16 @@ export function StockImagePicker({
           </div>
         )}
 
-        {!multiSelect && (
+        {!multiSelect && displayResources.length > 0 && (
+          <FreepikAttribution
+            resources={displayResources.slice(0, 3)}
+            isPremiumUser={false}
+            showComplianceInfo={true}
+            variant="footer"
+          />
+        )}
+
+        {!multiSelect && displayResources.length === 0 && (
           <div className="p-3 border-t border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
             Click an image to use it in your project
           </div>

@@ -17,6 +17,9 @@ export interface StockResource {
   author: string | null;
   publishedAt: string | null;
   license: string | null;
+  requiresAttribution?: boolean;
+  attributionText?: string;
+  attributionUrl?: string;
 }
 
 export interface StockSearchOptions {

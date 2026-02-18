@@ -34,7 +34,7 @@ setupNetworkListeners(
   () => console.log('Network: Gone offline')
 );
 
-// Use TEST mode to verify rendering works
+// Use TEST mode to verify rendering works - set to true to test basic rendering
 const TEST_MODE = false;
 
 createRoot(document.getElementById('root')!).render(

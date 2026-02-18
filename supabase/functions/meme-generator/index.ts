@@ -116,11 +116,6 @@ serve(async (req) => {
         imageUrl = await generateMemeWithText(referenceImageUrl, sanitizedTopText, sanitizedBottomText, sanitizedStyle)
       }
 
-      } catch (error) {
-        console.warn('GPT-4 Vision failed, falling back to reference image:', error)
-        imageUrl = referenceImageUrl
-      }
-
     } else if ((provider === 'gemini' || !provider) && geminiKey) {
       // Use Gemini for meme generation
       try {

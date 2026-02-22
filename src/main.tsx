@@ -14,6 +14,7 @@ import { AiAssistantProvider } from './components/ui/AiAssistantProvider.tsx';
 import { BrowserRouter } from 'react-router-dom';
 import { registerServiceWorker, setupNetworkListeners } from './utils/pwaUtils';
 import { AdminProvider } from './contexts/AdminContext.tsx';
+import { PersonalizationProvider } from './contexts/PersonalizationContext.tsx';
 
 // Preload commonly used fonts
 preloadCommonFonts();
@@ -43,16 +44,18 @@ createRoot(document.getElementById('root')!).render(
       <AppTest />
     ) : (
       <AuthProvider>
-        <AdminProvider>
-          <BrowserRouter>
-            <AiAssistantProvider>
-              <DndProvider backend={backend}>
-                <App />
-                <DragLayer />
-              </DndProvider>
-            </AiAssistantProvider>
-          </BrowserRouter>
-        </AdminProvider>
+        <PersonalizationProvider>
+          <AdminProvider>
+            <BrowserRouter>
+              <AiAssistantProvider>
+                <DndProvider backend={backend}>
+                  <App />
+                  <DragLayer />
+                </DndProvider>
+              </AiAssistantProvider>
+            </BrowserRouter>
+          </AdminProvider>
+        </PersonalizationProvider>
       </AuthProvider>
     )}
   </StrictMode>

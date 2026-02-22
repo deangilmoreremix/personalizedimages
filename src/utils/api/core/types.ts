@@ -19,7 +19,7 @@ export interface ImageGenerationRequest {
   count?: number;
   model?: string; // Specific model override
   outputFormat?: OutputFormat;
-  appliedTokens?: any[]; // Array of tokens to apply
+  appliedTokens?: Array<{ key: string; value: string; category?: string }>;
 }
 
 // Image editing request

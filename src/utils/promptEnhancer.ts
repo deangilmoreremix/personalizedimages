@@ -340,6 +340,44 @@ export function quickEnhance(prompt: string, category: GeneratorCategory): strin
   return result.enhanced;
 }
 
+const TOKEN_PLACEHOLDER_RE = /(\{[A-Z_]+\}|\[[A-Z_]+\]|__[A-Z_]+__|%[A-Z_]+%)/g;
+
+export function enhanceWithTokenPreservation(
+  prompt: string,
+  category: GeneratorCategory,
+  tokenValues: Record<string, string>
+): { enhanced: string; resolvedTokens: string[]; warnings: string[] } {
+  const placeholderMap = new Map<string, string>();
+  let counter = 0;
+
+  const stripped = prompt.replace(TOKEN_PLACEHOLDER_RE, (match) => {
+    const id = `__TKNPH${counter++}__`;
+    placeholderMap.set(id, match);
+    return id;
+  });
+
+  const enhanced = quickEnhance(stripped, category);
+
+  let resolved = enhanced;
+  const resolvedTokens: string[] = [];
+  const warnings: string[] = [];
+
+  placeholderMap.forEach((original, placeholder) => {
+    const tokenKey = original.replace(/^[\[{%_]+|[\]}%_]+$/g, '');
+    const value = tokenValues[tokenKey];
+
+    if (value) {
+      resolved = resolved.replace(placeholder, value);
+      resolvedTokens.push(tokenKey);
+    } else {
+      resolved = resolved.replace(placeholder, original);
+      warnings.push(`Unresolved token: ${tokenKey}`);
+    }
+  });
+
+  return { enhanced: resolved, resolvedTokens, warnings };
+}
+
 export function getImageTypeOptions(): { value: ImageType; label: string }[] {
   return [
     { value: 'photograph', label: 'Photograph' },

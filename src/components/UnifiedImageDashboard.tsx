@@ -40,11 +40,13 @@ import {
   Loader2
 } from 'lucide-react';
 
-// Core generation API
 import { generateImage, generateImageBatch, generateVariations } from '../utils/api/image/generation';
 import { resolveTokens } from '../utils/tokenResolver';
-import { quickEnhance, type GeneratorCategory } from '../utils/promptEnhancer';
+import { quickEnhance, enhanceWithTokenPreservation, type GeneratorCategory } from '../utils/promptEnhancer';
 import PromptEnhancementPanel from './PromptEnhancementPanel';
+import { usePersonalization } from '../contexts/PersonalizationContext';
+import { imageService } from '../services/supabaseService';
+import { useAuth } from '../auth/AuthContext';
 
 // UI Components
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
@@ -88,10 +90,10 @@ interface PersonalizationToken {
 }
 
 const UnifiedImageDashboard: React.FC = () => {
-  // Theme hook
   const { theme, setTheme, isDark } = useTheme();
+  const { user } = useAuth();
+  const { tokens, updateToken, updateTokens, resolvePrompt, isSaving } = usePersonalization();
 
-  // Token application hook
   const {
     applyTokenToImage,
     removeTokenFromImage,
@@ -106,7 +108,6 @@ const UnifiedImageDashboard: React.FC = () => {
     }
   });
 
-  // Core state
   const [currentMode, setCurrentMode] = useState<string>('ai-image');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showTokenPanel, setShowTokenPanel] = useState(true);
@@ -116,17 +117,8 @@ const UnifiedImageDashboard: React.FC = () => {
   const [promptText, setPromptText] = useState('');
   const [autoEnhance, setAutoEnhance] = useState(true);
   const [negativePrompt, setNegativePrompt] = useState('');
+  const [tokenWarnings, setTokenWarnings] = useState<string[]>([]);
 
-  // Personalization state
-  const [tokens, setTokens] = useState<Record<string, string>>({
-    FIRSTNAME: 'John',
-    COMPANY: 'Acme Corp',
-    EMAIL: 'john@acme.com',
-    CHARACTER_NAME: 'Alex',
-    STYLE: 'heroic',
-    POSE: 'action',
-    ENVIRONMENT: 'urban'
-  });
   const [showPersonalization, setShowPersonalization] = useState(false);
   const [personalizationMode, setPersonalizationMode] = useState<'basic' | 'action-figure' | 'advanced'>('basic');
 
@@ -203,7 +195,6 @@ const UnifiedImageDashboard: React.FC = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   }, [theme, setTheme]);
 
-  // Build the effective prompt with token resolution
   const buildEffectivePrompt = useCallback((rawPrompt: string): string => {
     let effectivePrompt = rawPrompt;
 
@@ -229,22 +220,65 @@ const UnifiedImageDashboard: React.FC = () => {
     return effectivePrompt;
   }, [showPersonalization, personalizationMode, tokens, getContextualTokens]);
 
-  // Handle image generation
   const handleGenerate = useCallback(async (options: any = {}) => {
     const raw = promptText.trim();
     if (!raw && !(showPersonalization && personalizationMode === 'action-figure')) return;
 
     setIsGenerating(true);
-    try {
-      let effectivePrompt = buildEffectivePrompt(raw);
+    setTokenWarnings([]);
 
-      if (autoEnhance) {
-        const categoryKey = currentMode as GeneratorCategory;
-        effectivePrompt = quickEnhance(effectivePrompt, categoryKey);
+    try {
+      let effectivePrompt: string;
+      let resolvedTokenKeys: string[] = [];
+      let warnings: string[] = [];
+
+      if (showPersonalization && personalizationMode === 'action-figure') {
+        const figureParts = [
+          `Create an action figure of ${tokens.CHARACTER_NAME || 'a character'}`,
+          `in a ${tokens.STYLE} style`,
+          `striking a ${(tokens.POSE || '').replace('-', ' ')} pose`,
+          `in a ${tokens.ENVIRONMENT} environment`,
+        ];
+        if (raw) figureParts.push(`. Additional details: ${raw}`);
+        effectivePrompt = figureParts.join(', ');
+        resolvedTokenKeys = ['CHARACTER_NAME', 'STYLE', 'POSE', 'ENVIRONMENT'];
+
+        if (autoEnhance) {
+          effectivePrompt = quickEnhance(effectivePrompt, currentMode as GeneratorCategory);
+        }
+      } else if (showPersonalization && autoEnhance) {
+        const result = enhanceWithTokenPreservation(
+          raw,
+          currentMode as GeneratorCategory,
+          getContextualTokens()
+        );
+        effectivePrompt = result.enhanced;
+        resolvedTokenKeys = result.resolvedTokens;
+        warnings = result.warnings;
+      } else if (showPersonalization) {
+        const resolved = resolveTokens(raw, getContextualTokens());
+        effectivePrompt = resolved.resolvedContent;
+        resolvedTokenKeys = resolved.resolvedTokens;
+        warnings = resolved.warnings;
+      } else if (autoEnhance) {
+        effectivePrompt = quickEnhance(raw, currentMode as GeneratorCategory);
+      } else {
+        effectivePrompt = raw;
       }
+
+      if (warnings.length > 0) {
+        setTokenWarnings(warnings);
+      }
+
+      const appliedTokens = resolvedTokenKeys.map(key => ({
+        key,
+        value: tokens[key] || '',
+        category: currentMode,
+      }));
 
       const result = await generateImage(effectivePrompt, {
         provider: 'gemini',
+        appliedTokens: appliedTokens.length > 0 ? appliedTokens : undefined,
         ...options
       });
 
@@ -263,13 +297,29 @@ const UnifiedImageDashboard: React.FC = () => {
         };
 
         setGeneratedImages(prev => [newImage, ...prev]);
+
+        if (user?.id) {
+          const tokensUsed = resolvedTokenKeys.length > 0
+            ? Object.fromEntries(resolvedTokenKeys.map(k => [k, tokens[k] || '']))
+            : undefined;
+
+          imageService.saveGeneratedImage({
+            user_id: user.id,
+            prompt: effectivePrompt,
+            image_url: result.imageUrl,
+            provider: result.provider || 'gemini',
+            model: result.metadata?.model,
+            category: currentMode,
+            tokens_used: tokensUsed,
+          }).catch(err => console.error('Failed to persist image:', err));
+        }
       }
     } catch (error) {
       console.error('Generation failed:', error);
     } finally {
       setIsGenerating(false);
     }
-  }, [promptText, currentMode, showPersonalization, personalizationMode, buildEffectivePrompt]);
+  }, [promptText, currentMode, showPersonalization, personalizationMode, autoEnhance, tokens, getContextualTokens, user?.id]);
 
   // Handle image selection
   const toggleImageSelection = useCallback((imageId: string) => {
@@ -295,11 +345,6 @@ const UnifiedImageDashboard: React.FC = () => {
     });
     setSelectedImages(new Set());
   }, [selectedImages, generatedImages]);
-
-  // Update token
-  const updateToken = useCallback((key: string, value: string) => {
-    setTokens(prev => ({ ...prev, [key]: value }));
-  }, []);
 
   // Handle personalization mode change
   const handlePersonalizationModeChange = useCallback((mode: 'basic' | 'action-figure' | 'advanced') => {
@@ -459,7 +504,7 @@ const UnifiedImageDashboard: React.FC = () => {
             <div className="flex-1 overflow-hidden">
               <TokenPanel
                 tokens={tokens}
-                onTokensChange={setTokens}
+                onTokensChange={updateTokens}
                 isCollapsed={sidebarCollapsed}
                 onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
               />
@@ -808,6 +853,33 @@ const UnifiedImageDashboard: React.FC = () => {
                   <p className="text-sm text-indigo-700 dark:text-indigo-300">
                     {buildEffectivePrompt(promptText)}
                   </p>
+                </div>
+              )}
+
+              {tokenWarnings.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                        Token Warnings
+                      </span>
+                      <ul className="mt-1 space-y-1">
+                        {tokenWarnings.map((warning, idx) => (
+                          <li key={idx} className="text-xs text-amber-700 dark:text-amber-300">
+                            {warning}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isSaving && (
+                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Saving tokens...</span>
                 </div>
               )}
 

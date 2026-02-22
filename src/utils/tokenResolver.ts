@@ -55,7 +55,9 @@ export interface TokenResolutionResult {
 }
 
 /**
- * Resolve tokens in content based on content type and available token values
+ * Resolve tokens in content by trying ALL known token formats.
+ * This ensures tokens work regardless of whether the user typed
+ * {FIRSTNAME}, [FIRSTNAME], __FIRSTNAME__, or %FIRSTNAME%.
  */
 export function resolveTokens(
   content: string,
@@ -72,7 +74,6 @@ export function resolveTokens(
   } = options;
 
   const config = CONTENT_TYPE_CONFIGS[contentType];
-  const pattern = TOKEN_PATTERNS[config.pattern];
 
   let resolvedContent = content;
   const resolvedTokens: string[] = [];
@@ -80,44 +81,45 @@ export function resolveTokens(
   const invalidTokens: string[] = [];
   const warnings: string[] = [];
 
-  // Combine all available token values
   const allTokens = {
     ...tokenValues,
     ...customTokens
   };
 
-  // Find all tokens in content
-  const tokenMatches = content.match(pattern);
-  if (tokenMatches) {
-    tokenMatches.forEach(match => {
-      const tokenKey = match.replace(/^[\[{%_]+|[\]}%_]+$/g, ''); // Extract token name
+  const allPatterns = Object.values(TOKEN_PATTERNS);
+  const seenTokenKeys = new Set<string>();
+
+  for (const pattern of allPatterns) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    const matches = resolvedContent.match(regex);
+    if (!matches) continue;
+
+    for (const match of matches) {
+      const tokenKey = match.replace(/^[\[{%_]+|[\]}%_]+$/g, '');
+      if (seenTokenKeys.has(`${tokenKey}_${match}`)) continue;
+      seenTokenKeys.add(`${tokenKey}_${match}`);
 
       if (allTokens[tokenKey]) {
-        // Token found - replace it
         const tokenRegex = new RegExp(escapeRegExp(match), 'g');
         resolvedContent = resolvedContent.replace(tokenRegex, allTokens[tokenKey]);
-        resolvedTokens.push(tokenKey);
+        if (!resolvedTokens.includes(tokenKey)) resolvedTokens.push(tokenKey);
       } else if (fallbackValues[tokenKey]) {
-        // Use fallback value
         const tokenRegex = new RegExp(escapeRegExp(match), 'g');
         resolvedContent = resolvedContent.replace(tokenRegex, fallbackValues[tokenKey]);
-        resolvedTokens.push(tokenKey);
+        if (!resolvedTokens.includes(tokenKey)) resolvedTokens.push(tokenKey);
         warnings.push(`Used fallback value for token: ${tokenKey}`);
       } else if (preserveUnresolved) {
-        // Keep unresolved tokens as-is
-        resolvedTokens.push(tokenKey);
+        if (!resolvedTokens.includes(tokenKey)) resolvedTokens.push(tokenKey);
         warnings.push(`Unresolved token preserved: ${tokenKey}`);
       } else if (strictMode) {
-        // Throw error in strict mode
         throw new Error(`Missing required token: ${tokenKey}`);
       } else {
-        // Replace with placeholder
         const tokenRegex = new RegExp(escapeRegExp(match), 'g');
         resolvedContent = resolvedContent.replace(tokenRegex, config.fallbackFormat.replace('TOKEN', tokenKey));
-        missingTokens.push(tokenKey);
+        if (!missingTokens.includes(tokenKey)) missingTokens.push(tokenKey);
         warnings.push(`Token not found, using placeholder: ${tokenKey}`);
       }
-    });
+    }
   }
 
   return {

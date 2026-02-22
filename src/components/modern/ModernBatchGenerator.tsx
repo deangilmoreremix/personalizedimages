@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Upload, Download, Play, Pause, X, Check, AlertCircle, FileText } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, Download, Play, Pause, X, Check, AlertCircle, FileText, StopCircle } from 'lucide-react';
 import FullScreenLayout from '../layout/FullScreenLayout';
 import ModernTopHeader from '../layout/ModernTopHeader';
 import LeftPanel, { LeftPanelSection, LeftPanelFooter } from '../layout/LeftPanel';
@@ -7,6 +7,7 @@ import RightPanel from '../layout/RightPanel';
 import EmptyState from '../layout/EmptyState';
 import GuideContent from '../layout/GuideContent';
 import APIContent from '../layout/APIContent';
+import { generateImage } from '../../services/imageGenerationService';
 
 interface BatchItem {
   id: number;
@@ -28,6 +29,7 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
   const [selectedModel, setSelectedModel] = useState('openai');
   const [prompt, setPrompt] = useState('');
   const [progress, setProgress] = useState(0);
+  const cancelRef = useRef(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -64,23 +66,43 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
     reader.readAsText(file);
   };
 
+  const resolvePromptForItem = (template: string, itemData: Record<string, string>): string => {
+    let resolved = template;
+    Object.entries(itemData).forEach(([key, value]) => {
+      resolved = resolved.replace(new RegExp(`\\[${key}\\]`, 'gi'), value);
+    });
+    Object.entries(tokens).forEach(([key, value]) => {
+      resolved = resolved.replace(new RegExp(`\\[${key}\\]`, 'gi'), value);
+    });
+    return resolved;
+  };
+
   const handleProcess = async () => {
+    if (!prompt.trim()) return;
     setIsProcessing(true);
     setProgress(0);
+    cancelRef.current = false;
 
     for (let i = 0; i < batchItems.length; i++) {
+      if (cancelRef.current) break;
+
       setBatchItems(prev => prev.map((item, idx) =>
         idx === i ? { ...item, status: 'processing' } : item
       ));
 
       try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        const resolvedPrompt = resolvePromptForItem(prompt, batchItems[i].data);
+        const result = await generateImage(resolvedPrompt, {
+          size: '1024x1024',
+          quality: 'standard',
+          category: 'batch-generation',
+        });
         setBatchItems(prev => prev.map((item, idx) =>
-          idx === i ? { ...item, status: 'completed', imageUrl: 'https://via.placeholder.com/300' } : item
+          idx === i ? { ...item, status: 'completed', imageUrl: result.imageUrl } : item
         ));
-      } catch (err) {
+      } catch (err: any) {
         setBatchItems(prev => prev.map((item, idx) =>
-          idx === i ? { ...item, status: 'failed', error: 'Generation failed' } : item
+          idx === i ? { ...item, status: 'failed', error: err.message || 'Generation failed' } : item
         ));
       }
 
@@ -88,6 +110,11 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
     }
 
     setIsProcessing(false);
+    cancelRef.current = false;
+  };
+
+  const handleCancel = () => {
+    cancelRef.current = true;
   };
 
   const downloadTemplate = () => {
@@ -160,9 +187,15 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
       </LeftPanelSection>
 
       <LeftPanelFooter>
-        <button onClick={handleProcess} disabled={isProcessing || batchItems.length === 0} className="w-full py-3 bg-violet-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-violet-700 transition-all">
-          {isProcessing ? <><Pause className="w-5 h-5" />Processing...</> : <><Play className="w-5 h-5" />Start Batch Generation</>}
-        </button>
+        {isProcessing ? (
+          <button onClick={handleCancel} className="w-full py-3 bg-red-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-all">
+            <StopCircle className="w-5 h-5" />Stop Processing
+          </button>
+        ) : (
+          <button onClick={handleProcess} disabled={batchItems.length === 0 || !prompt.trim()} className="w-full py-3 bg-violet-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-violet-700 transition-all">
+            <Play className="w-5 h-5" />Start Batch Generation
+          </button>
+        )}
         {isProcessing && (
           <div className="mt-3">
             <div className="w-full bg-gray-200 rounded-full h-2">

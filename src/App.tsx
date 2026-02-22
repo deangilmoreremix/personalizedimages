@@ -51,6 +51,9 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import AdminDashboard from './pages/AdminDashboard';
 import AIToolsHub from './pages/AIToolsHub';
 import GenerationQueue from './components/GenerationQueue';
+import MarketplacePage from './pages/MarketplacePage';
+import CrazyImagePage from './pages/features/CrazyImagePage';
+import FreepikDemo from './pages/FreepikDemo';
 import { AssetProvider } from './contexts/AssetContext';
 import { StockImageProvider } from './contexts/StockImageContext';
 
@@ -104,6 +107,9 @@ const AppLayout = () => {
           <Route path="/testimonials" element={<TestimonialsPage />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/ai-tools" element={<AIToolsHub />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/features/crazy-image" element={<CrazyImagePage />} />
+          <Route path="/freepik-demo" element={<FreepikDemo />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>

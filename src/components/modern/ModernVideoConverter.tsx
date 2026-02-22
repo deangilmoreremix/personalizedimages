@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Play, Download, Film, Music, Wand2, RefreshCw } from 'lucide-react';
+import { Upload, Play, Download, Film, RefreshCw, AlertCircle } from 'lucide-react';
 import FullScreenLayout from '../layout/FullScreenLayout';
 import ModernTopHeader from '../layout/ModernTopHeader';
 import LeftPanel, { LeftPanelSection, LeftPanelFooter } from '../layout/LeftPanel';
@@ -7,6 +7,7 @@ import RightPanel from '../layout/RightPanel';
 import EmptyState from '../layout/EmptyState';
 import GuideContent from '../layout/GuideContent';
 import APIContent from '../layout/APIContent';
+import { convertImageToVideo } from '../../utils/videoApi';
 
 const ModernVideoConverter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'result' | 'guide' | 'api'>('result');
@@ -35,12 +36,44 @@ const ModernVideoConverter: React.FC = () => {
     }
   };
 
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+
   const handleGenerate = async () => {
+    if (!sourceImage) return;
     setIsGenerating(true);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    setVideoUrl('https://www.w3schools.com/html/mov_bbb.mp4');
-    setIsGenerating(false);
-    setActiveTab('result');
+    setError(null);
+    setProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + 8, 90));
+    }, 500);
+
+    try {
+      const result = await convertImageToVideo(sourceImage, {
+        duration,
+        effect: effect as any,
+        resolution: resolution as any,
+        outputFormat: 'mp4',
+        quality: 'high',
+      });
+
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      if (result && (result as any).videoUrl) {
+        setVideoUrl((result as any).videoUrl);
+      } else if (result && result.id) {
+        setVideoUrl(null);
+        setError('Video is being processed. Check back in a few moments.');
+      }
+    } catch (err: any) {
+      clearInterval(progressInterval);
+      setError(err.message || 'Video conversion failed. Please try again.');
+    } finally {
+      setIsGenerating(false);
+      setActiveTab('result');
+    }
   };
 
   const leftPanelContent = (
@@ -137,9 +170,28 @@ const ModernVideoConverter: React.FC = () => {
         <video src={videoUrl} controls className="w-full" />
       </div>
       <div className="flex gap-3">
-        <button className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center justify-center gap-2"><Download className="w-4 h-4" />Download MP4</button>
-        <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"><Play className="w-4 h-4" /></button>
+        <a href={videoUrl} download className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center justify-center gap-2"><Download className="w-4 h-4" />Download MP4</a>
+        <button onClick={handleGenerate} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"><RefreshCw className="w-4 h-4" />Reconvert</button>
       </div>
+    </div>
+  ) : error ? (
+    <div className="p-8 text-center">
+      <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-gray-700 mb-2">Conversion Issue</h3>
+      <p className="text-gray-500 text-sm max-w-md mx-auto">{error}</p>
+      <button onClick={handleGenerate} className="mt-4 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700 transition-colors">Try Again</button>
+    </div>
+  ) : isGenerating ? (
+    <div className="p-12 text-center">
+      <div className="w-16 h-16 mx-auto mb-4 relative">
+        <div className="absolute inset-0 rounded-full border-4 border-violet-200" />
+        <div className="absolute inset-0 rounded-full border-4 border-violet-600 border-t-transparent animate-spin" />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-700 mb-2">Converting to Video...</h3>
+      <div className="w-48 mx-auto bg-gray-200 rounded-full h-2 mt-3">
+        <div className="bg-violet-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+      </div>
+      <p className="text-xs text-gray-500 mt-2">{Math.round(progress)}%</p>
     </div>
   ) : (
     <EmptyState icon={Film} title="No Video Generated" description="Upload an image and click Convert to create your video" tips={['Choose platform presets for optimal sizing', 'Ken Burns effect adds professional motion', 'Longer duration = larger file size']} />

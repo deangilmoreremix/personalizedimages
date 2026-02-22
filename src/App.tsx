@@ -50,6 +50,7 @@ import UniversalPersonalizationPanel from './components/UniversalPersonalization
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import AdminDashboard from './pages/AdminDashboard';
 import AIToolsHub from './pages/AIToolsHub';
+import GenerationQueue from './components/GenerationQueue';
 import { AssetProvider } from './contexts/AssetContext';
 import { StockImageProvider } from './contexts/StockImageContext';
 
@@ -70,6 +71,7 @@ const AppLayout = () => {
           <Route path="/model-comparison" element={<MultiModelComparison tokens={{}} />} />
           <Route path="/batch-generation" element={<BatchGeneration tokens={{}} />} />
           <Route path="/analytics" element={<AnalyticsDashboard />} />
+          <Route path="/queue" element={<GenerationQueue />} />
           <Route path="/token-management" element={<TokenManagement currentTokens={{}} onTokensChange={() => {}} />} />
           <Route path="/personalization" element={<UniversalPersonalizationPanel onClose={() => window.history.back()} />} />
           <Route path="/features/action-figures" element={<ActionFigurePage />} />

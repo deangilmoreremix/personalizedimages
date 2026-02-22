@@ -8,16 +8,13 @@ import {
   Image as ImageIcon,
   Users,
   Zap,
-  Calendar,
-  Filter,
   Download,
   RefreshCw,
-  Target,
   Award,
   Activity
 } from 'lucide-react';
 import { cloudGalleryService } from '../services/cloudGalleryService';
-import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
+import { supabase } from '../utils/supabaseClient';
 
 interface AnalyticsData {
   totalImages: number;
@@ -35,10 +32,107 @@ interface AnalyticsData {
     useCount: number;
     avgRating: number;
   }>;
-  userEngagement: {
-    totalUsers: number;
-    activeUsers: number;
-    avgSessionTime: number;
+  activeGenerations: number;
+  creditsUsed: number;
+}
+
+async function fetchRealAnalytics(startDate: string): Promise<AnalyticsData> {
+  const sb = supabase as any;
+  const { data: userData } = await sb?.auth?.getUser?.() ?? { data: { user: null } };
+  const userId = userData?.user?.id;
+
+  const defaults: AnalyticsData = {
+    totalImages: 0,
+    totalCost: 0,
+    avgGenerationTime: 0,
+    modelUsage: {},
+    dailyStats: [],
+    topPrompts: [],
+    activeGenerations: 0,
+    creditsUsed: 0,
+  };
+
+  if (!sb || !userId) return defaults;
+
+  const [imagesRes, eventsRes, promptsRes, queueRes, creditsRes] = await Promise.all([
+    sb.from('generated_images').select('id, provider, model, created_at, tokens_used').eq('user_id', userId).gte('created_at', startDate),
+    cloudGalleryService.getAnalytics({ startDate, limit: 5000 }),
+    cloudGalleryService.getMostUsedPrompts(10),
+    sb.from('generation_queue').select('id, status').eq('user_id', userId).in('status', ['pending', 'processing']),
+    sb.from('user_credits').select('total_used').eq('user_id', userId).maybeSingle(),
+  ]);
+
+  const images = imagesRes?.data || [];
+  const events = eventsRes || [];
+  const prompts = promptsRes || [];
+  const activeQueue = queueRes?.data || [];
+  const credits = creditsRes?.data;
+
+  const modelCounts: Record<string, number> = {};
+  images.forEach((img: any) => {
+    const m = img.provider || img.model || 'unknown';
+    modelCounts[m] = (modelCounts[m] || 0) + 1;
+  });
+
+  const total = images.length || 1;
+  const modelUsage: Record<string, number> = {};
+  Object.entries(modelCounts).forEach(([model, count]) => {
+    modelUsage[model] = Math.round((count / total) * 100);
+  });
+
+  const dailyMap: Record<string, { images: number; cost: number; totalTime: number; count: number }> = {};
+  images.forEach((img: any) => {
+    const day = img.created_at?.split('T')[0];
+    if (!day) return;
+    if (!dailyMap[day]) dailyMap[day] = { images: 0, cost: 0, totalTime: 0, count: 0 };
+    dailyMap[day].images += 1;
+    dailyMap[day].cost += 0.04;
+    dailyMap[day].count += 1;
+  });
+
+  events.forEach((evt: any) => {
+    const day = evt.created_at?.split('T')[0];
+    if (!day || !dailyMap[day]) return;
+    if (evt.event_data?.generation_time_ms) {
+      dailyMap[day].totalTime += evt.event_data.generation_time_ms;
+    }
+  });
+
+  const dailyStats = Object.entries(dailyMap)
+    .map(([date, stats]) => ({
+      date,
+      images: stats.images,
+      cost: Math.round(stats.cost * 100) / 100,
+      avgTime: stats.count > 0 ? Math.round(stats.totalTime / stats.count) : 3000,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const totalCost = images.length * 0.04;
+
+  let totalTime = 0;
+  let timeCount = 0;
+  events.forEach((evt: any) => {
+    if (evt.event_data?.generation_time_ms) {
+      totalTime += evt.event_data.generation_time_ms;
+      timeCount += 1;
+    }
+  });
+
+  const topPrompts = prompts.map((p: any) => ({
+    prompt: p.prompt,
+    useCount: p.use_count || 1,
+    avgRating: p.avg_rating || 0,
+  }));
+
+  return {
+    totalImages: images.length,
+    totalCost: Math.round(totalCost * 100) / 100,
+    avgGenerationTime: timeCount > 0 ? Math.round(totalTime / timeCount) : 3200,
+    modelUsage,
+    dailyStats,
+    topPrompts,
+    activeGenerations: activeQueue.length,
+    creditsUsed: credits?.total_used || 0,
   };
 }
 
@@ -52,18 +146,18 @@ const AnalyticsDashboard: React.FC = () => {
     loadAnalytics();
   }, [dateRange]);
 
+  const getStartDate = () => {
+    const now = new Date();
+    const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
+    now.setDate(now.getDate() - days);
+    return now.toISOString();
+  };
+
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      // Get analytics data from the service
-      const events = await cloudGalleryService.getAnalytics({
-        limit: 1000,
-        startDate: getStartDate()
-      });
-
-      // Process the data
-      const processedData = processAnalyticsData(events);
-      setAnalyticsData(processedData);
+      const data = await fetchRealAnalytics(getStartDate());
+      setAnalyticsData(data);
     } catch (error) {
       console.error('Error loading analytics:', error);
     } finally {
@@ -71,69 +165,42 @@ const AnalyticsDashboard: React.FC = () => {
     }
   };
 
-  const getStartDate = () => {
-    const now = new Date();
-    switch (dateRange) {
-      case '7d':
-        now.setDate(now.getDate() - 7);
-        break;
-      case '30d':
-        now.setDate(now.getDate() - 30);
-        break;
-      case '90d':
-        now.setDate(now.getDate() - 90);
-        break;
-    }
-    return now.toISOString();
-  };
-
-  const processAnalyticsData = (events: any[]): AnalyticsData => {
-    // Mock data processing - in real implementation, this would analyze the events
-    const mockData: AnalyticsData = {
-      totalImages: 1247,
-      totalCost: 89.45,
-      avgGenerationTime: 3240, // ms
-      modelUsage: {
-        'openai': 45,
-        'gemini': 35,
-        'imagen': 12,
-        'gpt-image-1': 8
-      },
-      dailyStats: Array.from({ length: 30 }, (_, i) => ({
-        date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        images: Math.floor(Math.random() * 50) + 10,
-        cost: Math.random() * 5,
-        avgTime: 2000 + Math.random() * 2000
-      })),
-      topPrompts: [
-        { prompt: 'Professional headshot', useCount: 45, avgRating: 4.2 },
-        { prompt: 'Product photography', useCount: 38, avgRating: 4.5 },
-        { prompt: 'Social media post', useCount: 32, avgRating: 3.8 },
-        { prompt: 'Marketing banner', useCount: 28, avgRating: 4.1 },
-        { prompt: 'Team photo', useCount: 25, avgRating: 4.3 }
-      ],
-      userEngagement: {
-        totalUsers: 156,
-        activeUsers: 89,
-        avgSessionTime: 1240 // seconds
-      }
-    };
-
-    return mockData;
-  };
-
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
   const formatTime = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
+
+  const handleExport = () => {
+    if (!analyticsData) return;
+    const csv = [
+      'Metric,Value',
+      `Total Images,${analyticsData.totalImages}`,
+      `Total Cost,${analyticsData.totalCost}`,
+      `Avg Generation Time (ms),${analyticsData.avgGenerationTime}`,
+      `Credits Used,${analyticsData.creditsUsed}`,
+      `Active Generations,${analyticsData.activeGenerations}`,
+      '',
+      'Model,Usage %',
+      ...Object.entries(analyticsData.modelUsage).map(([m, p]) => `${m},${p}`),
+      '',
+      'Date,Images,Cost,Avg Time (ms)',
+      ...analyticsData.dailyStats.map(d => `${d.date},${d.images},${d.cost},${d.avgTime}`),
+      '',
+      'Prompt,Uses,Avg Rating',
+      ...analyticsData.topPrompts.map(p => `"${p.prompt.replace(/"/g, '""')}",${p.useCount},${p.avgRating}`),
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2 text-gray-600">Loading analytics...</span>
       </div>
     );
@@ -150,21 +217,19 @@ const AnalyticsDashboard: React.FC = () => {
   }
 
   return (
-    <div className={DESIGN_SYSTEM.components.section}>
-      {/* Header */}
+    <div className="max-w-6xl mx-auto p-4 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h2 className={commonStyles.sectionHeader}>
-            <BarChart3 className="w-6 h-6 text-primary-500 mr-2" />
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-blue-600" />
             Analytics Dashboard
           </h2>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-1 text-sm">
             Track your AI image generation performance and costs
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Date Range Selector */}
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as '7d' | '30d' | '90d')}
@@ -175,110 +240,78 @@ const AnalyticsDashboard: React.FC = () => {
             <option value="90d">Last 90 days</option>
           </select>
 
-          {/* Refresh Button */}
           <button
             onClick={loadAnalytics}
-            className={getButtonClasses('secondary')}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1.5 transition-colors"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
         </div>
       </div>
 
       {/* Key Metrics */}
-      <div className={`${getGridClasses(4)} mb-8`}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-600 text-sm font-medium">Total Images</p>
-              <p className="text-3xl font-bold text-blue-900">{analyticsData.totalImages.toLocaleString()}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'Total Images', value: analyticsData.totalImages.toLocaleString(), icon: ImageIcon, from: 'from-blue-50', to: 'to-blue-100', border: 'border-blue-200', textColor: 'text-blue-600', valueColor: 'text-blue-900', iconColor: 'text-blue-600' },
+          { label: 'Total Cost', value: formatCurrency(analyticsData.totalCost), icon: DollarSign, from: 'from-emerald-50', to: 'to-emerald-100', border: 'border-emerald-200', textColor: 'text-emerald-600', valueColor: 'text-emerald-900', iconColor: 'text-emerald-600' },
+          { label: 'Avg Gen Time', value: formatTime(analyticsData.avgGenerationTime), icon: Clock, from: 'from-amber-50', to: 'to-amber-100', border: 'border-amber-200', textColor: 'text-amber-600', valueColor: 'text-amber-900', iconColor: 'text-amber-600' },
+          { label: 'Credits Used', value: analyticsData.creditsUsed.toLocaleString(), icon: Zap, from: 'from-rose-50', to: 'to-rose-100', border: 'border-rose-200', textColor: 'text-rose-600', valueColor: 'text-rose-900', iconColor: 'text-rose-600' },
+        ].map((metric, i) => (
+          <motion.div
+            key={metric.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className={`bg-gradient-to-br ${metric.from} ${metric.to} p-5 rounded-xl border ${metric.border}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`${metric.textColor} text-xs font-medium`}>{metric.label}</p>
+                <p className={`text-2xl md:text-3xl font-bold ${metric.valueColor} mt-1`}>{metric.value}</p>
+              </div>
+              <metric.icon className={`w-7 h-7 ${metric.iconColor}`} />
             </div>
-            <ImageIcon className="w-8 h-8 text-blue-600" />
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-600 text-sm font-medium">Total Cost</p>
-              <p className="text-3xl font-bold text-green-900">{formatCurrency(analyticsData.totalCost)}</p>
-            </div>
-            <DollarSign className="w-8 h-8 text-green-600" />
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-600 text-sm font-medium">Avg Generation Time</p>
-              <p className="text-3xl font-bold text-purple-900">{formatTime(analyticsData.avgGenerationTime)}</p>
-            </div>
-            <Clock className="w-8 h-8 text-purple-600" />
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-600 text-sm font-medium">Active Users</p>
-              <p className="text-3xl font-bold text-orange-900">{analyticsData.userEngagement.activeUsers}</p>
-            </div>
-            <Users className="w-8 h-8 text-orange-600" />
-          </div>
-        </motion.div>
+          </motion.div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Model Usage Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Model Usage */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
         >
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Zap className="w-5 h-5 text-primary-500 mr-2" />
+          <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-blue-600" />
             Model Usage Distribution
           </h3>
 
-          <div className="space-y-3">
-            {Object.entries(analyticsData.modelUsage).map(([model, percentage]) => (
-              <div key={model} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-primary-500"></div>
-                  <span className="text-sm font-medium capitalize">{model.replace('-', ' ')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-primary-500 h-2 rounded-full"
-                      style={{ width: `${percentage}%` }}
-                    ></div>
+          {Object.keys(analyticsData.modelUsage).length > 0 ? (
+            <div className="space-y-3">
+              {Object.entries(analyticsData.modelUsage)
+                .sort(([, a], [, b]) => b - a)
+                .map(([model, percentage]) => (
+                  <div key={model} className="flex items-center justify-between">
+                    <span className="text-sm font-medium capitalize text-gray-700">{model.replace('-', ' ')}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 bg-gray-200 rounded-full h-2">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                          className="bg-blue-600 h-2 rounded-full"
+                        />
+                      </div>
+                      <span className="text-sm text-gray-600 w-10 text-right">{percentage}%</span>
+                    </div>
                   </div>
-                  <span className="text-sm text-gray-600 w-8">{percentage}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-8">No generation data yet</p>
+          )}
         </motion.div>
 
         {/* Daily Trends */}
@@ -287,70 +320,61 @@ const AnalyticsDashboard: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
         >
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <TrendingUp className="w-5 h-5 text-primary-500 mr-2" />
+          <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
             Daily Trends
           </h3>
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 mb-4">
+            {(['images', 'cost', 'time'] as const).map(metric => (
               <button
-                onClick={() => setSelectedMetric('images')}
-                className={`px-3 py-1 rounded text-sm ${
-                  selectedMetric === 'images'
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-600'
+                key={metric}
+                onClick={() => setSelectedMetric(metric)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  selectedMetric === metric
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                Images
+                {metric.charAt(0).toUpperCase() + metric.slice(1)}
               </button>
-              <button
-                onClick={() => setSelectedMetric('cost')}
-                className={`px-3 py-1 rounded text-sm ${
-                  selectedMetric === 'cost'
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                Cost
-              </button>
-              <button
-                onClick={() => setSelectedMetric('time')}
-                className={`px-3 py-1 rounded text-sm ${
-                  selectedMetric === 'time'
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                Time
-              </button>
-            </div>
+            ))}
+          </div>
 
-            <div className="h-32 flex items-end justify-between gap-1">
-              {analyticsData.dailyStats.slice(0, 14).reverse().map((day, index) => {
-                const value = selectedMetric === 'images' ? day.images :
-                             selectedMetric === 'cost' ? day.cost * 20 :
-                             day.avgTime / 100;
-                const maxValue = Math.max(...analyticsData.dailyStats.map(d =>
+          {analyticsData.dailyStats.length > 0 ? (
+            <div className="h-36 flex items-end gap-1">
+              {analyticsData.dailyStats.slice(-14).map((day, index) => {
+                const vals = analyticsData.dailyStats.slice(-14);
+                const getValue = (d: typeof day) =>
                   selectedMetric === 'images' ? d.images :
-                  selectedMetric === 'cost' ? d.cost * 20 :
-                  d.avgTime / 100
-                ));
+                  selectedMetric === 'cost' ? d.cost * 25 :
+                  d.avgTime / 100;
+                const maxVal = Math.max(...vals.map(getValue), 1);
+                const val = getValue(day);
 
                 return (
-                  <div key={index} className="flex flex-col items-center gap-1">
-                    <div
-                      className="w-6 bg-primary-500 rounded-t"
-                      style={{ height: `${(value / maxValue) * 100}%` }}
-                    ></div>
-                    <span className="text-xs text-gray-500 transform -rotate-45 origin-top">
+                  <div key={index} className="flex-1 flex flex-col items-center gap-1 group relative">
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                      {selectedMetric === 'images' ? day.images :
+                       selectedMetric === 'cost' ? `$${day.cost}` :
+                       `${(day.avgTime / 1000).toFixed(1)}s`}
+                    </div>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${(val / maxVal) * 100}%` }}
+                      transition={{ duration: 0.5, delay: index * 0.03 }}
+                      className="w-full bg-blue-500 rounded-t min-h-[2px] hover:bg-blue-600 transition-colors cursor-default"
+                    />
+                    <span className="text-[10px] text-gray-400">
                       {new Date(day.date).getDate()}
                     </span>
                   </div>
                 );
               })}
             </div>
-          </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-12">No daily data yet</p>
+          )}
         </motion.div>
 
         {/* Top Prompts */}
@@ -360,94 +384,92 @@ const AnalyticsDashboard: React.FC = () => {
           transition={{ delay: 0.4 }}
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
         >
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Award className="w-5 h-5 text-primary-500 mr-2" />
+          <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <Award className="w-5 h-5 text-blue-600" />
             Top Performing Prompts
           </h3>
 
-          <div className="space-y-3">
-            {analyticsData.topPrompts.map((prompt, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{prompt.prompt}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-500">{prompt.useCount} uses</span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-yellow-600">★</span>
-                      <span className="text-xs text-gray-600">{prompt.avgRating.toFixed(1)}</span>
+          {analyticsData.topPrompts.length > 0 ? (
+            <div className="space-y-2">
+              {analyticsData.topPrompts.slice(0, 6).map((prompt, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{prompt.prompt}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-500">{prompt.useCount} uses</span>
+                      {prompt.avgRating > 0 && (
+                        <span className="text-xs text-amber-600 flex items-center gap-0.5">
+                          <span>&#9733;</span> {prompt.avgRating.toFixed(1)}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
-                <div className="ml-3">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2 shrink-0">
                     #{index + 1}
                   </span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-8">No prompt data yet. Generate images to see your top prompts.</p>
+          )}
         </motion.div>
 
-        {/* User Engagement */}
+        {/* Activity Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
         >
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Activity className="w-5 h-5 text-primary-500 mr-2" />
-            User Engagement
+          <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-600" />
+            Activity Summary
           </h3>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Total Users</span>
+                <ImageIcon className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Images Generated</span>
               </div>
-              <span className="text-lg font-bold text-blue-900">
-                {analyticsData.userEngagement.totalUsers}
-              </span>
+              <span className="text-lg font-bold text-blue-900">{analyticsData.totalImages}</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-900">Active Users</span>
+                <Zap className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm font-medium text-emerald-900">Credits Used</span>
               </div>
-              <span className="text-lg font-bold text-green-900">
-                {analyticsData.userEngagement.activeUsers}
-              </span>
+              <span className="text-lg font-bold text-emerald-900">{analyticsData.creditsUsed}</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-900">Avg Session Time</span>
+                <Activity className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-medium text-amber-900">In Queue</span>
               </div>
-              <span className="text-lg font-bold text-purple-900">
-                {formatDuration(analyticsData.userEngagement.avgSessionTime)}
-              </span>
+              <span className="text-lg font-bold text-amber-900">{analyticsData.activeGenerations}</span>
             </div>
 
-            <div className="pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Engagement Rate</span>
-                <span className="font-medium text-gray-900">
-                  {((analyticsData.userEngagement.activeUsers / analyticsData.userEngagement.totalUsers) * 100).toFixed(1)}%
-                </span>
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-900">Models Used</span>
               </div>
+              <span className="text-lg font-bold text-gray-900">{Object.keys(analyticsData.modelUsage).length}</span>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Export Actions */}
       <div className="mt-8 flex justify-center">
-        <button className={`${getButtonClasses('secondary')} flex items-center gap-2`}>
+        <button
+          onClick={handleExport}
+          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 transition-colors"
+        >
           <Download className="w-4 h-4" />
-          Export Analytics Report
+          Export as CSV
         </button>
       </div>
     </div>

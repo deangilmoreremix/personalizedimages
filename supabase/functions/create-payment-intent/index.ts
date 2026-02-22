@@ -34,7 +34,7 @@ serve(async (req) => {
     }
 
     // Check rate limit
-    const rateLimit = checkRateLimit(user.id, true)
+    const rateLimit = await checkRateLimit(user.id, true)
     if (!rateLimit.allowed) {
       return new Response(
         JSON.stringify({

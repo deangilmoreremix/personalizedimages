@@ -88,7 +88,7 @@ serve(async (req) => {
     }
 
     // Check rate limit
-    const rateLimit = checkRateLimit(user.id, true)
+    const rateLimit = await checkRateLimit(user.id, true)
     if (!rateLimit.allowed) {
       return new Response(
         JSON.stringify({
@@ -108,7 +108,7 @@ serve(async (req) => {
     }
 
     // Check user credits
-    const creditCheck = checkCredits(user.id)
+    const creditCheck = await checkCredits(user.id)
     if (!creditCheck.allowed) {
       return new Response(
         JSON.stringify({

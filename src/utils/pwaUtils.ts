@@ -144,46 +144,63 @@ export const clearAllCaches = async (): Promise<void> => {
   }
 };
 
-// Show update notification
 const showUpdateNotification = () => {
-  // Create a simple notification for the update
   const updateBanner = document.createElement('div');
   updateBanner.id = 'pwa-update-banner';
   updateBanner.className = 'fixed top-0 left-0 right-0 bg-blue-600 text-white p-4 z-50 shadow-lg';
-  updateBanner.innerHTML = `
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"></path>
-          </svg>
-        </div>
-        <div>
-          <p class="font-medium">Update Available</p>
-          <p class="text-sm opacity-90">A new version of VideoRemix is ready</p>
-        </div>
-      </div>
-      <div class="flex gap-2">
-        <button id="update-dismiss" class="px-3 py-1 bg-blue-500 hover:bg-blue-400 rounded text-sm transition-colors">
-          Later
-        </button>
-        <button id="update-reload" class="px-3 py-1 bg-white text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors">
-          Update Now
-        </button>
-      </div>
-    </div>
-  `;
 
+  const wrapper = document.createElement('div');
+  wrapper.className = 'flex items-center justify-between';
+
+  const leftSection = document.createElement('div');
+  leftSection.className = 'flex items-center gap-3';
+
+  const iconContainer = document.createElement('div');
+  iconContainer.className = 'w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'w-4 h-4');
+  svg.setAttribute('fill', 'currentColor');
+  svg.setAttribute('viewBox', '0 0 20 20');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('fill-rule', 'evenodd');
+  path.setAttribute('d', 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z');
+  path.setAttribute('clip-rule', 'evenodd');
+  svg.appendChild(path);
+  iconContainer.appendChild(svg);
+
+  const textContainer = document.createElement('div');
+  const title = document.createElement('p');
+  title.className = 'font-medium';
+  title.textContent = 'Update Available';
+  const subtitle = document.createElement('p');
+  subtitle.className = 'text-sm opacity-90';
+  subtitle.textContent = 'A new version of VideoRemix is ready';
+  textContainer.appendChild(title);
+  textContainer.appendChild(subtitle);
+
+  leftSection.appendChild(iconContainer);
+  leftSection.appendChild(textContainer);
+
+  const buttonContainer = document.createElement('div');
+  buttonContainer.className = 'flex gap-2';
+
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'px-3 py-1 bg-blue-500 hover:bg-blue-400 rounded text-sm transition-colors';
+  dismissBtn.textContent = 'Later';
+  dismissBtn.addEventListener('click', () => updateBanner.remove());
+
+  const reloadBtn = document.createElement('button');
+  reloadBtn.className = 'px-3 py-1 bg-white text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors';
+  reloadBtn.textContent = 'Update Now';
+  reloadBtn.addEventListener('click', () => window.location.reload());
+
+  buttonContainer.appendChild(dismissBtn);
+  buttonContainer.appendChild(reloadBtn);
+
+  wrapper.appendChild(leftSection);
+  wrapper.appendChild(buttonContainer);
+  updateBanner.appendChild(wrapper);
   document.body.appendChild(updateBanner);
-
-  // Handle button clicks
-  document.getElementById('update-dismiss')?.addEventListener('click', () => {
-    updateBanner.remove();
-  });
-
-  document.getElementById('update-reload')?.addEventListener('click', () => {
-    window.location.reload();
-  });
 };
 
 // Handle offline/online events

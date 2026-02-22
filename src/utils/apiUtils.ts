@@ -97,10 +97,7 @@ function formatTokensForApi(tokens: Record<string, string>): string {
  * Extract text from HTML content
  */
 function extractTextFromHtml(html: string): string {
-  // Create a temporary element
-  const tempElement = document.createElement('div');
-  tempElement.innerHTML = html;
-  
-  // Return the text content
-  return tempElement.textContent || tempElement.innerText || '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  return doc.body.textContent || '';
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes, PaintBucket, Tag } from 'lucide-react';
-import { generateGhibliStyleImage, generateImageWithGeminiNano } from '../utils/api';
+import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import DroppableInput from './DroppableInput';
@@ -28,7 +28,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('gemini-nano');
+  const [selectedProvider] = useState<'openai'>('openai');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [sceneType, setSceneType] = useState<string>('nature');
@@ -172,30 +172,23 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
         hasReferenceImage: !!referenceImage
       });
       
-      const imageUrl = await generateGhibliStyleImage(finalPrompt, selectedProvider, referenceImage || undefined);
-      console.log('✅ Successfully generated Ghibli-style image');
-      
-      setGeneratedImage(imageUrl);
+      const styledPrompt = `${finalPrompt} (Studio Ghibli anime art style, soft watercolor palette, dreamy atmosphere)`;
+      const result = await generateImage(styledPrompt, {
+        style: 'Studio Ghibli anime',
+        category: 'ghibli'
+      });
+
+      setGeneratedImage(result.imageUrl);
       if (onImageGenerated) {
-        onImageGenerated(imageUrl);
+        onImageGenerated(result.imageUrl);
       }
     } catch (err) {
-      console.error('❌ Failed to generate Ghibli-style image:', err);
-      let errorMessage = 'Failed to generate Ghibli-style image: ';
-      
-      if (err instanceof Error) {
-        errorMessage += err.message;
-      } else if (typeof err === 'string') {
-        errorMessage += err;
+      if (err instanceof InsufficientCreditsError) {
+        setError(`Insufficient credits (${err.remainingCredits} remaining). Purchase more to continue.`);
+      } else if (err instanceof GenerationError) {
+        setError(err.message);
       } else {
-        errorMessage += 'Unknown error';
-      }
-      
-      setError(errorMessage);
-      
-      // Provide a more helpful error message for common issues
-      if (errorMessage.includes('400')) {
-        setError(`${errorMessage}. This may be due to an invalid API key or a problem with the prompt content.`);
+        setError(`Failed to generate Ghibli-style image: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     } finally {
       setIsGenerating(false);

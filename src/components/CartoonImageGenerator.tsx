@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Lightbulb, Dices, Paintbrush as PaintBrush, Shapes } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateImageWithDalle, generateImageWithGemini, generateCartoonImage, generateImageWithGeminiNano } from '../utils/api';
+import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
@@ -30,7 +30,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
+  const [selectedProvider] = useState<'openai'>('openai');
 
   const [personalizedContent, setPersonalizedContent] = useState('');
   const { shouldShowPanel } = usePersonalizationPreferences('cartoon');
@@ -90,42 +90,25 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
       
       console.log(`🎨 Generating cartoon image with ${selectedProvider}:`, { finalPrompt, hasReferenceImage: !!referenceImage });
       
-      let imageUrl;
-      
-      try {
-        // Use the cartoon generator function that handles reference images
-        imageUrl = await generateCartoonImage(
-          finalPrompt,
-          selectedProvider,
-          referenceImage || undefined,
-          cartoonThemesConfig.themes[selectedTheme].label
-        );
-      } catch (err) {
-        console.warn('❌ Cartoon image generation failed with API:', err);
-        
-        // If the specialized function fails, fall back to basic image generation
-        if (selectedProvider === 'gemini') {
-          imageUrl = await generateImageWithGemini(finalPrompt);
-        } else {
-          imageUrl = await generateImageWithDalle(finalPrompt);
-        }
-      }
-      
-      console.log('✅ Successfully generated cartoon image');
-      
-      setGeneratedImage(imageUrl);
+      const themeLabel = cartoonThemesConfig.themes[selectedTheme]?.label || 'cartoon';
+      const styledPrompt = `${finalPrompt} (${themeLabel} cartoon style)`;
+
+      const result = await generateImage(styledPrompt, {
+        style: themeLabel,
+        category: 'cartoon'
+      });
+
+      setGeneratedImage(result.imageUrl);
       if (onImageGenerated) {
-        onImageGenerated(imageUrl);
+        onImageGenerated(result.imageUrl);
       }
     } catch (err) {
-      console.error('❌ Failed to generate cartoon image:', err);
-      setError(`Failed to generate cartoon image: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      
-      // Fallback to a placeholder image
-      const placeholderUrl = `https://placehold.co/600x400/f5f5f5/6d28d9?text=Could+not+generate+cartoon+image`;
-      setGeneratedImage(placeholderUrl);
-      if (onImageGenerated) {
-        onImageGenerated(placeholderUrl);
+      if (err instanceof InsufficientCreditsError) {
+        setError(`Insufficient credits (${err.remainingCredits} remaining). Purchase more to continue.`);
+      } else if (err instanceof GenerationError) {
+        setError(err.message);
+      } else {
+        setError(`Failed to generate cartoon image: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     } finally {
       setIsGenerating(false);

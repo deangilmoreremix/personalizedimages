@@ -21,7 +21,7 @@ import {
   FileSpreadsheet,
   Settings
 } from 'lucide-react';
-import { cloudGalleryService } from '../services/cloudGalleryService';
+import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface BatchItem {
@@ -44,15 +44,14 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState(-1);
-  const [selectedModel, setSelectedModel] = useState<'openai' | 'gemini'>('openai');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [imageStyle, setImageStyle] = useState('photography');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cancelledRef = useRef(false);
 
   const modelConfig = {
-    openai: { name: 'DALL-E 3', cost: 0.04 },
-    gemini: { name: 'Gemini', cost: 0.0025 }
+    openai: { name: 'DALL-E 3', cost: 0.04 }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +90,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
               id: `batch-${Date.now()}-${i}`,
               prompt: values[headers.findIndex(h => h.toLowerCase() === 'prompt')] || '',
               tokens: mergedTokens,
-              model: selectedModel,
+              model: 'openai',
               status: 'pending'
             });
           }
@@ -111,7 +110,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
       id: `manual-${Date.now()}`,
       prompt: '',
       tokens: { ...tokens },
-      model: selectedModel,
+      model: 'openai',
       status: 'pending'
     };
     setBatchItems(prev => [...prev, newItem]);
@@ -131,38 +130,45 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
     const startTime = Date.now();
 
     try {
-      // Here you would call the actual generation API
-      // For now, we'll simulate with a placeholder
-      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+      let resolvedPrompt = item.prompt;
+      Object.entries(item.tokens).forEach(([key, value]) => {
+        resolvedPrompt = resolvedPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'gi'), value);
+      });
 
-      const mockImageUrl = `https://picsum.photos/512/512?random=${Math.random()}`;
+      const sizeMap: Record<string, '1024x1024' | '1792x1024' | '1024x1792'> = {
+        '1:1': '1024x1024',
+        '16:9': '1792x1024',
+        '4:3': '1792x1024',
+        '9:16': '1024x1792',
+        '3:4': '1024x1792'
+      };
 
-      // Save to gallery
-      await cloudGalleryService.saveImage({
-        image_url: mockImageUrl,
-        prompt: item.prompt,
-        tokens: item.tokens,
-        model: item.model,
-        style: imageStyle,
-        metadata: {
-          batchId: item.id,
-          aspectRatio,
-          generatedAt: new Date().toISOString()
-        }
+      const result = await generateImage(resolvedPrompt, {
+        size: sizeMap[aspectRatio] || '1024x1024',
+        style: imageStyle !== 'photography' ? imageStyle : undefined,
+        category: 'batch'
       });
 
       return {
         ...item,
         status: 'completed',
-        imageUrl: mockImageUrl,
+        imageUrl: result.imageUrl,
         generationTime: Date.now() - startTime,
-        cost: modelConfig[item.model as keyof typeof modelConfig].cost
+        cost: modelConfig.openai.cost
       };
     } catch (error) {
+      let errorMsg = 'Generation failed';
+      if (error instanceof InsufficientCreditsError) {
+        errorMsg = 'Insufficient credits';
+      } else if (error instanceof GenerationError) {
+        errorMsg = error.message;
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
       return {
         ...item,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Generation failed',
+        error: errorMsg,
         generationTime: Date.now() - startTime
       };
     }
@@ -176,19 +182,23 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
 
     setIsProcessing(true);
     setCurrentProcessingIndex(0);
+    cancelledRef.current = false;
 
     for (let i = 0; i < batchItems.length; i++) {
+      if (cancelledRef.current) break;
+
       setCurrentProcessingIndex(i);
-
       const item = batchItems[i];
-      updateItem(item.id, { status: 'processing' });
+      if (item.status === 'completed') continue;
 
+      updateItem(item.id, { status: 'processing' });
       const result = await generateImageForItem(item);
       updateItem(item.id, result);
 
-      // Small delay between generations to avoid rate limits
-      if (i < batchItems.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      if (result.status === 'failed' && result.error === 'Insufficient credits') break;
+
+      if (i < batchItems.length - 1 && !cancelledRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
@@ -197,6 +207,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   };
 
   const stopBatch = () => {
+    cancelledRef.current = true;
     setIsProcessing(false);
     setCurrentProcessingIndex(-1);
   };
@@ -305,14 +316,9 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   AI Model
                 </label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value as 'openai' | 'gemini')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="openai">DALL-E 3 (${modelConfig.openai.cost}/img)</option>
-                  <option value="gemini">Gemini (${modelConfig.gemini.cost}/img)</option>
-                </select>
+                <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700">
+                  DALL-E 3 (${modelConfig.openai.cost}/img)
+                </div>
               </div>
 
               <button

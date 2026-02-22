@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Download, Image as ImageIcon, RefreshCw, Shapes, Search } from 'lucide-react';
-import { generateImageWithDalle, generateImageWithGemini } from '../utils/api';
+import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
@@ -21,7 +21,6 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini'>('openai');
   const [referenceImage, setReferenceImage] = useState<StockResource | null>(null);
 
   // Personalization panel state - now uses preferences
@@ -54,14 +53,17 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
         enhancedPrompt = `${prompt} (using reference image: ${referenceImage.title || 'Freepik image'})`;
       }
 
-      const imageUrl = selectedProvider === 'openai'
-        ? await generateImageWithDalle(enhancedPrompt)
-        : await generateImageWithGemini(enhancedPrompt);
-
-      setGeneratedImage(imageUrl);
-      onImageGenerated(imageUrl);
+      const result = await generateImage(enhancedPrompt, { category: 'ai-image' });
+      setGeneratedImage(result.imageUrl);
+      onImageGenerated(result.imageUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed');
+      if (err instanceof InsufficientCreditsError) {
+        setError(`Insufficient credits (${err.remainingCredits} remaining). Purchase more to continue.`);
+      } else if (err instanceof GenerationError) {
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Generation failed');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -75,19 +77,8 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">AI Model</label>
-            <div className="flex gap-2">
-              <button
-                className={`px-4 py-2 rounded ${selectedProvider === 'openai' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                onClick={() => setSelectedProvider('openai')}
-              >
-                OpenAI
-              </button>
-              <button
-                className={`px-4 py-2 rounded ${selectedProvider === 'gemini' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-                onClick={() => setSelectedProvider('gemini')}
-              >
-                Gemini
-              </button>
+            <div className="px-4 py-2 rounded bg-blue-50 text-blue-700 text-sm border border-blue-200 inline-block">
+              DALL-E 3 (OpenAI)
             </div>
           </div>
 

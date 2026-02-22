@@ -43,6 +43,8 @@ import {
 // Core generation API
 import { generateImage, generateImageBatch, generateVariations } from '../utils/api/image/generation';
 import { resolveTokens } from '../utils/tokenResolver';
+import { quickEnhance, type GeneratorCategory } from '../utils/promptEnhancer';
+import PromptEnhancementPanel from './PromptEnhancementPanel';
 
 // UI Components
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
@@ -112,6 +114,8 @@ const UnifiedImageDashboard: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [promptText, setPromptText] = useState('');
+  const [autoEnhance, setAutoEnhance] = useState(true);
+  const [negativePrompt, setNegativePrompt] = useState('');
 
   // Personalization state
   const [tokens, setTokens] = useState<Record<string, string>>({
@@ -232,7 +236,12 @@ const UnifiedImageDashboard: React.FC = () => {
 
     setIsGenerating(true);
     try {
-      const effectivePrompt = buildEffectivePrompt(raw);
+      let effectivePrompt = buildEffectivePrompt(raw);
+
+      if (autoEnhance) {
+        const categoryKey = currentMode as GeneratorCategory;
+        effectivePrompt = quickEnhance(effectivePrompt, categoryKey);
+      }
 
       const result = await generateImage(effectivePrompt, {
         provider: 'gemini',
@@ -765,6 +774,15 @@ const UnifiedImageDashboard: React.FC = () => {
                 />
               </div>
 
+              {/* Prompt Enhancement Panel */}
+              <PromptEnhancementPanel
+                prompt={promptText}
+                category={currentMode as GeneratorCategory}
+                onApplyEnhanced={(enhanced) => setPromptText(enhanced)}
+                onNegativePromptChange={setNegativePrompt}
+                compact={false}
+              />
+
               {/* Personalized Prompt Preview */}
               {showPersonalization && promptText.trim() && personalizationMode !== 'action-figure' && (
                 <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3 border border-green-200 dark:border-green-800">
@@ -805,10 +823,22 @@ const UnifiedImageDashboard: React.FC = () => {
                   </button>
 
                   <button
+                    onClick={() => setAutoEnhance(!autoEnhance)}
+                    className={`px-4 py-2 border rounded-lg flex items-center space-x-2 transition-colors ${
+                      autoEnhance
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300'
+                        : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>Auto-Enhance {autoEnhance ? 'On' : 'Off'}</span>
+                  </button>
+
+                  <button
                     onClick={() => setShowPersonalization(!showPersonalization)}
                     className={`px-4 py-2 border rounded-lg flex items-center space-x-2 transition-colors ${
                       showPersonalization
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300'
                         : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                   >

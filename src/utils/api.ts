@@ -4,6 +4,7 @@
 import { callEdgeFunction, isSupabaseConfigured, supabase } from './supabaseClient';
 import { getGeminiApiKey, getOpenAIApiKey, getGiphyApiKey, getFreepikApiKey, hasApiKey, blobToBase64 } from './apiUtils';
 import { generateImageWithGeminiNano as generateImageWithGeminiNanoService, editImageWithGeminiNano as editImageWithGeminiNanoService, generateVariationsWithGeminiNano as generateVariationsWithGeminiNanoService, GeminiNanoConfig, ImageEditOptions, ImageGenerationOptions } from './geminiNanoApi';
+import { quickEnhance, type GeneratorCategory } from './promptEnhancer';
 
 /**
  * Generate an image description that can be used for AI image generation
@@ -965,8 +966,7 @@ export async function generateGhibliStyleImage(prompt: string, provider: string 
   try {
     console.log(`🌟 Generating Ghibli-style image with ${provider}`);
     
-    // Enhance the prompt for Ghibli style
-    const enhancedPrompt = `Studio Ghibli style animation: ${prompt}. Soft colors, whimsical atmosphere, detailed backgrounds, watercolor style painting, magical elements, inspired by Hayao Miyazaki's art direction.`;
+    const enhancedPrompt = quickEnhance(`Studio Ghibli style: ${prompt}`, 'ghibli');
     
     // Try edge function first
     if (isSupabaseConfigured()) {
@@ -1029,8 +1029,7 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
   try {
     console.log(`🎨 Generating cartoon-style image with ${provider}`);
     
-    // Enhance the prompt for cartoon style
-    const enhancedPrompt = `${prompt} in ${style} style. Clean lines, vibrant colors, simplified features, animated look.`;
+    const enhancedPrompt = quickEnhance(`${prompt} in ${style} style`, 'cartoon');
     
     // Try edge function first
     if (isSupabaseConfigured()) {
@@ -1130,8 +1129,7 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
   try {
     console.log(`🤖 Generating action figure with ${provider}`);
 
-    // Enhance the prompt for action figure style
-    const enhancedPrompt = `Create a highly detailed, professional-quality product photo of an action figure: ${prompt}. The figure should look like a real commercial toy with articulation points, detailed textures, realistic packaging design, and toy store lighting.`;
+    const enhancedPrompt = quickEnhance(`Create an action figure: ${prompt}`, 'action-figure');
 
     // Try edge function first
     if (isSupabaseConfigured()) {

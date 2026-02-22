@@ -226,13 +226,12 @@ function selectFallbackProvider(currentProvider: AIProvider, options: Partial<Im
 }
 
 function createProviderRequest(prompt: string, provider: AIProvider, options: Partial<ImageGenerationRequest>) {
-  const baseRequest = {
+  const baseRequest: { prompt: string; provider: AIProvider; options: Record<string, any> } = {
     prompt,
     provider,
     options: {}
   };
 
-  // Add provider-specific options
   switch (provider) {
     case 'openai':
       baseRequest.options = {
@@ -258,6 +257,10 @@ function createProviderRequest(prompt: string, provider: AIProvider, options: Pa
         negativePrompt: options.negativePrompt
       };
       break;
+  }
+
+  if (options.appliedTokens?.length) {
+    baseRequest.options.appliedTokens = options.appliedTokens;
   }
 
   return baseRequest;

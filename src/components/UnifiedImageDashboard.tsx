@@ -42,6 +42,7 @@ import {
 
 // Core generation API
 import { generateImage, generateImageBatch, generateVariations } from '../utils/api/image/generation';
+import { resolveTokens } from '../utils/tokenResolver';
 
 // UI Components
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
@@ -110,6 +111,7 @@ const UnifiedImageDashboard: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+  const [promptText, setPromptText] = useState('');
 
   // Personalization state
   const [tokens, setTokens] = useState<Record<string, string>>({
@@ -197,12 +199,43 @@ const UnifiedImageDashboard: React.FC = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   }, [theme, setTheme]);
 
+  // Build the effective prompt with token resolution
+  const buildEffectivePrompt = useCallback((rawPrompt: string): string => {
+    let effectivePrompt = rawPrompt;
+
+    if (showPersonalization && personalizationMode === 'action-figure') {
+      const figureParts = [
+        `Create an action figure of ${tokens.CHARACTER_NAME || 'a character'}`,
+        `in a ${tokens.STYLE} style`,
+        `striking a ${(tokens.POSE || '').replace('-', ' ')} pose`,
+        `in a ${tokens.ENVIRONMENT} environment`,
+      ];
+      if (rawPrompt.trim()) {
+        figureParts.push(`. Additional details: ${rawPrompt}`);
+      }
+      effectivePrompt = figureParts.join(', ');
+    }
+
+    if (showPersonalization) {
+      const contextualTokens = getContextualTokens();
+      const resolved = resolveTokens(effectivePrompt, contextualTokens);
+      effectivePrompt = resolved.resolvedContent;
+    }
+
+    return effectivePrompt;
+  }, [showPersonalization, personalizationMode, tokens, getContextualTokens]);
+
   // Handle image generation
-  const handleGenerate = useCallback(async (prompt: string, options: any = {}) => {
+  const handleGenerate = useCallback(async (options: any = {}) => {
+    const raw = promptText.trim();
+    if (!raw && !(showPersonalization && personalizationMode === 'action-figure')) return;
+
     setIsGenerating(true);
     try {
-      const result = await generateImage(prompt, {
-        provider: 'gemini', // Default to Gemini for now
+      const effectivePrompt = buildEffectivePrompt(raw);
+
+      const result = await generateImage(effectivePrompt, {
+        provider: 'gemini',
         ...options
       });
 
@@ -210,7 +243,7 @@ const UnifiedImageDashboard: React.FC = () => {
         const newImage: GeneratedImage = {
           id: Date.now().toString(),
           url: result.imageUrl,
-          prompt,
+          prompt: effectivePrompt,
           mode: currentMode,
           timestamp: new Date(),
           metadata: {
@@ -227,7 +260,7 @@ const UnifiedImageDashboard: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  }, [currentMode]);
+  }, [promptText, currentMode, showPersonalization, personalizationMode, buildEffectivePrompt]);
 
   // Handle image selection
   const toggleImageSelection = useCallback((imageId: string) => {
@@ -723,7 +756,9 @@ const UnifiedImageDashboard: React.FC = () => {
                   Prompt {showPersonalization && <span className="text-indigo-600 dark:text-indigo-400">(Personalized)</span>}
                 </label>
                 <textarea
-                  placeholder={showPersonalization ? "Enter base prompt - tokens will be applied automatically..." : "Describe the image you want to create..."}
+                  value={promptText}
+                  onChange={(e) => setPromptText(e.target.value)}
+                  placeholder={showPersonalization ? "Enter base prompt with tokens like {FIRSTNAME} - they'll be replaced automatically..." : "Describe the image you want to create..."}
                   className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   rows={3}
                   disabled={isGenerating}
@@ -731,6 +766,19 @@ const UnifiedImageDashboard: React.FC = () => {
               </div>
 
               {/* Personalized Prompt Preview */}
+              {showPersonalization && promptText.trim() && personalizationMode !== 'action-figure' && (
+                <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Eye className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Resolved Prompt Preview
+                    </span>
+                  </div>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    {buildEffectivePrompt(promptText.trim())}
+                  </p>
+                </div>
+              )}
               {showPersonalization && personalizationMode === 'action-figure' && (
                 <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-3 border border-indigo-200 dark:border-indigo-800">
                   <div className="flex items-center space-x-2 mb-2">
@@ -740,10 +788,7 @@ const UnifiedImageDashboard: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                    Create an action figure of <strong>{tokens.CHARACTER_NAME || 'Character'}</strong> in a{' '}
-                    <strong>{tokens.STYLE}</strong> style, striking a{' '}
-                    <strong>{tokens.POSE.replace('-', ' ')}</strong> pose in a{' '}
-                    <strong>{tokens.ENVIRONMENT}</strong> environment.
+                    {buildEffectivePrompt(promptText)}
                   </p>
                 </div>
               )}
@@ -751,8 +796,8 @@ const UnifiedImageDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <button
-                    onClick={() => handleGenerate('A beautiful landscape')}
-                    disabled={isGenerating}
+                    onClick={() => handleGenerate()}
+                    disabled={isGenerating || (!promptText.trim() && !(showPersonalization && personalizationMode === 'action-figure'))}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
                     <Sparkles className="w-4 h-4" />

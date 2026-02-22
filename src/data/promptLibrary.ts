@@ -103,6 +103,318 @@ export const actionFigureTemplates: PromptTemplate[] = [
     basePrompt: "Create a chibi-style action figure of [NAME] from [COMPANY] with oversized head, big eyes, and cute proportions. The figure is posed cutely with [ACCESSORIES] that match the chibi aesthetic. The design features soft, rounded features and adorable expressions. Kawaii photography with bright, cheerful lighting and cute presentation.",
     tokens: ["NAME", "COMPANY", "ACCESSORIES"],
     enhancements: ["chibi proportions", "cute aesthetic", "oversized features"]
+  },
+  {
+    id: "steampunk-explorer",
+    category: "actionFigure",
+    name: "Steampunk Explorer",
+    basePrompt: "Create a steampunk-themed action figure of [NAME] from [COMPANY] wearing Victorian-era adventurer gear with brass goggles, leather straps, and clockwork gadgets. Accessories include a steam-powered gauntlet, compass, and gear-laden backpack. Packaged in a riveted metal-effect box with copper foil accents, aged parchment labels, and sepia-toned artwork. Studio photography with warm amber lighting, photorealistic materials, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["steampunk aesthetics", "Victorian adventure", "clockwork details"]
+  },
+  {
+    id: "cyberpunk-hacker",
+    category: "actionFigure",
+    name: "Cyberpunk Hacker",
+    basePrompt: "Create a cyberpunk action figure of [NAME] from [COMPANY] in neon-lit urban hacker gear with holographic visor, data gloves, and fiber-optic hair highlights. Accessories include a holo-tablet, EMP grenade, and drone companion. Packaging features translucent smoky plastic with neon edge lighting, circuit-board pattern graphics, and a QR code that glows under UV. Dramatic neon lighting with cyan and magenta rim lights, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["cyberpunk neon aesthetic", "hacker gear", "futuristic packaging"]
+  },
+  {
+    id: "space-commander",
+    category: "actionFigure",
+    name: "Space Commander",
+    basePrompt: "Create a sci-fi space commander action figure of [NAME] from [COMPANY] in a sleek space suit with retractable helmet visor, magnetic boots, and illuminated rank insignia. Accessories include a plasma pistol, star map hologram projector, and mission briefcase. Packaging styled as a cryo-pod with frosted window, starfield background, and mission dossier insert card. Cool blue-white studio lighting with stars reflected in visor, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["sci-fi commander", "space suit design", "cryo-pod packaging"]
+  },
+  {
+    id: "medieval-knight",
+    category: "actionFigure",
+    name: "Medieval Knight",
+    basePrompt: "Create a medieval knight action figure of [NAME] from [COMPANY] in full plate armor with [COMPANY]-branded heraldic shield, plumed helm, and flowing cape. Accessories include a broadsword, jousting lance, and battle standard. Packaging designed as a castle gate with portcullis window, wax seal, and illuminated manuscript-style character card. Warm torch-lit studio photography, photorealistic metal reflections, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["medieval armor", "heraldic design", "castle packaging"]
+  },
+  {
+    id: "ninja-warrior",
+    category: "actionFigure",
+    name: "Ninja Warrior",
+    basePrompt: "Create a ninja warrior action figure of [NAME] from [COMPANY] in sleek black tactical shinobi gear with carbon-fiber armor plates and glowing red eye visor. Accessories include twin katanas, shuriken set, smoke bombs, and grappling hook. Packaging is matte black with subtle embossed Japanese calligraphy, red foil accents, and a sliding-reveal mechanism. Dramatic low-key lighting with single red accent, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["ninja aesthetic", "tactical gear", "stealth packaging"]
+  },
+  {
+    id: "pirate-captain",
+    category: "actionFigure",
+    name: "Pirate Captain",
+    basePrompt: "Create a swashbuckling pirate captain action figure of [NAME] from [COMPANY] with tricorn hat, ornate longcoat, and mechanical prosthetic arm. Accessories include a cutlass, treasure map, spyglass, and parrot companion figure. Packaging designed as a treasure chest with aged wood texture, gold coin scatter, and nautical map lining. Warm golden-hour lighting with ocean backdrop hints, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["pirate adventure", "treasure chest packaging", "nautical theme"]
+  },
+  {
+    id: "arctic-explorer",
+    category: "actionFigure",
+    name: "Arctic Explorer",
+    basePrompt: "Create an arctic explorer action figure of [NAME] from [COMPANY] in insulated expedition gear with fur-lined hood, snow goggles, and ice-climbing harness. Accessories include an ice axe, thermal scanner, husky companion figure, and expedition flag. Packaging features frosted clear plastic with snowflake patterns, aurora borealis backdrop, and temperature gauge graphic. Cool blue-white lighting with frost effects, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["arctic expedition", "frost effects", "polar exploration"]
+  },
+  {
+    id: "rock-star-legend",
+    category: "actionFigure",
+    name: "Rock Star Legend",
+    basePrompt: "Create a rock star action figure of [NAME] from [COMPANY] in leather jacket with studs, ripped jeans, and iconic sunglasses. Accessories include an electric guitar, microphone with stand, amplifier, and backstage pass. Packaging styled as a concert poster with venue marquee, ticket stub, and vinyl record sleeve insert. Stage lighting with dramatic spotlights and lens flare, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["rock star aesthetic", "concert packaging", "stage lighting"]
+  },
+  {
+    id: "safari-ranger",
+    category: "actionFigure",
+    name: "Safari Ranger",
+    basePrompt: "Create a safari ranger action figure of [NAME] from [COMPANY] in khaki expedition outfit with wide-brim hat, binoculars, and utility vest. Accessories include a tranquilizer dart gun, field journal, walkie-talkie, and baby elephant companion figure. Packaging features savanna landscape art, field guide format layout, and conservation badge. Warm golden sunlight photography with dust motes, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["safari adventure", "conservation theme", "wildlife companion"]
+  },
+  {
+    id: "deep-sea-diver",
+    category: "actionFigure",
+    name: "Deep Sea Diver",
+    basePrompt: "Create a deep-sea diver action figure of [NAME] from [COMPANY] in advanced diving suit with illuminated helmet, pressure gauge displays, and mechanical claw arm. Accessories include a harpoon gun, underwater camera, specimen container, and anglerfish companion. Packaging uses translucent blue tinted plastic with bubble effects, depth gauge graphic, and bioluminescent accents. Deep blue lighting with caustic water patterns, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["deep sea exploration", "bioluminescent effects", "underwater theme"]
+  },
+  {
+    id: "race-car-driver",
+    category: "actionFigure",
+    name: "Race Car Driver",
+    basePrompt: "Create a race car driver action figure of [NAME] from [COMPANY] in fire-resistant racing suit with [COMPANY] branding, open-face helmet with visor, and racing gloves. Accessories include a steering wheel, checkered flag, trophy, and pit crew tools. Packaging styled as a racing garage with tire-tread texture, speedometer graphic, and finish-line stripe. High-energy studio lighting with motion blur accents, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["motorsport theme", "racing aesthetics", "speed graphics"]
+  },
+  {
+    id: "wizard-scholar",
+    category: "actionFigure",
+    name: "Wizard Scholar",
+    basePrompt: "Create a wizard scholar action figure of [NAME] from [COMPANY] in flowing robes with arcane symbols, pointed hat with constellation embroidery, and crystal-topped staff. Accessories include a spellbook, potion vials, owl familiar, and crystal ball. Packaging designed as an ancient tome with leather binding, gold leaf lettering, and mystical seal. Warm candlelit photography with magical particle effects, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["magical scholar", "tome packaging", "arcane aesthetics"]
+  },
+  {
+    id: "mountain-climber",
+    category: "actionFigure",
+    name: "Mountain Climber",
+    basePrompt: "Create a mountain climber action figure of [NAME] from [COMPANY] in alpine climbing gear with harness, carabiners, chalk bag, and insulated layers. Accessories include ice axes, rope coil, headlamp, and summit flag. Packaging features mountain peak silhouette, topographic map patterns, and altitude marker graphics. Crisp high-altitude lighting with snow-capped peaks, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["alpine climbing", "summit achievement", "mountain aesthetics"]
+  },
+  {
+    id: "chef-master",
+    category: "actionFigure",
+    name: "Master Chef",
+    basePrompt: "Create a master chef action figure of [NAME] from [COMPANY] in pristine white chef coat with embroidered name, toque blanche, and chef knife roll. Accessories include a copper saucepan, plated dish, chef torch, and recipe book. Packaging styled as a premium kitchen with marble counter texture, Michelin star graphics, and menu card insert. Warm kitchen lighting with steam effects, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["culinary arts", "gourmet presentation", "kitchen aesthetics"]
+  },
+  {
+    id: "detective-noir",
+    category: "actionFigure",
+    name: "Noir Detective",
+    basePrompt: "Create a noir detective action figure of [NAME] from [COMPANY] in classic trench coat, fedora hat tilted low, and worn leather shoes. Accessories include a magnifying glass, case file folder, revolver, and coffee cup. Packaging designed with film noir aesthetics: high contrast black and white with venetian blind shadow patterns, city skyline silhouette, and typewriter-font case number. Moody low-key lighting with dramatic shadows, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["film noir aesthetic", "detective mystery", "shadow photography"]
+  },
+  {
+    id: "astronaut-pioneer",
+    category: "actionFigure",
+    name: "Astronaut Pioneer",
+    basePrompt: "Create an astronaut action figure of [NAME] from [COMPANY] in next-generation space suit with gold visor, life support backpack, and articulated EVA gloves. Accessories include a lunar rock sample kit, tethering cable, mission patch set, and national flag. Packaging designed as a spacecraft airlock with porthole window, mission insignia, and countdown display. Clean studio lighting with earth reflection in visor, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["space exploration", "NASA aesthetic", "astronaut gear"]
+  },
+  {
+    id: "jungle-archaeologist",
+    category: "actionFigure",
+    name: "Jungle Archaeologist",
+    basePrompt: "Create a jungle archaeologist action figure of [NAME] from [COMPANY] in rugged khaki outfit with leather satchel, weathered hat, and compass watch. Accessories include a whip, golden idol replica, ancient map, and machete. Packaging features jungle vine frame, temple ruins backdrop, and artifact catalog insert. Warm dappled jungle light through canopy, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["adventure archaeology", "temple ruins", "jungle exploration"]
+  },
+  {
+    id: "firefighter-hero",
+    category: "actionFigure",
+    name: "Firefighter Hero",
+    basePrompt: "Create a firefighter hero action figure of [NAME] from [COMPANY] in full turnout gear with reflective stripes, SCBA tank, and Cairns helmet. Accessories include a halligan bar, fire hose nozzle, thermal imaging camera, and dalmatian companion. Packaging styled as a fire station bay with red garage door, Maltese cross emblem, and unit number decal. Dramatic lighting with orange fire glow effects, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["firefighter gear", "emergency services", "hero presentation"]
+  },
+  {
+    id: "samurai-master",
+    category: "actionFigure",
+    name: "Samurai Master",
+    basePrompt: "Create a samurai master action figure of [NAME] from [COMPANY] in full o-yoroi armor with kabuto helmet, menpo face guard, and ornate do chest plate. Accessories include a katana with lacquered saya, wakizashi, war fan, and display stand with cherry blossom branch. Packaging features shoji screen design, kanji calligraphy, and ukiyo-e style artwork. Soft diffused lighting with cherry blossom petals, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["samurai warrior", "Japanese aesthetics", "traditional armor"]
+  },
+  {
+    id: "superhero-classic",
+    category: "actionFigure",
+    name: "Classic Superhero",
+    basePrompt: "Create a classic superhero action figure of [NAME] from [COMPANY] in form-fitting suit with [COMPANY]-themed emblem on chest, flowing cape, and domino mask. Accessories include interchangeable power-effect hands, energy blast piece, rooftop base, and villain target. Packaging features comic panel art layout with bold action lines, speech bubble with character catchphrase, and holographic logo. Dynamic action lighting with rim light, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["superhero design", "comic book style", "dynamic action"]
+  },
+  {
+    id: "western-gunslinger",
+    category: "actionFigure",
+    name: "Western Gunslinger",
+    basePrompt: "Create a western gunslinger action figure of [NAME] from [COMPANY] in dusty duster coat, wide-brim cowboy hat, leather chaps, and spurred boots. Accessories include dual revolvers with holsters, lasso, wanted poster, and horse companion figure. Packaging styled as a saloon door with wanted poster graphic, sheriff star badge, and desert landscape. Warm sunset lighting with dust particles, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["wild west aesthetic", "gunslinger pose", "western frontier"]
+  },
+  {
+    id: "secret-agent",
+    category: "actionFigure",
+    name: "Secret Agent",
+    basePrompt: "Create a secret agent action figure of [NAME] from [COMPANY] in tailored tuxedo with concealed body armor, cufflink communicator, and watch gadget. Accessories include a silenced pistol, briefcase with hidden compartment, disguise kit, and sports car key. Packaging designed as a classified file with redacted text, TOP SECRET stamp, and biometric scan graphic. Sleek moody lighting with blue accent, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["spy thriller", "gadget accessories", "classified aesthetic"]
+  },
+  {
+    id: "viking-raider",
+    category: "actionFigure",
+    name: "Viking Raider",
+    basePrompt: "Create a Viking raider action figure of [NAME] from [COMPANY] in fur-lined chainmail with horned helm, braided beard, and rune-carved arm bands. Accessories include a battle axe, round shield with clan symbol, drinking horn, and raven companion. Packaging features longship prow design, Norse knotwork borders, and Elder Futhark rune text. Dramatic firelight with northern sky backdrop, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["Norse warrior", "Viking aesthetics", "rune design"]
+  },
+  {
+    id: "mad-scientist",
+    category: "actionFigure",
+    name: "Mad Scientist",
+    basePrompt: "Create a mad scientist action figure of [NAME] from [COMPANY] in stained lab coat with wild electrified hair, safety goggles on forehead, and rubber gloves. Accessories include bubbling beaker set, Tesla coil, brain in a jar, and lab notebook. Packaging designed as a laboratory with caution tape, biohazard symbols, chemical formula graphics, and green glow effect. Eerie green-tinted lighting with electricity arcs, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["mad science", "laboratory setting", "electrical effects"]
+  },
+  {
+    id: "dragon-tamer",
+    category: "actionFigure",
+    name: "Dragon Tamer",
+    basePrompt: "Create a dragon tamer action figure of [NAME] from [COMPANY] in scale-mail armor with dragon-wing shoulder pauldrons, fireproof cloak, and dragon-tooth necklace. Accessories include a dragon egg, training whistle, fire shield, and baby dragon companion figure. Packaging features cave entrance design with treasure hoard glimpse, flame effects, and dragon silhouette. Warm firelight with smoke wisps, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["fantasy dragon", "scale armor", "fire effects"]
+  },
+  {
+    id: "time-traveler",
+    category: "actionFigure",
+    name: "Time Traveler",
+    basePrompt: "Create a time traveler action figure of [NAME] from [COMPANY] in a mix of eras: Victorian waistcoat, futuristic wristband, and steampunk boots. Accessories include a pocket watch time device, temporal map scroll, era-appropriate weapons pack, and paradox shield. Packaging features a clock face with spiraling timeline, multiple era silhouettes, and shifting holographic date display. Swirling time-vortex lighting effects with multiple color temperatures, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["time travel concept", "era-blending style", "temporal effects"]
+  },
+  {
+    id: "cybernetic-soldier",
+    category: "actionFigure",
+    name: "Cybernetic Soldier",
+    basePrompt: "Create a cybernetic soldier action figure of [NAME] from [COMPANY] in tactical combat armor with mechanical augmented arm, targeting eye implant, and nano-fiber bodysuit. Accessories include a plasma rifle, deployable shield drone, med-kit, and ammo pack. Packaging styled as a military spec-ops case with digital camo, HUD overlay graphics, and mission parameters readout. Hard tactical lighting with green night-vision accent, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["cybernetic augmentation", "military tactical", "sci-fi combat"]
+  },
+  {
+    id: "underwater-mermaid",
+    category: "actionFigure",
+    name: "Oceanic Guardian",
+    basePrompt: "Create an oceanic guardian action figure of [NAME] from [COMPANY] in iridescent scale armor with flowing seaweed-like hair, coral crown, and trident weapon. Accessories include a shell shield, seahorse companion, pearl necklace, and underwater base with bubbles. Packaging features deep ocean gradient with bioluminescent creatures, wave pattern borders, and nautical compass rose. Underwater caustic light patterns with teal and pearl tones, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["ocean mythology", "iridescent materials", "underwater aesthetics"]
+  },
+  {
+    id: "post-apocalyptic-survivor",
+    category: "actionFigure",
+    name: "Post-Apocalyptic Survivor",
+    basePrompt: "Create a post-apocalyptic survivor action figure of [NAME] from [COMPANY] in patched-together armor from salvaged materials, gas mask hanging at neck, and weathered backpack. Accessories include a makeshift weapon, Geiger counter, canned food, and mutant dog companion. Packaging features distressed cardboard with radiation warning symbols, cracked earth texture, and hand-drawn map insert. Harsh desaturated lighting with orange dust haze, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["post-apocalyptic wasteland", "salvage aesthetic", "survival gear"]
+  },
+  {
+    id: "egyptian-pharaoh",
+    category: "actionFigure",
+    name: "Egyptian Pharaoh",
+    basePrompt: "Create an Egyptian pharaoh action figure of [NAME] from [COMPANY] in golden nemes headdress, ornate pectoral collar, and royal shendyt skirt with lapis lazuli inlays. Accessories include a crook and flail, ankh staff, scarab amulet, and cat goddess companion. Packaging designed as a sarcophagus with hieroglyphic panels, gold leaf accents, and cartouche name plate. Warm golden lighting with sandy atmosphere, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["ancient Egypt", "pharaoh regalia", "hieroglyphic design"]
+  },
+  {
+    id: "roller-derby-champion",
+    category: "actionFigure",
+    name: "Roller Derby Champion",
+    basePrompt: "Create a roller derby champion action figure of [NAME] from [COMPANY] in colorful team uniform with knee pads, elbow pads, helmet with star decals, and quad roller skates. Accessories include a foam finger, trophy belt, team banner, and victory confetti base. Packaging features bold graffiti-style art, track layout graphic, and player stats card. High-energy studio lighting with motion streaks, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["roller derby action", "team sports", "dynamic motion"]
+  },
+  {
+    id: "wildlife-photographer",
+    category: "actionFigure",
+    name: "Wildlife Photographer",
+    basePrompt: "Create a wildlife photographer action figure of [NAME] from [COMPANY] in camouflage field vest with multiple pockets, bucket hat, and hiking boots. Accessories include a professional camera with telephoto lens, tripod, field notebook, and cheetah companion figure. Packaging features National Geographic-style layout with wildlife photos, map coordinates, and species identification card. Natural golden hour lighting, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["wildlife photography", "nature expedition", "camouflage gear"]
+  },
+  {
+    id: "punk-rocker",
+    category: "actionFigure",
+    name: "Punk Rocker",
+    basePrompt: "Create a punk rocker action figure of [NAME] from [COMPANY] with spiked mohawk, studded leather jacket with band patches, ripped fishnet shirt, and combat boots with chains. Accessories include an electric bass guitar, safety pin earrings, spray paint can, and DIY zine. Packaging features torn poster collage style, xerox texture, anarchy symbol accent, and hand-lettered typography. Gritty club lighting with red and yellow gels, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["punk aesthetic", "DIY culture", "underground music"]
+  },
+  {
+    id: "renaissance-artist",
+    category: "actionFigure",
+    name: "Renaissance Artist",
+    basePrompt: "Create a Renaissance artist action figure of [NAME] from [COMPANY] in period-accurate doublet and hose, beret, and paint-stained smock. Accessories include an easel with canvas, palette and brushes, sculptor chisel set, and anatomical sketch folio. Packaging designed as a gilded picture frame with Florentine patterns, marble texture base, and patron seal. Warm Rembrandt-style lighting with chiaroscuro effect, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["Renaissance art", "classical painting", "Florentine design"]
+  },
+  {
+    id: "mecha-pilot",
+    category: "actionFigure",
+    name: "Mecha Pilot",
+    basePrompt: "Create a mecha pilot action figure of [NAME] from [COMPANY] in form-fitting pilot suit with neural interface helmet, control gauntlets, and ejection harness. Accessories include a cockpit seat base, holographic targeting display, mecha model mini-figure, and pilot wings badge. Packaging styled as a hangar bay with blast doors, launch sequence graphics, and technical blueprint of mech unit. Cool blue cockpit lighting with HUD reflections, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["mecha anime style", "pilot suit design", "hangar aesthetics"]
+  },
+  {
+    id: "hip-hop-producer",
+    category: "actionFigure",
+    name: "Hip Hop Producer",
+    basePrompt: "Create a hip-hop producer action figure of [NAME] from [COMPANY] in designer streetwear with oversized headphones, chunky gold chain, and limited-edition sneakers. Accessories include a beat pad controller, vinyl record, microphone, and studio monitor speakers base. Packaging features graffiti wall art, turntable graphic, gold foil accents, and mixtape insert. Neon-lit studio photography with purple and gold tones, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["hip hop culture", "studio producer", "streetwear fashion"]
+  },
+  {
+    id: "forest-elf-ranger",
+    category: "actionFigure",
+    name: "Forest Elf Ranger",
+    basePrompt: "Create a forest elf ranger action figure of [NAME] from [COMPANY] in leaf-pattern leather armor with elven cloak, pointed ears, and intricate vine tattoos. Accessories include a longbow with quiver, dual elven daggers, healing potion, and fox companion figure. Packaging designed as a tree hollow with barklike texture, fairy light accents, and elvish script label. Soft dappled forest light with green and gold tones, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["fantasy elf", "forest aesthetics", "elven craftsmanship"]
+  },
+  {
+    id: "storm-chaser",
+    category: "actionFigure",
+    name: "Storm Chaser",
+    basePrompt: "Create a storm chaser action figure of [NAME] from [COMPANY] in weather-resistant jacket with anemometer hat clip, rain-proof camera, and armored boots. Accessories include a tornado probe launcher, weather station equipment, dash-cam mount, and storm truck vehicle base. Packaging features dramatic storm cloud photography, Doppler radar graphic, and wind speed scale. Dramatic dark sky lighting with lightning flash, photorealistic, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["extreme weather", "tornado chasing", "meteorology gear"]
+  },
+  {
+    id: "lego-minifigure",
+    category: "actionFigure",
+    name: "LEGO Minifigure",
+    basePrompt: "Create a LEGO-style minifigure of [NAME] from [COMPANY] with characteristic blocky proportions, yellow skin, printed torso detail, and clip-style hands. Accessories include a briefcase, coffee cup, and company-branded baseplate. The figure stands on a display base with nameplate. Clean bright studio lighting with toy photography aesthetic, photorealistic LEGO material finish, high detail.",
+    tokens: ["NAME", "COMPANY"],
+    enhancements: ["LEGO aesthetic", "minifigure proportions", "brick-built accessories"]
   }
 ];
 
@@ -1110,6 +1422,22 @@ export const marketingTemplates: PromptTemplate[] = [
     basePrompt: "Create a customer testimonial image featuring [CUSTOMER_NAME] with quote '[TESTIMONIAL]' about [COMPANY]'s [PRODUCT_NAME]. Include professional headshot, company logo, and clean typography suitable for website testimonials and case studies.",
     tokens: ["CUSTOMER_NAME", "TESTIMONIAL", "COMPANY", "PRODUCT_NAME"],
     enhancements: ["testimonial design", "customer success", "social proof"]
+  },
+  {
+    id: "brand-ambassador-spotlight",
+    category: "marketing",
+    name: "Brand Ambassador Spotlight",
+    basePrompt: "Create a brand ambassador spotlight image featuring [NAME] representing [COMPANY] with [PRODUCT_NAME]. The design includes lifestyle photography, [BRAND_COLOR] accents, social media handles, and an aspirational tone suitable for influencer campaigns and ambassador programs.",
+    tokens: ["NAME", "COMPANY", "PRODUCT_NAME", "BRAND_COLOR"],
+    enhancements: ["ambassador branding", "influencer style", "lifestyle marketing"]
+  },
+  {
+    id: "referral-program-promo",
+    category: "marketing",
+    name: "Referral Program Promo",
+    basePrompt: "Design a referral program promotional graphic for [COMPANY] featuring [NAME] with the tagline '[CTA_TEXT]'. Include reward details, share icons, and clean [BRAND_COLOR] branding suitable for email campaigns and social media referral drives.",
+    tokens: ["COMPANY", "NAME", "CTA_TEXT", "BRAND_COLOR"],
+    enhancements: ["referral campaign", "share incentive", "growth marketing"]
   }
 ];
 

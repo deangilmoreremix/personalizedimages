@@ -19,7 +19,9 @@ import {
   Users,
   Image as ImageIcon,
   FileSpreadsheet,
-  Settings
+  Settings,
+  RotateCcw,
+  Layers
 } from 'lucide-react';
 import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
@@ -47,6 +49,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [imageStyle, setImageStyle] = useState('photography');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [concurrency, setConcurrency] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cancelledRef = useRef(false);
 
@@ -175,35 +178,47 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   };
 
   const processBatch = async () => {
-    if (batchItems.length === 0) {
-      alert('Please add some items to process');
-      return;
-    }
+    if (batchItems.length === 0) return;
 
     setIsProcessing(true);
     setCurrentProcessingIndex(0);
     cancelledRef.current = false;
 
-    for (let i = 0; i < batchItems.length; i++) {
-      if (cancelledRef.current) break;
+    const pending = batchItems.filter(item => item.status !== 'completed');
+    let idx = 0;
 
-      setCurrentProcessingIndex(i);
-      const item = batchItems[i];
-      if (item.status === 'completed') continue;
+    const processOne = async (): Promise<void> => {
+      while (idx < pending.length && !cancelledRef.current) {
+        const currentIdx = idx++;
+        const item = pending[currentIdx];
+        setCurrentProcessingIndex(currentIdx);
 
-      updateItem(item.id, { status: 'processing' });
-      const result = await generateImageForItem(item);
-      updateItem(item.id, result);
+        updateItem(item.id, { status: 'processing' });
+        const result = await generateImageForItem(item);
+        updateItem(item.id, result);
 
-      if (result.status === 'failed' && result.error === 'Insufficient credits') break;
+        if (result.status === 'failed' && result.error === 'Insufficient credits') {
+          cancelledRef.current = true;
+          break;
+        }
 
-      if (i < batchItems.length - 1 && !cancelledRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!cancelledRef.current) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-    }
+    };
+
+    const workers = Array.from({ length: Math.min(concurrency, pending.length) }, () => processOne());
+    await Promise.all(workers);
 
     setIsProcessing(false);
     setCurrentProcessingIndex(-1);
+  };
+
+  const retryFailed = async () => {
+    setBatchItems(prev => prev.map(item =>
+      item.status === 'failed' ? { ...item, status: 'pending' as const, error: undefined } : item
+    ));
   };
 
   const stopBatch = () => {
@@ -368,6 +383,26 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
                         <option value="cartoon">Cartoon</option>
                       </select>
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <Layers className="w-3 h-3 inline mr-1" />
+                        Parallel Workers
+                      </label>
+                      <select
+                        value={concurrency}
+                        onChange={(e) => setConcurrency(Number(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        disabled={isProcessing}
+                      >
+                        <option value={1}>1 (Sequential)</option>
+                        <option value={2}>2 (Parallel)</option>
+                        <option value={3}>3 (Fast)</option>
+                      </select>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Higher values process faster but use more API calls simultaneously
+                      </p>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -401,6 +436,16 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download Results CSV
+              </button>
+            )}
+
+            {stats.failed > 0 && !isProcessing && (
+              <button
+                onClick={() => { retryFailed(); setTimeout(processBatch, 100); }}
+                className="w-full px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 flex items-center justify-center gap-2 transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Retry {stats.failed} Failed
               </button>
             )}
           </div>

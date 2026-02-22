@@ -1,6 +1,22 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 import { getCorsHeaders, authenticateUser, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
+const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_MAX = 10;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkLocalRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(clientIp);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 interface GhibliImageRequest {
   prompt: string
   provider: 'openai' | 'gemini' | 'gemini2flash'
@@ -16,6 +32,14 @@ serve(async (req) => {
   }
 
   try {
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!checkLocalRateLimit(clientIp)) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait before trying again." }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Authenticate user
     const { user, error: authError } = await authenticateUser(req)
     if (authError) {

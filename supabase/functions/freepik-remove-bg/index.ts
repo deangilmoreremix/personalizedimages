@@ -1,11 +1,25 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.78.0";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+async function resolveImageUrl(imageUrl: string): Promise<string> {
+  if (!imageUrl.startsWith("data:")) return imageUrl;
+  const match = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid base64 image data");
+  const ext = match[1] === "jpeg" ? "jpg" : match[1];
+  const raw = Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0));
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+  const fileName = `freepik-tmp/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("temp-uploads")
+    .upload(fileName, raw, { contentType: `image/${match[1]}`, upsert: true });
+  if (error) throw new Error(`Upload failed: ${error.message}`);
+  const { data } = supabase.storage.from("temp-uploads").getPublicUrl(fileName);
+  return data.publicUrl;
+}
 
 const FREEPIK_BASE = "https://api.freepik.com/v1";
 const RATE_LIMIT_WINDOW = 60_000;
@@ -25,14 +39,17 @@ function checkRateLimit(clientIp: string): boolean {
   return true;
 }
 
-function jsonRes(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
+  function jsonRes(data: unknown, status = 200) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
@@ -90,6 +107,8 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ error: "imageUrl is required" }, 400);
     }
 
+    const resolvedUrl = await resolveImageUrl(imageUrl);
+
     const generateRes = await fetch(
       `${FREEPIK_BASE}/ai/remove-background`,
       {
@@ -99,7 +118,7 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          image_url: imageUrl,
+          image_url: resolvedUrl,
           output_format: body.outputFormat || "png",
         }),
       }

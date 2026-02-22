@@ -37,6 +37,10 @@ export function useImageUpload() {
         dataUrl: reader.result as string,
       });
     };
+    reader.onerror = () => {
+      URL.revokeObjectURL(previewUrl);
+      setUploadError('Failed to read the file. Please try again.');
+    };
     reader.readAsDataURL(file);
   }, []);
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Wand2, Sparkles, Settings2, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { freepikAiService } from '../../services/freepikAiService';
 import ProcessingOverlay from './shared/ProcessingOverlay';
@@ -35,9 +35,11 @@ export default function MysticGenerator() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
   const [improving, setImproving] = useState(false);
+  const generatingRef = useRef(false);
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || generatingRef.current) return;
+    generatingRef.current = true;
     setProcessing(true);
     setProgress(0);
     setError(null);
@@ -75,6 +77,7 @@ export default function MysticGenerator() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setProcessing(false);
+      generatingRef.current = false;
     }
   }, [prompt, negativePrompt, selectedSize, numImages, guidanceScale, selectedStyle]);
 
@@ -84,8 +87,8 @@ export default function MysticGenerator() {
     try {
       const result = await freepikAiService.improvePrompt(prompt.trim());
       setPrompt(result.improvedPrompt);
-    } catch {
-      // silently fail
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to improve prompt');
     } finally {
       setImproving(false);
     }

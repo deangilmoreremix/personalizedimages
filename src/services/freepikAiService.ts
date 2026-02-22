@@ -1,4 +1,5 @@
 import { callEdgeFunction } from '../utils/supabaseClient';
+import { makeRateLimitedRequest, RATE_LIMITS } from '../utils/rateLimiter';
 
 export interface FreepikTaskResult {
   taskId: string;
@@ -73,7 +74,8 @@ function sanitizePrompt(text: string): string {
 async function pollTask(
   edgeFunctionName: string,
   taskId: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  extraPayload?: Record<string, unknown>
 ): Promise<FreepikTaskResult> {
   let attempts = 0;
 
@@ -83,6 +85,7 @@ async function pollTask(
     const result = await callEdgeFunction(edgeFunctionName, {
       action: 'status',
       taskId,
+      ...extraPayload,
     });
 
     if (result.status === 'COMPLETED') {
@@ -119,6 +122,14 @@ async function pollTask(
   };
 }
 
+function rateLimitedEdgeCall(functionName: string, payload: Record<string, unknown>) {
+  return makeRateLimitedRequest(
+    `freepik:${functionName}`,
+    RATE_LIMITS.IMAGE_GENERATION,
+    () => callEdgeFunction(functionName, payload)
+  );
+}
+
 export const freepikAiService = {
   async generateImage(
     options: FreepikGenerateOptions,
@@ -130,7 +141,7 @@ export const freepikAiService = {
       prompt: sanitizePrompt(options.prompt),
       negativePrompt: options.negativePrompt ? sanitizePrompt(options.negativePrompt) : undefined,
     };
-    const result = await callEdgeFunction('freepik-ai-image', {
+    const result = await rateLimitedEdgeCall('freepik-ai-image', {
       action: 'generate',
       ...sanitized,
     });
@@ -157,13 +168,14 @@ export const freepikAiService = {
     onProgress?: (progress: number) => void
   ): Promise<FreepikTaskResult> {
     onProgress?.(5);
-    const result = await callEdgeFunction('freepik-upscale', {
+    const result = await rateLimitedEdgeCall('freepik-upscale', {
       action: 'upscale',
       ...options,
     });
 
     if (result.taskId) {
-      return pollTask('freepik-upscale', result.taskId, onProgress);
+      const upscaleMode = result.mode || options.mode || 'precision';
+      return pollTask('freepik-upscale', result.taskId, onProgress, { mode: upscaleMode });
     }
 
     if (result.resultUrl) {
@@ -179,7 +191,7 @@ export const freepikAiService = {
     onProgress?: (progress: number) => void
   ): Promise<FreepikTaskResult> {
     onProgress?.(10);
-    const result = await callEdgeFunction('freepik-remove-bg', {
+    const result = await rateLimitedEdgeCall('freepik-remove-bg', {
       action: 'remove',
       ...options,
     });
@@ -201,7 +213,7 @@ export const freepikAiService = {
     onProgress?: (progress: number) => void
   ): Promise<FreepikTaskResult> {
     onProgress?.(5);
-    const result = await callEdgeFunction('freepik-relight', {
+    const result = await rateLimitedEdgeCall('freepik-relight', {
       action: 'relight',
       ...options,
     });
@@ -223,7 +235,7 @@ export const freepikAiService = {
     onProgress?: (progress: number) => void
   ): Promise<FreepikTaskResult> {
     onProgress?.(5);
-    const result = await callEdgeFunction('freepik-style-transfer', {
+    const result = await rateLimitedEdgeCall('freepik-style-transfer', {
       action: 'transfer',
       ...options,
     });
@@ -242,7 +254,7 @@ export const freepikAiService = {
 
   async improvePrompt(prompt: string): Promise<FreepikPromptImproveResult> {
     const cleanPrompt = sanitizePrompt(prompt);
-    const result = await callEdgeFunction('freepik-improve-prompt', {
+    const result = await rateLimitedEdgeCall('freepik-improve-prompt', {
       prompt: cleanPrompt,
     });
 

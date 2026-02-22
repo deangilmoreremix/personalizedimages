@@ -151,13 +151,11 @@ serve(async (req) => {
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
-    console.log('🔑 API Keys check:', {
+    console.log('API Keys check:', {
       hasOpenAI: !!openaiKey,
       openAIValid: openaiKey ? validateApiKey(openaiKey, 'openai') : false,
-      openAIPrefix: openaiKey ? openaiKey.substring(0, 10) + '...' : 'none',
       hasGemini: !!geminiKey,
       geminiValid: geminiKey ? validateApiKey(geminiKey, 'gemini') : false,
-      geminiPrefix: geminiKey ? geminiKey.substring(0, 10) + '...' : 'none'
     })
 
     let imageUrl: string = ''
@@ -173,7 +171,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             model: "dall-e-3", // Using DALL-E 3 as GPT-5 image generation capability
-            prompt: sanitizedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
+            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
             n: 1,
             size: size,
             quality: quality
@@ -214,7 +212,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             model: "dall-e-3",
-            prompt: sanitizedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
+            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
             n: 1,
             size: size,
             quality: quality
@@ -246,7 +244,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             model: "dall-e-3",
-            prompt: sanitizedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
+            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
             n: 1,
             size: size,
             quality: quality

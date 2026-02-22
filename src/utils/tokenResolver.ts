@@ -90,7 +90,7 @@ export function resolveTokens(
   const tokenMatches = content.match(pattern);
   if (tokenMatches) {
     tokenMatches.forEach(match => {
-      const tokenKey = match.replace(/[\[\]{}%_]/g, ''); // Extract token name
+      const tokenKey = match.replace(/^[\[{%_]+|[\]}%_]+$/g, ''); // Extract token name
 
       if (allTokens[tokenKey]) {
         // Token found - replace it
@@ -154,7 +154,7 @@ export function validateTokens(
   const tokenMatches = content.match(pattern);
   if (tokenMatches) {
     tokenMatches.forEach(match => {
-      const tokenKey = match.replace(/[\[\]{}%_]/g, '');
+      const tokenKey = match.replace(/^[\[{%_]+|[\]}%_]+$/g, '');
       if (!foundTokens.includes(tokenKey)) {
         foundTokens.push(tokenKey);
       }
@@ -218,7 +218,7 @@ export function convertTokenFormat(
   const fromPattern = TOKEN_PATTERNS[fromConfig.pattern];
 
   return content.replace(fromPattern, (match) => {
-    const tokenKey = match.replace(/[\[\]{}%_]/g, '');
+    const tokenKey = match.replace(/^[\[{%_]+|[\]}%_]+$/g, '');
     return toConfig.fallbackFormat.replace('TOKEN', tokenKey);
   });
 }

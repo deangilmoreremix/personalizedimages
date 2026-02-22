@@ -46,6 +46,7 @@ import { quickEnhance, enhanceWithTokenPreservation, type GeneratorCategory } fr
 import PromptEnhancementPanel from './PromptEnhancementPanel';
 import { usePersonalization } from '../contexts/PersonalizationContext';
 import { imageService } from '../services/supabaseService';
+import { isSupabaseConfigured } from '../utils/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 
 // UI Components
@@ -190,10 +191,29 @@ const UnifiedImageDashboard: React.FC = () => {
     });
   }, [generatedImages, searchQuery, selectedCategory]);
 
-  // Toggle theme
   const toggleTheme = useCallback(() => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   }, [theme, setTheme]);
+
+  const getContextualTokens = useCallback(() => {
+    const baseTokens = {
+      FIRSTNAME: tokens.FIRSTNAME,
+      COMPANY: tokens.COMPANY,
+      EMAIL: tokens.EMAIL
+    };
+
+    if (currentMode === 'action-figure' || personalizationMode === 'action-figure') {
+      return {
+        ...baseTokens,
+        CHARACTER_NAME: tokens.CHARACTER_NAME,
+        STYLE: tokens.STYLE,
+        POSE: tokens.POSE,
+        ENVIRONMENT: tokens.ENVIRONMENT
+      };
+    }
+
+    return baseTokens;
+  }, [currentMode, personalizationMode, tokens]);
 
   const buildEffectivePrompt = useCallback((rawPrompt: string): string => {
     let effectivePrompt = rawPrompt;
@@ -298,7 +318,7 @@ const UnifiedImageDashboard: React.FC = () => {
 
         setGeneratedImages(prev => [newImage, ...prev]);
 
-        if (user?.id) {
+        if (user?.id && isSupabaseConfigured()) {
           const tokensUsed = resolvedTokenKeys.length > 0
             ? Object.fromEntries(resolvedTokenKeys.map(k => [k, tokens[k] || '']))
             : undefined;
@@ -353,27 +373,6 @@ const UnifiedImageDashboard: React.FC = () => {
       setCurrentMode('action-figure');
     }
   }, [currentMode]);
-
-  // Get contextual tokens based on current mode
-  const getContextualTokens = useCallback(() => {
-    const baseTokens = {
-      FIRSTNAME: tokens.FIRSTNAME,
-      COMPANY: tokens.COMPANY,
-      EMAIL: tokens.EMAIL
-    };
-
-    if (currentMode === 'action-figure' || personalizationMode === 'action-figure') {
-      return {
-        ...baseTokens,
-        CHARACTER_NAME: tokens.CHARACTER_NAME,
-        STYLE: tokens.STYLE,
-        POSE: tokens.POSE,
-        ENVIRONMENT: tokens.ENVIRONMENT
-      };
-    }
-
-    return baseTokens;
-  }, [currentMode, personalizationMode, tokens]);
 
   // Handle token drop on image
   const handleTokenDrop = useCallback(async (imageId: string, token: any, position?: { x: number; y: number }) => {
@@ -679,7 +678,7 @@ const UnifiedImageDashboard: React.FC = () => {
                         <p className="text-sm text-gray-700 dark:text-gray-300">
                           Create an action figure of <strong>{tokens.CHARACTER_NAME || 'Character'}</strong> in a{' '}
                           <strong>{tokens.STYLE}</strong> style, striking a{' '}
-                          <strong>{tokens.POSE.replace('-', ' ')}</strong> pose in a{' '}
+                          <strong>{(tokens.POSE || '').replace('-', ' ')}</strong> pose in a{' '}
                           <strong>{tokens.ENVIRONMENT}</strong> environment.
                         </p>
                       </div>

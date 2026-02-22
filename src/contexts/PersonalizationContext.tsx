@@ -141,11 +141,10 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
     });
   }, [scheduleSave]);
 
-  const updateTokens = useCallback((updates: Record<string, string>) => {
-    setTokens(prev => {
-      const next = { ...prev, ...updates };
-      scheduleSave(next);
-      return next;
+  const updateTokens = useCallback((newTokens: Record<string, string>) => {
+    setTokens(() => {
+      scheduleSave(newTokens);
+      return newTokens;
     });
   }, [scheduleSave]);
 

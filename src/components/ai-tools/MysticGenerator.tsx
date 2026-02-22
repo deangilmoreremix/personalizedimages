@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Wand2, Sparkles, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Wand2, Sparkles, Settings2, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { freepikAiService } from '../../services/freepikAiService';
 import ProcessingOverlay from './shared/ProcessingOverlay';
 import ResultDisplay from './shared/ResultDisplay';
@@ -262,7 +262,16 @@ export default function MysticGenerator() {
             </button>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>
+              <div className="flex items-center justify-between bg-red-50 p-3 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+                <button
+                  onClick={handleGenerate}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Retry
+                </button>
+              </div>
             )}
           </div>
         )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import {
   Scissors,
   Maximize2,
@@ -9,6 +9,8 @@ import {
   ArrowLeft,
   Zap,
   Star,
+  Loader2,
+  Shield,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BackgroundRemover from '../components/ai-tools/BackgroundRemover';
@@ -81,6 +83,26 @@ const TOOLS: ToolConfig[] = [
   },
 ];
 
+function ToolLoadingSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden animate-pulse">
+      <div className="p-5 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gray-200" />
+          <div className="space-y-2">
+            <div className="w-32 h-4 bg-gray-200 rounded" />
+            <div className="w-48 h-3 bg-gray-100 rounded" />
+          </div>
+        </div>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="w-full h-48 bg-gray-100 rounded-xl" />
+        <div className="w-full h-10 bg-gray-100 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
 export default function AIToolsHub() {
   const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState<string | null>(null);
@@ -128,17 +150,32 @@ export default function AIToolsHub() {
                   change lighting, transfer artistic styles, and improve your prompts --
                   all powered by Freepik's enterprise-grade API.
                 </p>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <Shield className="w-3.5 h-3.5 text-green-400" />
+                    <span className="text-gray-400">Rate limited</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <Loader2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-gray-400">Async processing</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-gray-400">Input sanitized</span>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {TOOLS.map((tool) => {
+              {TOOLS.map((tool, index) => {
                 const Icon = tool.icon;
                 return (
                   <button
                     key={tool.id}
                     onClick={() => setActiveTool(tool.id)}
                     className="group text-left bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5 transition-all duration-200"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center shadow-lg`}>
@@ -168,7 +205,9 @@ export default function AIToolsHub() {
           </>
         ) : (
           <div className="max-w-2xl mx-auto">
-            {activeConfig && <activeConfig.component />}
+            <Suspense fallback={<ToolLoadingSkeleton />}>
+              {activeConfig && <activeConfig.component />}
+            </Suspense>
           </div>
         )}
       </div>

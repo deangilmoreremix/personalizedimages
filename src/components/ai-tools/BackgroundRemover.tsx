@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Scissors, Sparkles } from 'lucide-react';
+import { Scissors, Sparkles, RotateCcw } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { freepikAiService } from '../../services/freepikAiService';
 import ImageDropZone from './shared/ImageDropZone';
@@ -7,7 +7,7 @@ import ProcessingOverlay from './shared/ProcessingOverlay';
 import ResultDisplay from './shared/ResultDisplay';
 
 export default function BackgroundRemover() {
-  const { image, isDragging, handleDrop, handleDragOver, handleDragLeave, handleFileSelect, clearImage } = useImageUpload();
+  const { image, isDragging, uploadError, handleDrop, handleDragOver, handleDragLeave, handleFileSelect, clearImage } = useImageUpload();
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -81,6 +81,7 @@ export default function BackgroundRemover() {
               onFileSelect={handleFileSelect}
               onClear={clearImage}
               label="Drop an image to remove its background"
+              uploadError={uploadError}
             />
 
             {image && (
@@ -116,7 +117,16 @@ export default function BackgroundRemover() {
             )}
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>
+              <div className="flex items-center justify-between bg-red-50 p-3 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+                <button
+                  onClick={handleRemoveBackground}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Retry
+                </button>
+              </div>
             )}
           </div>
         )}

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Sparkles, Copy, ArrowRight, Check } from 'lucide-react';
+import { Sparkles, Copy, ArrowRight, Check, RotateCcw } from 'lucide-react';
 import { freepikAiService } from '../../services/freepikAiService';
 
 export default function PromptImprover() {
@@ -113,7 +113,16 @@ export default function PromptImprover() {
         )}
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>
+          <div className="flex items-center justify-between bg-red-50 p-3 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+            <button
+              onClick={handleImprove}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Retry
+            </button>
+          </div>
         )}
       </div>
     </div>

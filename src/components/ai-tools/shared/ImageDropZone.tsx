@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
 
 interface ImageDropZoneProps {
   image: { previewUrl: string } | null;
@@ -11,6 +11,7 @@ interface ImageDropZoneProps {
   onClear: () => void;
   label?: string;
   compact?: boolean;
+  uploadError?: string | null;
 }
 
 export default function ImageDropZone({
@@ -23,6 +24,7 @@ export default function ImageDropZone({
   onClear,
   label = 'Drop an image here or click to upload',
   compact = false,
+  uploadError,
 }: ImageDropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -45,41 +47,51 @@ export default function ImageDropZone({
   }
 
   return (
-    <div
-      onDrop={onDrop}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onClick={() => inputRef.current?.click()}
-      className={`border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 ${
-        compact ? 'p-6' : 'p-10'
-      } ${
-        isDragging
-          ? 'border-primary-400 bg-primary-50/50'
-          : 'border-gray-300 hover:border-gray-400 bg-gray-50/50 hover:bg-gray-50'
-      }`}
-    >
+    <div className="space-y-2">
       <div
-        className={`${compact ? 'w-10 h-10' : 'w-14 h-14'} rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center`}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onClick={() => inputRef.current?.click()}
+        className={`border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 ${
+          compact ? 'p-6' : 'p-10'
+        } ${
+          uploadError
+            ? 'border-red-300 bg-red-50/50'
+            : isDragging
+              ? 'border-primary-400 bg-primary-50/50'
+              : 'border-gray-300 hover:border-gray-400 bg-gray-50/50 hover:bg-gray-50'
+        }`}
       >
-        {isDragging ? (
-          <Upload className={`${compact ? 'w-5 h-5' : 'w-7 h-7'} text-primary-500`} />
-        ) : (
-          <ImageIcon className={`${compact ? 'w-5 h-5' : 'w-7 h-7'} text-gray-400`} />
-        )}
+        <div
+          className={`${compact ? 'w-10 h-10' : 'w-14 h-14'} rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center`}
+        >
+          {isDragging ? (
+            <Upload className={`${compact ? 'w-5 h-5' : 'w-7 h-7'} text-primary-500`} />
+          ) : (
+            <ImageIcon className={`${compact ? 'w-5 h-5' : 'w-7 h-7'} text-gray-400`} />
+          )}
+        </div>
+        <div className="text-center">
+          <p className={`${compact ? 'text-sm' : 'text-base'} font-medium text-gray-600`}>
+            {label}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">PNG, JPG, or WebP (max 4MB)</p>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          onChange={onFileSelect}
+          className="hidden"
+        />
       </div>
-      <div className="text-center">
-        <p className={`${compact ? 'text-sm' : 'text-base'} font-medium text-gray-600`}>
-          {label}
-        </p>
-        <p className="text-xs text-gray-400 mt-1">PNG, JPG, or WebP</p>
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        onChange={onFileSelect}
-        className="hidden"
-      />
+      {uploadError && (
+        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          {uploadError}
+        </div>
+      )}
     </div>
   );
 }

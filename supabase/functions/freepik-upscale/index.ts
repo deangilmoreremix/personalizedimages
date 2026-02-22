@@ -8,6 +8,29 @@ const corsHeaders = {
 };
 
 const FREEPIK_BASE = "https://api.freepik.com/v1";
+const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_MAX = 10;
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(clientIp);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+function jsonRes(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -15,15 +38,14 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!checkRateLimit(clientIp)) {
+      return jsonRes({ error: "Rate limit exceeded. Please wait before trying again." }, 429);
+    }
+
     const freepikKey = Deno.env.get("FREEPIK_API_KEY");
     if (!freepikKey) {
-      return new Response(
-        JSON.stringify({ error: "Freepik API key not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return jsonRes({ error: "Freepik API key not configured" }, 500);
     }
 
     const body = await req.json();
@@ -42,16 +64,7 @@ Deno.serve(async (req: Request) => {
 
       if (!statusRes.ok) {
         const errText = await statusRes.text();
-        return new Response(
-          JSON.stringify({
-            status: "FAILED",
-            error: `Status check failed: ${statusRes.status} ${errText}`,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
+        return jsonRes({ status: "FAILED", error: `Status check failed: ${statusRes.status} ${errText}` });
       }
 
       const statusData = await statusRes.json();
@@ -62,46 +75,21 @@ Deno.serve(async (req: Request) => {
         taskStatus === "completed" ||
         statusData.data?.image?.url
       ) {
-        return new Response(
-          JSON.stringify({
-            status: "COMPLETED",
-            resultUrl:
-              statusData.data?.image?.url || statusData.data?.result?.url,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
+        return jsonRes({
+          status: "COMPLETED",
+          resultUrl: statusData.data?.image?.url || statusData.data?.result?.url,
+        });
       }
 
       if (taskStatus === "FAILED" || taskStatus === "failed") {
-        return new Response(
-          JSON.stringify({
-            status: "FAILED",
-            error: statusData.data?.error || "Upscale task failed",
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
+        return jsonRes({ status: "FAILED", error: statusData.data?.error || "Upscale task failed" });
       }
 
-      return new Response(JSON.stringify({ status: "PROCESSING" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonRes({ status: "PROCESSING" });
     }
 
     if (!imageUrl) {
-      return new Response(
-        JSON.stringify({ error: "imageUrl is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return jsonRes({ error: "imageUrl is required" }, 400);
     }
 
     const useCreative = mode === "creative";
@@ -131,51 +119,23 @@ Deno.serve(async (req: Request) => {
 
     if (!generateRes.ok) {
       const errText = await generateRes.text();
-      return new Response(
-        JSON.stringify({
-          error: `Freepik API error: ${generateRes.status} ${errText}`,
-        }),
-        {
-          status: generateRes.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return jsonRes({ error: `Freepik API error: ${generateRes.status} ${errText}` }, generateRes.status);
     }
 
     const data = await generateRes.json();
 
     if (data.data?.image?.url) {
-      return new Response(
-        JSON.stringify({
-          status: "COMPLETED",
-          resultUrl: data.data.image.url,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return jsonRes({ status: "COMPLETED", resultUrl: data.data.image.url });
     }
 
-    const returnedTaskId =
-      data.data?.task_id || data.data?.id || data.task_id;
-    return new Response(
-      JSON.stringify({
-        taskId: returnedTaskId,
-        status: "PROCESSING",
-        mode: useCreative ? "creative" : "precision",
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Internal server error";
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const returnedTaskId = data.data?.task_id || data.data?.id || data.task_id;
+    return jsonRes({
+      taskId: returnedTaskId,
+      status: "PROCESSING",
+      mode: useCreative ? "creative" : "precision",
     });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return jsonRes({ error: message }, 500);
   }
 });

@@ -60,6 +60,15 @@ export interface FreepikPromptImproveResult {
 
 const POLL_INTERVAL = 2000;
 const MAX_POLL_ATTEMPTS = 90;
+const MAX_PROMPT_LENGTH = 2000;
+
+function sanitizePrompt(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/[<>]/g, '')
+    .trim()
+    .slice(0, MAX_PROMPT_LENGTH);
+}
 
 async function pollTask(
   edgeFunctionName: string,
@@ -116,9 +125,14 @@ export const freepikAiService = {
     onProgress?: (progress: number) => void
   ): Promise<FreepikTaskResult> {
     onProgress?.(5);
+    const sanitized = {
+      ...options,
+      prompt: sanitizePrompt(options.prompt),
+      negativePrompt: options.negativePrompt ? sanitizePrompt(options.negativePrompt) : undefined,
+    };
     const result = await callEdgeFunction('freepik-ai-image', {
       action: 'generate',
-      ...options,
+      ...sanitized,
     });
 
     if (result.taskId) {
@@ -227,8 +241,9 @@ export const freepikAiService = {
   },
 
   async improvePrompt(prompt: string): Promise<FreepikPromptImproveResult> {
+    const cleanPrompt = sanitizePrompt(prompt);
     const result = await callEdgeFunction('freepik-improve-prompt', {
-      prompt,
+      prompt: cleanPrompt,
     });
 
     return {

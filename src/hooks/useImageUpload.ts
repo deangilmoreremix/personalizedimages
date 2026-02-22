@@ -1,5 +1,8 @@
 import { useState, useCallback } from 'react';
 
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
 export interface UploadedImage {
   file: File;
   previewUrl: string;
@@ -9,9 +12,22 @@ export interface UploadedImage {
 export function useImageUpload() {
   const [image, setImage] = useState<UploadedImage | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const processFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) return;
+    setUploadError(null);
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setUploadError('Please upload a PNG, JPG, WebP, or GIF image.');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setUploadError(`File is ${sizeMB}MB. Maximum allowed size is 4MB.`);
+      return;
+    }
+
     const previewUrl = URL.createObjectURL(file);
     const reader = new FileReader();
     reader.onload = () => {
@@ -56,6 +72,7 @@ export function useImageUpload() {
       URL.revokeObjectURL(image.previewUrl);
     }
     setImage(null);
+    setUploadError(null);
   }, [image]);
 
   const setFromUrl = useCallback((url: string) => {
@@ -69,6 +86,7 @@ export function useImageUpload() {
   return {
     image,
     isDragging,
+    uploadError,
     handleDrop,
     handleDragOver,
     handleDragLeave,

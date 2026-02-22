@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Palette, Sparkles, Upload } from 'lucide-react';
+import { Palette, Sparkles, Upload, RotateCcw } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { freepikAiService } from '../../services/freepikAiService';
 import ImageDropZone from './shared/ImageDropZone';
@@ -18,7 +18,7 @@ const BUILT_IN_STYLES = [
 ];
 
 export default function StyleTransfer() {
-  const { image, isDragging, handleDrop, handleDragOver, handleDragLeave, handleFileSelect, clearImage } = useImageUpload();
+  const { image, isDragging, uploadError, handleDrop, handleDragOver, handleDragLeave, handleFileSelect, clearImage } = useImageUpload();
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -127,6 +127,7 @@ export default function StyleTransfer() {
               onFileSelect={handleFileSelect}
               onClear={clearImage}
               label="Drop the image to transform"
+              uploadError={uploadError}
             />
 
             {image && (
@@ -207,7 +208,16 @@ export default function StyleTransfer() {
             )}
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>
+              <div className="flex items-center justify-between bg-red-50 p-3 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+                <button
+                  onClick={handleTransfer}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Retry
+                </button>
+              </div>
             )}
           </div>
         )}

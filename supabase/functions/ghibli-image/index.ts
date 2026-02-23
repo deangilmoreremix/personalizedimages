@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 import { getCorsHeaders, authenticateUser, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 const RATE_LIMIT_WINDOW = 60_000;
@@ -23,12 +22,12 @@ interface GhibliImageRequest {
   referenceImageUrl?: string
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
   const corsHeaders = getCorsHeaders(origin)
 
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { status: 200, headers: corsHeaders })
   }
 
   try {

@@ -1,7 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { corsHeaders, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
-
-console.log("Prompt Recommendations Edge Function loaded")
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
 
 interface PromptRecommendationsRequest {
   basePrompt: string
@@ -10,12 +7,31 @@ interface PromptRecommendationsRequest {
   count?: number
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
+  const origin = req.headers.get('origin')
+  const headers = getCorsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { status: 200, headers })
   }
 
   try {
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const rateLimit = await checkRateLimit(user.id, true)
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded' }),
+        { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const {
       basePrompt,
       tokens = {},
@@ -26,7 +42,7 @@ serve(async (req) => {
     if (!basePrompt || typeof basePrompt !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Valid base prompt is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -35,20 +51,18 @@ serve(async (req) => {
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
     const geminiKey = Deno.env.get('GEMINI_API_KEY')
 
-    // Prefer OpenAI for text generation, but fallback to Gemini
     const useOpenAI = openaiKey && validateApiKey(openaiKey, 'openai')
     const useGemini = geminiKey && validateApiKey(geminiKey, 'gemini')
 
     if (!useOpenAI && !useGemini) {
       return new Response(
         JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Format tokens for the request
     const tokenString = Object.entries(tokens)
-      .map(([key, value]) => `${key}: ${value}`)
+      .map(([key, value]) => `${sanitizeInput(String(key))}: ${sanitizeInput(String(value))}`)
       .join(', ')
 
     const systemPrompt = `You are an expert at creating detailed, effective prompts for AI image generation. Generate ${count} enhanced prompt variations that follow best practices for ${style} image generation. Return ONLY a JSON array of strings, nothing else.`
@@ -66,7 +80,7 @@ serve(async (req) => {
             'Authorization': `Bearer ${openaiKey}`
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o-mini",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: userPrompt }
@@ -86,8 +100,7 @@ serve(async (req) => {
 
         try {
           recommendations = JSON.parse(responseText)
-        } catch (e) {
-          // If parsing fails, extract strings from the text
+        } catch (_e) {
           const matches = responseText.match(/"([^"]+)"/g)
           if (matches) {
             recommendations = matches.map((match: string) => match.replace(/"/g, ''))
@@ -98,19 +111,15 @@ serve(async (req) => {
 
       } catch (error) {
         console.error('OpenAI recommendations error:', error)
-        // Fallback to Gemini if OpenAI fails
-        if (useGemini) {
-          console.log('Falling back to Gemini for recommendations')
-        } else {
+        if (!useGemini) {
           throw error
         }
       }
     }
 
-    // If OpenAI didn't work or wasn't available, try Gemini
     if (recommendations.length === 0 && useGemini) {
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -138,8 +147,7 @@ serve(async (req) => {
 
         try {
           recommendations = JSON.parse(responseText)
-        } catch (e) {
-          // If parsing fails, extract strings from the text
+        } catch (_e) {
           const matches = responseText.match(/"([^"]+)"/g)
           if (matches) {
             recommendations = matches.map((match: string) => match.replace(/"/g, ''))
@@ -154,7 +162,6 @@ serve(async (req) => {
       }
     }
 
-    // If still no recommendations, provide fallbacks
     if (recommendations.length === 0) {
       recommendations = [
         `${sanitizedPrompt} with detailed lighting and high-quality finish`,
@@ -163,20 +170,18 @@ serve(async (req) => {
       ]
     }
 
-    // Ensure we have exactly the requested count
     if (recommendations.length > count) {
       recommendations = recommendations.slice(0, count)
     }
 
     return new Response(
       JSON.stringify({ recommendations }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('Prompt Recommendations Error:', error)
 
-    // Return fallback recommendations on error
     const fallbackRecommendations = [
       'A professional photograph with detailed lighting and composition',
       'A creative illustration with vibrant colors and unique perspective',
@@ -188,7 +193,7 @@ serve(async (req) => {
         recommendations: fallbackRecommendations,
         warning: 'Using fallback recommendations due to error'
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' } }
     )
   }
 })

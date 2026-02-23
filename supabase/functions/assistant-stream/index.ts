@@ -1,10 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
 
 interface AssistantStreamRequest {
   messages: Array<{ role: string; content: string }>;
@@ -14,48 +9,62 @@ interface AssistantStreamRequest {
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get('origin');
+  const headers = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers });
   }
 
   try {
+    const { user, error: authError } = await authenticateUser(req);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const rateLimit = await checkRateLimit(user.id, true);
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded' }),
+        { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { messages, userContext = {}, temperature = 0.7, provider = 'gemini' }: AssistantStreamRequest = await req.json();
 
     if (!messages || messages.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Messages array is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
-    // Use Gemini by default if available
     if (provider === 'gemini' && geminiApiKey) {
-      return await streamWithGemini(messages, userContext, temperature, geminiApiKey);
+      return await streamWithGemini(messages, userContext, temperature, geminiApiKey, headers);
     } else if (provider === 'openai' && openaiApiKey) {
-      return await streamWithOpenAI(messages, userContext, temperature, openaiApiKey);
+      return await streamWithOpenAI(messages, userContext, temperature, openaiApiKey, headers);
     } else if (geminiApiKey) {
-      // Fallback to Gemini if OpenAI requested but not available
-      return await streamWithGemini(messages, userContext, temperature, geminiApiKey);
+      return await streamWithGemini(messages, userContext, temperature, geminiApiKey, headers);
     } else if (openaiApiKey) {
-      // Fallback to OpenAI if Gemini not available
-      return await streamWithOpenAI(messages, userContext, temperature, openaiApiKey);
+      return await streamWithOpenAI(messages, userContext, temperature, openaiApiKey, headers);
     } else {
       return new Response(
         JSON.stringify({ error: 'No API keys configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
   } catch (error) {
     console.error('Assistant stream error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' } }
     );
   }
 });
@@ -64,9 +73,9 @@ async function streamWithGemini(
   messages: Array<{ role: string; content: string }>,
   userContext: Record<string, any>,
   temperature: number,
-  apiKey: string
+  apiKey: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
-  // Build system message with context
   const systemMessage = `You are an AI assistant for a creative tool called VideoRemix that helps users create personalized images, action figures, Ghibli-style images, cartoon-style images, memes, and other visual content using AI.
 
 First name: ${userContext['FIRSTNAME'] || 'User'}
@@ -87,7 +96,6 @@ When suggesting features, include the feature ID in brackets like [image] at the
 Keep responses concise (max 3-4 sentences).
 At the end of your response include a marker with feature IDs like this: FEATURES:["image","action-figure"]`;
 
-  // Format messages for Gemini
   const formattedMessages = [
     { role: 'user', parts: [{ text: systemMessage }] },
     ...messages.map(msg => ({
@@ -115,7 +123,6 @@ At the end of your response include a marker with feature IDs like this: FEATURE
     throw new Error(`Gemini API error: ${response.status}`);
   }
 
-  // Create a readable stream to forward the response
   const stream = new ReadableStream({
     async start(controller) {
       const reader = response.body?.getReader();
@@ -135,7 +142,6 @@ At the end of your response include a marker with feature IDs like this: FEATURE
           const chunk = decoder.decode(value, { stream: true });
           buffer += chunk;
 
-          // Process complete JSON objects
           let startIndex = 0;
           let endIndex = 0;
 
@@ -149,8 +155,7 @@ At the end of your response include a marker with feature IDs like this: FEATURE
                 const text = data.candidates[0].content.parts[0].text;
                 controller.enqueue(new TextEncoder().encode(text));
               }
-            } catch (e) {
-              console.warn('Failed to parse JSON chunk:', e);
+            } catch (_e) {
             }
           }
 
@@ -179,9 +184,9 @@ async function streamWithOpenAI(
   messages: Array<{ role: string; content: string }>,
   userContext: Record<string, any>,
   temperature: number,
-  apiKey: string
+  apiKey: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
-  // Build system message
   const systemMessage = {
     role: 'system',
     content: `You are an AI assistant for a creative tool called VideoRemix that helps users create personalized images, action figures, Ghibli-style images, cartoon-style images, memes, and other visual content using AI.
@@ -226,7 +231,6 @@ At the end of your response include a marker with feature IDs like this: FEATURE
     throw new Error(`OpenAI API error: ${response.status}`);
   }
 
-  // Create a readable stream to forward the response
   const stream = new ReadableStream({
     async start(controller) {
       const reader = response.body?.getReader();
@@ -256,8 +260,7 @@ At the end of your response include a marker with feature IDs like this: FEATURE
                 if (content) {
                   controller.enqueue(new TextEncoder().encode(content));
                 }
-              } catch (e) {
-                console.warn('Failed to parse SSE data:', e);
+              } catch (_e) {
               }
             }
           }

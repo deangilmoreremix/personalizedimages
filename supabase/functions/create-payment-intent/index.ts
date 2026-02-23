@@ -1,7 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
-
-console.log("Create Payment Intent Edge Function loaded")
 
 // In-memory store for idempotency keys (use Redis/database in production)
 const paymentIntents = new Map<string, any>()
@@ -14,13 +11,12 @@ interface CreatePaymentIntentRequest {
   idempotencyKey?: string
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
   const corsHeaders = getCorsHeaders(origin)
 
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { status: 200, headers: corsHeaders })
   }
 
   try {

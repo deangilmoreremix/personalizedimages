@@ -1,7 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
-
-console.log("Image Enhancement Edge Function loaded")
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 interface ImageEnhancementRequest {
   imageUrl: string
@@ -11,12 +8,31 @@ interface ImageEnhancementRequest {
   maskUrl?: string
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
+  const origin = req.headers.get('origin')
+  const headers = getCorsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { status: 200, headers })
   }
 
   try {
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const rateLimit = await checkRateLimit(user.id, true)
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded' }),
+        { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const {
       imageUrl,
       prompt,
@@ -28,7 +44,7 @@ serve(async (req) => {
     if (!imageUrl || !isValidUrl(imageUrl)) {
       return new Response(
         JSON.stringify({ error: 'Valid image URL is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -37,7 +53,7 @@ serve(async (req) => {
     if (maskUrl && !isValidUrl(maskUrl)) {
       return new Response(
         JSON.stringify({ error: 'Invalid mask URL' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -48,7 +64,7 @@ serve(async (req) => {
         (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
       return new Response(
         JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -124,9 +140,7 @@ serve(async (req) => {
       }
 
     } else if (provider === 'openai' && openaiKey) {
-      // For OpenAI, use variations or edits endpoint
       if (enhancementType === 'variations') {
-        // Use variations endpoint
         const imageResponse = await fetch(imageUrl)
         if (!imageResponse.ok) {
           throw new Error('Failed to fetch image')
@@ -155,7 +169,6 @@ serve(async (req) => {
         resultImageUrl = data.data[0].url
 
       } else if (enhancementType === 'edit' && maskUrl && sanitizedPrompt) {
-        // Use edits endpoint with mask
         const [imageResponse, maskResponse] = await Promise.all([
           fetch(imageUrl),
           fetch(maskUrl)
@@ -194,7 +207,6 @@ serve(async (req) => {
         resultImageUrl = data.data[0].url
 
       } else {
-        // Default to generating a new enhanced version based on description
         const enhancementPrompt = `An enhanced, higher quality version of: ${sanitizedPrompt || 'professional photograph with improved detail'}`
 
         const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -223,20 +235,21 @@ serve(async (req) => {
     } else {
       return new Response(
         JSON.stringify({ error: `Provider ${provider} not available or API key missing` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
     return new Response(
       JSON.stringify({ imageUrl: resultImageUrl }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('Image Enhancement Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' } }
     )
   }
 })

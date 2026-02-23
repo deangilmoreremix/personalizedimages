@@ -1,7 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
-
-console.log("Image to Video Edge Function loaded")
 
 interface ImageToVideoRequest {
   imageUrl: string
@@ -10,13 +7,12 @@ interface ImageToVideoRequest {
   prompt?: string
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
   const corsHeaders = getCorsHeaders(origin)
 
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { status: 200, headers: corsHeaders })
   }
 
   try {

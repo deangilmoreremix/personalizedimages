@@ -75,6 +75,17 @@ export function resolveTokens(
 
   const config = CONTENT_TYPE_CONFIGS[contentType];
 
+  if (!content) {
+    return {
+      resolvedContent: content ?? '',
+      resolvedTokens: [],
+      missingTokens: [],
+      invalidTokens: [],
+      warnings: [],
+      isFullyResolved: true
+    };
+  }
+
   let resolvedContent = content;
   const resolvedTokens: string[] = [];
   const missingTokens: string[] = [];
@@ -144,6 +155,10 @@ export function validateTokens(
   invalidTokens: string[];
   suggestions: string[];
 } {
+  if (!content) {
+    return { isValid: true, foundTokens: [], validTokens: [], invalidTokens: [], suggestions: [] };
+  }
+
   const config = CONTENT_TYPE_CONFIGS[contentType];
   const pattern = TOKEN_PATTERNS[config.pattern];
 
@@ -152,7 +167,6 @@ export function validateTokens(
   const invalidTokens: string[] = [];
   const suggestions: string[] = [];
 
-  // Extract all tokens from content
   const tokenMatches = content.match(pattern);
   if (tokenMatches) {
     tokenMatches.forEach(match => {

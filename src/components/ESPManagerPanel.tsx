@@ -56,7 +56,7 @@ Your Company`);
     EMAIL: 'john.doe@example.com',
     COMPANY: 'Acme Corp'
   });
-  const [testImageUrl, setTestImageUrl] = useState('https://via.placeholder.com/600x400?text=Personalized+Image');
+  const [testImageUrl, setTestImageUrl] = useState('https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&dpr=1');
   const [testResults, setTestResults] = useState<any>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 

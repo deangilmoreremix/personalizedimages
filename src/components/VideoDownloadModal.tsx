@@ -4,7 +4,7 @@ import { X, Download, CreditCard, CheckCircle, AlertCircle, Loader, Video } from
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, hasUserPurchasedVideo } from '../utils/stripeUtils';
-import { useAuth } from './Auth/AuthContext';
+import { useAuth } from '../auth/AuthContext';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');

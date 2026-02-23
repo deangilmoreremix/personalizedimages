@@ -36,11 +36,6 @@ const initSupabase = () => {
 // Initialize on module import
 initSupabase();
 
-// Check if running in WebContainer environment
-const isWebContainerEnvironment = () => {
-  return false; // Always return false to ensure we don't use fallbacks
-};
-
 /**
  * Call a Supabase Edge Function
  * @param functionName The name of the function to call
@@ -104,4 +99,4 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
   }
 }
 
-export { supabase, isSupabaseConfigured, initSupabase, callEdgeFunction,  };
+export { supabase, isSupabaseConfigured, initSupabase, callEdgeFunction };

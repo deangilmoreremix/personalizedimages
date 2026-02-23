@@ -17,41 +17,38 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunks
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            if (id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
               return 'react-vendor';
             }
             if (id.includes('framer-motion') || id.includes('react-colorful') || id.includes('lucide-react')) {
               return 'ui-vendor';
             }
-            if (id.includes('react-dnd') || id.includes('react-dropzone')) {
-              return 'dnd-vendor';
-            }
             if (id.includes('openai') || id.includes('@supabase')) {
               return 'api-vendor';
-            }
-            if (id.includes('gifshot') || id.includes('@resvg') || id.includes('react-player')) {
-              return 'media-vendor';
             }
             return 'vendor';
           }
 
-          // Feature-based chunks
-          if (id.includes('components/ActionFigure') || id.includes('components/MusicStar') || id.includes('components/TVShow') || id.includes('components/Wrestling')) {
-            return 'action-figures';
+          if (
+            id.includes('components/ActionFigure') ||
+            id.includes('components/MusicStar') ||
+            id.includes('components/TVShow') ||
+            id.includes('components/Wrestling') ||
+            id.includes('components/Retro') ||
+            id.includes('components/Unified') ||
+            id.includes('components/Enhanced') ||
+            id.includes('components/Cartoon') ||
+            id.includes('components/Ghibli') ||
+            id.includes('components/AIImage') ||
+            id.includes('components/EnhancedImageEditor') ||
+            id.includes('components/Meme') ||
+            id.includes('components/GifEditor')
+          ) {
+            return 'generators';
           }
-          if (id.includes('components/Cartoon') || id.includes('components/Ghibli')) {
-            return 'cartoon-ghibli';
-          }
-          if (id.includes('components/Meme') || id.includes('components/GifEditor')) {
-            return 'meme-gif';
-          }
-          if (id.includes('components/AIImage') || id.includes('components/EnhancedImageEditor')) {
-            return 'ai-image';
-          }
-          if (id.includes('components/admin') || id.includes('components/Auth')) {
-            return 'admin-auth';
+          if (id.includes('components/admin')) {
+            return 'admin';
           }
         }
       }

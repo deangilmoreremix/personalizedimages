@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Video, Loader, AlertCircle } from 'lucide-react';
 import VideoDownloadModal from './VideoDownloadModal';
-import { useAuth } from './Auth/AuthContext';
+import { useAuth } from '../auth/AuthContext';
 
 interface VideoGenerationButtonProps {
   imageUrl: string;

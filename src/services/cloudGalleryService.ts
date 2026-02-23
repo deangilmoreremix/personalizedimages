@@ -159,11 +159,15 @@ class CloudGalleryService {
   }
 
   async getImageById(id: string): Promise<UserImage | null> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return null;
+
     const { data, error } = await supabase
       .from('user_images')
       .select('*')
       .eq('id', id)
-      .single();
+      .eq('user_id', user.user.id)
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching image:', error);
@@ -174,10 +178,16 @@ class CloudGalleryService {
   }
 
   async updateImage(id: string, updates: Partial<UserImage>): Promise<UserImage | null> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('User not authenticated');
+
+    const { user_id: _uid, id: _id, created_at: _ca, ...safeUpdates } = updates as any;
+
     const { data, error } = await supabase
       .from('user_images')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', id)
+      .eq('user_id', user.user.id)
       .select()
       .single();
 
@@ -190,10 +200,14 @@ class CloudGalleryService {
   }
 
   async deleteImage(id: string): Promise<boolean> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
     const { error } = await supabase
       .from('user_images')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.user.id);
 
     if (error) {
       console.error('Error deleting image:', error);
@@ -204,10 +218,14 @@ class CloudGalleryService {
   }
 
   async toggleFavorite(id: string, isFavorite: boolean): Promise<boolean> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
     const { error } = await supabase
       .from('user_images')
       .update({ is_favorite: isFavorite })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.user.id);
 
     return !error;
   }
@@ -218,10 +236,14 @@ class CloudGalleryService {
 
     const newTags = Array.from(new Set([...image.tags, ...tags]));
 
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
     const { error } = await supabase
       .from('user_images')
       .update({ tags: newTags })
-      .eq('id', imageId);
+      .eq('id', imageId)
+      .eq('user_id', user.user.id);
 
     return !error;
   }
@@ -232,10 +254,14 @@ class CloudGalleryService {
 
     const newTags = image.tags.filter(tag => !tags.includes(tag));
 
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
     const { error } = await supabase
       .from('user_images')
       .update({ tags: newTags })
-      .eq('id', imageId);
+      .eq('id', imageId)
+      .eq('user_id', user.user.id);
 
     return !error;
   }
@@ -291,10 +317,16 @@ class CloudGalleryService {
   }
 
   async updateFolder(id: string, updates: Partial<Folder>): Promise<Folder | null> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('User not authenticated');
+
+    const { user_id: _uid, id: _id, created_at: _ca, ...safeUpdates } = updates as any;
+
     const { data, error } = await supabase
       .from('folders')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', id)
+      .eq('user_id', user.user.id)
       .select()
       .single();
 
@@ -307,10 +339,14 @@ class CloudGalleryService {
   }
 
   async deleteFolder(id: string): Promise<boolean> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
     const { error } = await supabase
       .from('folders')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.user.id);
 
     if (error) {
       console.error('Error deleting folder:', error);
@@ -321,10 +357,14 @@ class CloudGalleryService {
   }
 
   async moveImagesToFolder(imageIds: string[], folderId: string | null): Promise<boolean> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
     const { error } = await supabase
       .from('user_images')
       .update({ folder_id: folderId })
-      .in('id', imageIds);
+      .in('id', imageIds)
+      .eq('user_id', user.user.id);
 
     return !error;
   }
@@ -476,10 +516,16 @@ class CloudGalleryService {
   }
 
   async updateQueueItem(id: string, updates: Partial<GenerationQueueItem>): Promise<boolean> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
+    const { user_id: _uid, id: _id, created_at: _ca, ...safeUpdates } = updates as any;
+
     const { error } = await supabase
       .from('generation_queue')
-      .update(updates)
-      .eq('id', id);
+      .update(safeUpdates)
+      .eq('id', id)
+      .eq('user_id', user.user.id);
 
     return !error;
   }
@@ -569,10 +615,16 @@ class CloudGalleryService {
   }
 
   async updateTokenProfile(id: string, updates: Partial<TokenProfile>): Promise<TokenProfile | null> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('User not authenticated');
+
+    const { user_id: _uid, id: _id, created_at: _ca, ...safeUpdates } = updates as any;
+
     const { data, error } = await supabase
       .from('token_profiles')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', id)
+      .eq('user_id', user.user.id)
       .select()
       .single();
 
@@ -585,10 +637,14 @@ class CloudGalleryService {
   }
 
   async deleteTokenProfile(id: string): Promise<boolean> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return false;
+
     const { error } = await supabase
       .from('token_profiles')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.user.id);
 
     return !error;
   }

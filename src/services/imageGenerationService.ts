@@ -57,36 +57,24 @@ export async function checkCredits(): Promise<{ allowed: boolean; balance: numbe
   return { allowed: data.balance > 0, balance: data.balance };
 }
 
-async function deductCredit(prompt: string, provider: string, imageUrl: string): Promise<void> {
+async function deductCredit(prompt: string, provider: string, imageUrl: string): Promise<number> {
   const userId = await getUserId();
-  if (!userId || !supabase) return;
+  if (!userId || !supabase) return -1;
 
   const sb = supabase as any;
 
-  const { data: credits } = await sb
-    .from('user_credits')
-    .select('balance, total_used')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (!credits) return;
-
-  const newBalance = credits.balance - 1;
-  const newTotalUsed = credits.total_used + 1;
-
-  await sb
-    .from('user_credits')
-    .update({ balance: newBalance, total_used: newTotalUsed, updated_at: new Date().toISOString() })
-    .eq('user_id', userId);
-
-  await sb.from('credit_transactions').insert({
-    user_id: userId,
-    type: 'usage',
-    amount: -1,
-    balance_after: newBalance,
-    description: `Image generation: ${prompt.substring(0, 100)}`,
-    metadata: { provider, image_url: imageUrl }
+  const { data, error } = await sb.rpc('check_and_deduct_credit', {
+    p_user_id: userId,
+    p_reason: `Image generation (${provider}): ${prompt.substring(0, 80)}`
   });
+
+  if (error) {
+    console.error('Atomic credit deduction failed:', error);
+    return -1;
+  }
+
+  const result = typeof data === 'string' ? JSON.parse(data) : data;
+  if (!result?.deducted) return result?.balance ?? -1;
 
   await sb.from('usage_logs').insert({
     user_id: userId,
@@ -96,6 +84,8 @@ async function deductCredit(prompt: string, provider: string, imageUrl: string):
     request_metadata: { prompt: prompt.substring(0, 500) },
     response_metadata: { image_url: imageUrl }
   });
+
+  return result.balance;
 }
 
 export async function saveGeneratedImage(
@@ -175,55 +165,9 @@ export async function generateImage(
     }
   }
 
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new GenerationError(
-      'OpenAI API key is not configured. Please add VITE_OPENAI_API_KEY to your environment.',
-      500,
-      false
-    );
-  }
-
-  const response = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'dall-e-3',
-      prompt: prompt + (style ? ` Style: ${style}` : ''),
-      n: 1,
-      size,
-      quality
-    })
-  });
-
-  if (!response.ok) {
-    let errorMessage = 'Image generation failed';
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.error?.message || errorMessage;
-    } catch { /* ignore parse error */ }
-
-    if (response.status === 429) {
-      throw new GenerationError('Rate limit exceeded. Please wait a moment and try again.', 429, true);
-    }
-    throw new GenerationError(errorMessage, response.status, response.status >= 500);
-  }
-
-  const data = await response.json();
-  const imageUrl = data?.data?.[0]?.url;
-  if (!imageUrl) {
-    throw new GenerationError('No image URL returned from API', 500, true);
-  }
-
-  try {
-    await deductCredit(prompt, 'openai', imageUrl);
-    await saveGeneratedImage(prompt, imageUrl, 'openai', category);
-  } catch (e) {
-    console.error('Post-generation tracking failed:', e);
-  }
-
-  return { imageUrl, provider: 'openai' };
+  throw new GenerationError(
+    'Image generation service is currently unavailable. Please ensure the edge function is configured.',
+    503,
+    true
+  );
 }

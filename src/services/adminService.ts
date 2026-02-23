@@ -53,8 +53,20 @@ export async function getCurrentUserRole(): Promise<AdminRole | null> {
   }
 }
 
+async function requireAdminCaller(): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  return checkIsAdmin(user.id);
+}
+
 export async function addAdminRole(userId: string, role: 'admin' | 'editor' | 'viewer'): Promise<boolean> {
   try {
+    const isCallerAdmin = await requireAdminCaller();
+    if (!isCallerAdmin) {
+      console.error('Unauthorized: caller is not an admin');
+      return false;
+    }
+
     const { error } = await supabase
       .from('admin_roles')
       .insert({
@@ -77,6 +89,18 @@ export async function addAdminRole(userId: string, role: 'admin' | 'editor' | 'v
 
 export async function removeAdminRole(userId: string): Promise<boolean> {
   try {
+    const isCallerAdmin = await requireAdminCaller();
+    if (!isCallerAdmin) {
+      console.error('Unauthorized: caller is not an admin');
+      return false;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id === userId) {
+      console.error('Cannot remove own admin role');
+      return false;
+    }
+
     const { error } = await supabase
       .from('admin_roles')
       .delete()
@@ -96,6 +120,9 @@ export async function removeAdminRole(userId: string): Promise<boolean> {
 
 export async function getAllAdminUsers(): Promise<AdminRole[]> {
   try {
+    const isCallerAdmin = await requireAdminCaller();
+    if (!isCallerAdmin) return [];
+
     const { data, error } = await supabase
       .from('admin_roles')
       .select('*')

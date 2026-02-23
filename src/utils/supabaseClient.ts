@@ -31,35 +31,51 @@ const initSupabase = () => {
 
 initSupabase();
 
+const EDGE_FUNCTION_TIMEOUT = 60_000;
+const MAX_RETRIES = 2;
+const RETRYABLE_STATUSES = new Set([502, 503, 504]);
+
 async function callEdgeFunction(functionName: string, payload: any = {}) {
   if (!supabase) {
     throw new Error('Supabase client not initialized');
   }
 
-  try {
-    let token = '';
+  const { data: authData } = await supabase.auth.getSession();
+  const token = authData?.session?.access_token;
+
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  const apiUrl = `${supabaseUrl}/functions/v1/${functionName}`;
+
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), EDGE_FUNCTION_TIMEOUT);
+
     try {
-      const { data: authData } = await supabase.auth.getSession();
-      token = authData?.session?.access_token || '';
-    } catch (authError) {
-      console.warn('Auth error, continuing with anonymous key:', authError);
-    }
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
 
-    const apiUrl = `${supabaseUrl}/functions/v1/${functionName}`;
-    const authHeader = token
-      ? `Bearer ${token}`
-      : `Bearer ${supabaseAnonKey}`;
+      clearTimeout(timeout);
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader
-      },
-      body: JSON.stringify(payload)
-    });
+      if (response.ok) {
+        return await response.json();
+      }
 
-    if (!response.ok) {
+      if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+
       const errorText = await response.text();
       let errorMessage: string;
       try {
@@ -68,13 +84,21 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
         errorMessage = errorText;
       }
       throw new Error(`Edge function error: ${response.status} - ${errorMessage}`);
+    } catch (error) {
+      clearTimeout(timeout);
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        lastError = new Error(`Edge function ${functionName} timed out after ${EDGE_FUNCTION_TIMEOUT / 1000}s`);
+      } else {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+      if (attempt < MAX_RETRIES && !(lastError.message.includes('Edge function error'))) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw lastError;
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error calling edge function ${functionName}:`, error);
-    throw error;
   }
+  throw lastError || new Error(`Edge function ${functionName} failed after retries`);
 }
 
-export { supabase, supabaseUrl, supabaseAnonKey, isSupabaseConfigured, initSupabase, callEdgeFunction };
+export { supabase, supabaseUrl, isSupabaseConfigured, initSupabase, callEdgeFunction };

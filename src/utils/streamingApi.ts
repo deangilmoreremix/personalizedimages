@@ -3,7 +3,7 @@
  */
 
 import { getGeminiApiKey, hasApiKey } from './apiUtils';
-import { supabase, supabaseUrl, supabaseAnonKey, isSupabaseConfigured } from './supabaseClient';
+import { supabase, supabaseUrl, isSupabaseConfigured } from './supabaseClient';
 import { FEATURES } from '../components/ui/FeatureDialogProvider';
 import { generateImageWithDalle, generateImageWithGemini, generateImageWithGemini2Flash, generateImageWithImagen, generateImageWithGptImage } from './api';
 
@@ -44,7 +44,7 @@ export async function streamAIResponse({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : `Bearer ${supabaseAnonKey}`,
+            'Authorization': `Bearer ${token}`,
             'X-Request-ID': requestId
           },
           body: JSON.stringify({

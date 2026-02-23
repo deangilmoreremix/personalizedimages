@@ -2,6 +2,7 @@
 const allowedOrigins = Deno.env.get('ALLOWED_ORIGINS')?.split(',') || ['http://localhost:3000'];
 
 export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
@@ -90,7 +91,7 @@ export async function checkRateLimit(
   const config = getSupabaseServiceClient();
 
   if (!config) {
-    return { allowed: true, remaining: limits.requests - 1, resetTime: now + limits.windowMs };
+    return { allowed: false, remaining: 0, resetTime: now + limits.windowMs };
   }
 
   try {
@@ -124,7 +125,7 @@ export async function checkRateLimit(
         }),
       });
       if (!upsertRes.ok) {
-        return { allowed: true, remaining: limits.requests - 1, resetTime: now + limits.windowMs };
+        return { allowed: false, remaining: 0, resetTime: now + limits.windowMs };
       }
       return { allowed: true, remaining: limits.requests - 1, resetTime: now + limits.windowMs };
     }
@@ -151,7 +152,7 @@ export async function checkRateLimit(
     const resetTime = new Date(record.window_start).getTime() + limits.windowMs;
     return { allowed: true, remaining, resetTime };
   } catch {
-    return { allowed: true, remaining: limits.requests - 1, resetTime: now + limits.windowMs };
+    return { allowed: false, remaining: 0, resetTime: now + limits.windowMs };
   }
 }
 
@@ -162,47 +163,34 @@ export async function checkCredits(
   const now = Date.now();
 
   if (!config) {
-    return { allowed: true, remainingCredits: 49, resetTime: now + 86400000 };
+    return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
   }
 
   try {
-    const res = await fetch(
-      `${config.url}/rest/v1/user_credits?user_id=eq.${encodeURIComponent(userId)}&select=balance,updated_at`,
-      {
-        headers: {
-          'apikey': config.serviceKey,
-          'Authorization': `Bearer ${config.serviceKey}`,
-        },
-      }
-    );
-    const rows = await res.json();
-    const record = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-
-    if (!record) {
-      return { allowed: true, remainingCredits: 0, resetTime: now + 86400000 };
-    }
-
-    if (record.balance <= 0) {
-      return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
-    }
-
-    await fetch(`${config.url}/rest/v1/user_credits?user_id=eq.${encodeURIComponent(userId)}`, {
-      method: 'PATCH',
+    const rpcRes = await fetch(`${config.url}/rest/v1/rpc/check_and_deduct_credit`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': config.serviceKey,
         'Authorization': `Bearer ${config.serviceKey}`,
       },
-      body: JSON.stringify({
-        balance: record.balance - 1,
-        total_used: record.balance > 0 ? 1 : 0,
-        updated_at: new Date().toISOString(),
-      }),
+      body: JSON.stringify({ p_user_id: userId, p_reason: 'edge_function_generation' }),
     });
 
-    return { allowed: true, remainingCredits: record.balance - 1, resetTime: now + 86400000 };
+    if (!rpcRes.ok) {
+      return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
+    }
+
+    const result = await rpcRes.json();
+    const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+
+    return {
+      allowed: !!parsed?.allowed,
+      remainingCredits: parsed?.balance ?? 0,
+      resetTime: now + 86400000,
+    };
   } catch {
-    return { allowed: true, remainingCredits: 49, resetTime: now + 86400000 };
+    return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
   }
 }
 

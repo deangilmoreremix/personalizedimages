@@ -1,4 +1,5 @@
-import { openai, GPTModel } from '../../lib/openai';
+import { GPTModel } from '../../lib/openai';
+import { callEdgeFunction, isSupabaseConfigured } from './supabaseClient';
 
 export interface GPTRequest {
   input?: string;
@@ -24,22 +25,15 @@ export interface GPTResponse {
   error?: string;
 }
 
-/**
- * Call OpenAI GPT API for text generation using Responses API
- */
 export async function callGPT(request: GPTRequest): Promise<GPTResponse> {
   try {
     const {
       input,
       messages,
       model = 'gpt-4o',
-      tools,
-      tool_choice,
-      response_format,
       max_output_tokens = 1000
     } = request;
 
-    // Prepare messages for OpenAI API
     let apiMessages;
     if (messages && messages.length > 0) {
       apiMessages = messages;
@@ -49,22 +43,17 @@ export async function callGPT(request: GPTRequest): Promise<GPTResponse> {
       throw new Error('Either input or messages must be provided');
     }
 
-    // Check if API key is available
-    if (!openai.apiKey) {
-      throw new Error('Missing OPENAI_API_KEY');
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured. GPT calls require edge function routing.');
     }
 
-    const response = await openai.responses.create({
-      model,
+    const result = await callEdgeFunction('assistant-stream', {
       messages: apiMessages,
       temperature: request.temperature ?? 0.7,
-      max_output_tokens,
-      ...(tools && { tools }),
-      ...(tool_choice && { tool_choice }),
-      ...(response_format && { response_format })
+      provider: 'openai'
     });
 
-    const text = response.output_text || '';
+    const text = typeof result === 'string' ? result : (result?.text || result?.message || '');
 
     return {
       model,
@@ -73,12 +62,7 @@ export async function callGPT(request: GPTRequest): Promise<GPTResponse> {
   } catch (error: any) {
     console.error('GPT API Error:', error);
 
-    let errorMessage = 'Unknown error occurred';
-    if (error?.message) {
-      errorMessage = error.message;
-    } else if (error?.response?.data?.error?.message) {
-      errorMessage = error.response.data.error.message;
-    }
+    const errorMessage = error?.message || 'Unknown error occurred';
 
     return {
       model: request.model || 'gpt-4o',
@@ -88,9 +72,6 @@ export async function callGPT(request: GPTRequest): Promise<GPTResponse> {
   }
 }
 
-/**
- * Polish/improve an image generation prompt using GPT
- */
 export async function polishImagePrompt(
   originalPrompt: string,
   model: GPTModel = 'gpt-4o'
@@ -108,15 +89,12 @@ Please provide only the improved prompt without any additional explanation or qu
 
   if (response.error) {
     console.warn('Prompt polishing failed:', response.error);
-    return originalPrompt; // Return original if polishing fails
+    return originalPrompt;
   }
 
-  return response.text.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
+  return response.text.trim().replace(/^["']|["']$/g, '');
 }
 
-/**
- * Stream GPT responses token-by-token using chat completions API
- */
 export async function streamGPTResponse(
   request: GPTRequest,
   options: GPTStreamOptions = {}
@@ -125,15 +103,8 @@ export async function streamGPTResponse(
     const {
       input,
       messages,
-      model = 'gpt-4o',
-      tools,
-      tool_choice,
-      response_format,
-      max_output_tokens = 1000,
-      temperature = 0.7
     } = request;
 
-    // Prepare messages for OpenAI API
     let apiMessages;
     if (messages && messages.length > 0) {
       apiMessages = messages;
@@ -143,35 +114,19 @@ export async function streamGPTResponse(
       throw new Error('Either input or messages must be provided');
     }
 
-    // Check if API key is available
-    if (!openai.apiKey) {
-      throw new Error('Missing OPENAI_API_KEY');
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured. Streaming requires edge function routing.');
     }
 
-    // Use chat completions API for streaming
-    const stream = await openai.chat.completions.create({
-      model,
+    const result = await callEdgeFunction('assistant-stream', {
       messages: apiMessages,
-      temperature,
-      max_tokens: max_output_tokens,
-      stream: true,
-      ...(tools && { tools }),
-      ...(tool_choice && { tool_choice }),
-      ...(response_format && { response_format })
+      temperature: request.temperature ?? 0.7,
+      provider: 'openai'
     });
 
-    let fullText = '';
-
-    // Process the stream
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        fullText += content;
-        options.onToken?.(content);
-      }
-    }
-
-    options.onComplete?.(fullText);
+    const text = typeof result === 'string' ? result : (result?.text || result?.message || '');
+    options.onToken?.(text);
+    options.onComplete?.(text);
   } catch (error: any) {
     console.error('GPT Stream Error:', error);
     const err = new Error(error?.message || 'Unknown streaming error');
@@ -180,14 +135,10 @@ export async function streamGPTResponse(
   }
 }
 
-/**
- * Call GPT with optional streaming support
- */
 export async function callGPTWithStreaming(
   request: GPTRequest,
   streamOptions?: GPTStreamOptions
 ): Promise<GPTResponse> {
-  // If streaming is requested and callbacks provided, use streaming
   if (request.stream && streamOptions) {
     let fullText = '';
 
@@ -209,6 +160,5 @@ export async function callGPTWithStreaming(
     };
   }
 
-  // Otherwise use standard non-streaming API
   return callGPT(request);
 }

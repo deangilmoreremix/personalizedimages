@@ -8,10 +8,16 @@ export const corsHeaders = {
 };
 
 export function getCorsHeaders(origin: string | null) {
-  const isAllowed = !origin || allowedOrigins.includes(origin);
+  if (!origin) {
+    return {
+      ...corsHeaders,
+      'Access-Control-Allow-Origin': allowedOrigins[0],
+    };
+  }
+  const isAllowed = allowedOrigins.includes('*') || allowedOrigins.includes(origin);
   return {
     ...corsHeaders,
-    'Access-Control-Allow-Origin': isAllowed ? origin || allowedOrigins[0] : allowedOrigins[0],
+    'Access-Control-Allow-Origin': isAllowed ? origin : 'null',
   };
 }
 

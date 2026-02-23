@@ -40,59 +40,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isSupabaseInitialized, setIsSupabaseInitialized] = useState(false);
 
-  // Initialize Supabase and get session
   useEffect(() => {
-    const initialize = async () => {
-      try {
-        const initialized = initSupabase();
-        setIsSupabaseInitialized(initialized);
+    const initialized = initSupabase();
+    setIsSupabaseInitialized(initialized);
 
-        if (initialized && supabase) {
-          const { data: { session } } = await supabase.auth.getSession();
-          setSession(session);
-          setUser(session?.user || null);
-
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          }
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initialize();
-  }, []);
-
-  // Set up auth state change listener when Supabase is initialized
-  useEffect(() => {
-    if (!isSupabaseInitialized || !supabase) {
+    if (!initialized || !supabase) {
+      setLoading(false);
       return;
     }
 
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth state change:", _event, session?.user?.id);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user || null);
-      
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        const userId = session.user.id;
+        (async () => {
+          await fetchProfile(userId);
+          setLoading(false);
+        })();
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user || null);
+      if (session?.user) {
+        fetchProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    }).catch(() => {
       setLoading(false);
     });
 
     return () => {
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
+      authListener?.subscription?.unsubscribe();
     };
-  }, [isSupabaseInitialized]);
+  }, []);
 
   // Fetch user profile from the database
   const fetchProfile = async (userId: string) => {
@@ -165,11 +152,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!supabase || !isSupabaseInitialized) {
         throw new Error('Supabase client not initialized');
       }
-      
+
       await supabase.auth.signOut();
-      setProfile(null);
     } catch (error) {
       console.error('Error in signOut:', error);
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
     }
   };
 

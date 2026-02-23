@@ -56,6 +56,7 @@ import CrazyImagePage from './pages/features/CrazyImagePage';
 import FreepikDemo from './pages/FreepikDemo';
 import { AssetProvider } from './contexts/AssetContext';
 import { StockImageProvider } from './contexts/StockImageContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Component for conditionally rendering footer and other components
 const AppLayout = () => {
@@ -110,7 +111,7 @@ const AppLayout = () => {
           <Route path="/marketplace" element={<MarketplacePage />} />
           <Route path="/features/crazy-image" element={<CrazyImagePage />} />
           <Route path="/freepik-demo" element={<FreepikDemo />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         </Routes>
       </main>
       {isHomePage && <Footer />}

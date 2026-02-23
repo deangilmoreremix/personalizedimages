@@ -12,7 +12,7 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'terser',
-    sourcemap: true, // Enable source maps for production debugging
+    sourcemap: false,
     chunkSizeWarningLimit: 600, // Increase limit to 600KB to reduce warnings
     rollupOptions: {
       output: {

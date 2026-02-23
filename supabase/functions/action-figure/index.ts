@@ -1,23 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
-
-console.log("Action Figure Edge Function loaded")
-
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 10;
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkLocalRateLimit(clientIp: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(clientIp);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
+import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 interface ActionFigureRequest {
   prompt: string
@@ -25,17 +6,36 @@ interface ActionFigureRequest {
   referenceImageUrl?: string
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
+  const origin = req.headers.get('origin')
+  const headers = getCorsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { status: 200, headers })
   }
 
   try {
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (!checkLocalRateLimit(clientIp)) {
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please wait before trying again." }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const rateLimit = await checkRateLimit(user.id, true)
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Please wait before trying again.' }),
+        { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const credits = await checkCredits(user.id)
+    if (!credits.allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Insufficient credits', remainingCredits: credits.remainingCredits }),
+        { status: 402, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -44,16 +44,16 @@ serve(async (req) => {
     if (!prompt || typeof prompt !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Valid prompt is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
     const sanitizedPrompt = sanitizeInput(prompt)
 
-    if (referenceImageUrl && !isValidUrl(referenceImageUrl)) {
+    if (referenceImageUrl && !referenceImageUrl.startsWith('data:') && !isValidUrl(referenceImageUrl)) {
       return new Response(
         JSON.stringify({ error: 'Invalid reference image URL' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -64,11 +64,10 @@ serve(async (req) => {
         (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
       return new Response(
         JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Enhance prompt for action figure style
     const enhancedPrompt = `Create a highly detailed, professional-quality product photo of an action figure: ${sanitizedPrompt}. The figure should look like a real commercial toy with articulation points, detailed textures, realistic packaging design, and toy store lighting.`
 
     let imageUrl: string = ''
@@ -97,25 +96,37 @@ serve(async (req) => {
       imageUrl = data.data[0].url
 
     } else if (provider === 'gemini' && geminiKey) {
-      let requestBody: any = {
+      const requestBody: any = {
         contents: [{ parts: [{ text: enhancedPrompt }] }],
-        generationConfig: {
-          responseMediaType: "IMAGE"
-        }
+        generationConfig: { responseMediaType: "IMAGE" }
       }
 
       if (referenceImageUrl) {
         try {
-          const imageResponse = await fetch(referenceImageUrl)
-          if (imageResponse.ok) {
-            const imageBlob = await imageResponse.blob()
-            const base64Data = await blobToBase64(imageBlob)
+          let imageData = ''
+          let mimeType = 'image/png'
 
+          if (referenceImageUrl.startsWith('data:')) {
+            const match = referenceImageUrl.match(/^data:([^;]+);base64,(.+)$/)
+            if (match) {
+              mimeType = match[1]
+              imageData = match[2]
+            }
+          } else {
+            const imageResponse = await fetch(referenceImageUrl)
+            if (imageResponse.ok) {
+              const imageBlob = await imageResponse.blob()
+              mimeType = imageBlob.type || 'image/png'
+              const arrayBuffer = await imageBlob.arrayBuffer()
+              const uint8Array = new Uint8Array(arrayBuffer)
+              imageData = uint8Array.reduce((s, b) => s + String.fromCharCode(b), '')
+              imageData = btoa(imageData)
+            }
+          }
+
+          if (imageData) {
             requestBody.contents[0].parts.push({
-              inline_data: {
-                mime_type: imageBlob.type,
-                data: base64Data
-              }
+              inline_data: { mime_type: mimeType, data: imageData }
             })
           }
         } catch (error) {
@@ -153,27 +164,20 @@ serve(async (req) => {
     } else {
       return new Response(
         JSON.stringify({ error: `Provider ${provider} not available or API key missing` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
     return new Response(
       JSON.stringify({ imageUrl }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Action Figure Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
     )
   }
 })
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  const arrayBuffer = await blob.arrayBuffer()
-  const uint8Array = new Uint8Array(arrayBuffer)
-  const binaryString = uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
-  return btoa(binaryString)
-}

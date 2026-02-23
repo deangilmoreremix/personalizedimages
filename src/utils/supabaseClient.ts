@@ -1,18 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Get environment variables with fallback values for development
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Validate environment variables
 const isSupabaseConfigured = () => {
   return !!supabaseUrl && !!supabaseAnonKey && supabaseUrl.startsWith('http');
 };
 
-// Create a singleton instance of the Supabase client if properly configured
-let supabase = null;
+let supabase: SupabaseClient | null = null;
 
-// Initialize Supabase client
 const initSupabase = () => {
   if (isSupabaseConfigured()) {
     try {
@@ -33,38 +29,26 @@ const initSupabase = () => {
   }
 };
 
-// Initialize on module import
 initSupabase();
 
-/**
- * Call a Supabase Edge Function
- * @param functionName The name of the function to call
- * @param payload The payload to send to the function
- * @returns The response from the function
- */
 async function callEdgeFunction(functionName: string, payload: any = {}) {
   if (!supabase) {
-    console.warn('Supabase client not initialized, cannot call edge function');
     throw new Error('Supabase client not initialized');
   }
 
   try {
-    // Get the JWT token for the current user if available
     let token = '';
     try {
       const { data: authData } = await supabase.auth.getSession();
-      token = authData.session?.access_token || '';
+      token = authData?.session?.access_token || '';
     } catch (authError) {
       console.warn('Auth error, continuing with anonymous key:', authError);
     }
 
-    // Construct the API URL
-    const apiUrl = `${supabase.supabaseUrl}/functions/v1/${functionName}`;
-
-    // Make the request with authorization header
-    const authHeader = token 
-      ? `Bearer ${token}` 
-      : `Bearer ${supabase.supabaseKey}`;
+    const apiUrl = `${supabaseUrl}/functions/v1/${functionName}`;
+    const authHeader = token
+      ? `Bearer ${token}`
+      : `Bearer ${supabaseAnonKey}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -75,21 +59,15 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
       body: JSON.stringify(payload)
     });
 
-    // For improved error reporting
     if (!response.ok) {
-      let errorText;
-      let errorObj;
-      
+      const errorText = await response.text();
+      let errorMessage: string;
       try {
-        // Try to parse as JSON first
-        errorObj = await response.json();
-        errorText = JSON.stringify(errorObj);
-      } catch (e) {
-        // If not JSON, get as text
-        errorText = await response.text();
+        errorMessage = JSON.stringify(JSON.parse(errorText));
+      } catch {
+        errorMessage = errorText;
       }
-      
-      throw new Error(`Edge function error: ${response.status} - ${errorText}`);
+      throw new Error(`Edge function error: ${response.status} - ${errorMessage}`);
     }
 
     return await response.json();
@@ -99,4 +77,4 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
   }
 }
 
-export { supabase, isSupabaseConfigured, initSupabase, callEdgeFunction };
+export { supabase, supabaseUrl, supabaseAnonKey, isSupabaseConfigured, initSupabase, callEdgeFunction };

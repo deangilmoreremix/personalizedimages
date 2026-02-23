@@ -57,7 +57,7 @@ export async function callGPT(request: GPTRequest): Promise<GPTResponse> {
     const response = await openai.responses.create({
       model,
       messages: apiMessages,
-      temperature: request.temperature || 0.7,
+      temperature: request.temperature ?? 0.7,
       max_output_tokens,
       ...(tools && { tools }),
       ...(tool_choice && { tool_choice }),

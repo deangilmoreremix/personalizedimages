@@ -156,11 +156,14 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
       throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
+    if (!data?.data?.[0]?.url) {
+      throw new Error('No image URL in OpenAI response');
+    }
     return data.data[0].url;
   }
 
@@ -186,7 +189,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
       throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
     }
 
@@ -271,7 +274,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
       throw new Error(`Imagen API error: ${error.error?.message || 'Unknown error'}`);
     }
 

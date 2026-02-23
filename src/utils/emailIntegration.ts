@@ -89,11 +89,16 @@ export function generatePersonalizedImageUrl(
 ): string {
   const config = EMAIL_PROVIDERS[provider];
 
-  // Create URL with query parameters for personalization
-  const url = new URL(baseImageUrl);
+  let url: URL;
+  try {
+    url = new URL(baseImageUrl, window.location.origin);
+  } catch {
+    return baseImageUrl;
+  }
+
   Object.entries(recipientData).forEach(([key, value]) => {
     if (config.supportedTokens.includes(key) || key.startsWith('custom_')) {
-      url.searchParams.set(key.toLowerCase(), encodeURIComponent(value));
+      url.searchParams.set(key.toLowerCase(), value);
     }
   });
 

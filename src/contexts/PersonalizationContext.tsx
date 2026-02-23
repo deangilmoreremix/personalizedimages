@@ -130,8 +130,12 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (pendingTokensRef.current) {
+        persistTokens(pendingTokensRef.current);
+        pendingTokensRef.current = null;
+      }
     };
-  }, []);
+  }, [persistTokens]);
 
   const updateToken = useCallback((key: string, value: string) => {
     setTokens(prev => {
@@ -142,9 +146,10 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
   }, [scheduleSave]);
 
   const updateTokens = useCallback((newTokens: Record<string, string>) => {
-    setTokens(() => {
-      scheduleSave(newTokens);
-      return newTokens;
+    setTokens(prev => {
+      const merged = { ...prev, ...newTokens };
+      scheduleSave(merged);
+      return merged;
     });
   }, [scheduleSave]);
 

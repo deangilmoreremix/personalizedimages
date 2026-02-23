@@ -213,10 +213,17 @@ export async function generateImage(
   }
 
   const data = await response.json();
-  const imageUrl = data.data[0].url;
+  const imageUrl = data?.data?.[0]?.url;
+  if (!imageUrl) {
+    throw new GenerationError('No image URL returned from API', 500, true);
+  }
 
-  await deductCredit(prompt, 'openai', imageUrl);
-  await saveGeneratedImage(prompt, imageUrl, 'openai', category);
+  try {
+    await deductCredit(prompt, 'openai', imageUrl);
+    await saveGeneratedImage(prompt, imageUrl, 'openai', category);
+  } catch (e) {
+    console.error('Post-generation tracking failed:', e);
+  }
 
   return { imageUrl, provider: 'openai' };
 }

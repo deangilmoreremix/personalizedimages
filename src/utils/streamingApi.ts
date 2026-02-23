@@ -3,7 +3,7 @@
  */
 
 import { getGeminiApiKey, hasApiKey } from './apiUtils';
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { supabase, supabaseUrl, supabaseAnonKey, isSupabaseConfigured } from './supabaseClient';
 import { FEATURES } from '../components/ui/FeatureDialogProvider';
 import { generateImageWithDalle, generateImageWithGemini, generateImageWithGemini2Flash, generateImageWithImagen, generateImageWithGptImage } from './api';
 
@@ -30,26 +30,21 @@ export async function streamAIResponse({
 
   try {
     // First try using Edge Function for security and consistent performance
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && supabase) {
       try {
         const streamController = new AbortController();
         const requestId = `stream_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        
-        console.log(`🔄 [${requestId}] Starting AI assistant stream via edge function`);
 
-        // Get the user's auth token if available
         const { data: authData } = await supabase.auth.getSession();
-        const token = authData.session?.access_token || '';
+        const token = authData?.session?.access_token || '';
 
-        // Build the URL for the streaming endpoint
-        const apiUrl = `${supabase.supabaseUrl}/functions/v1/assistant-stream`;
+        const apiUrl = `${supabaseUrl}/functions/v1/assistant-stream`;
 
-        // Make the request to the edge function with proper headers
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : `Bearer ${supabase.supabaseKey}`,
+            'Authorization': token ? `Bearer ${token}` : `Bearer ${supabaseAnonKey}`,
             'X-Request-ID': requestId
           },
           body: JSON.stringify({
@@ -467,7 +462,7 @@ function extractFeatureSuggestions(text: string): string[] {
 
   // Fallback: extract feature IDs mentioned in brackets
   const features: string[] = [];
-  const featureMap = Object.keys(FEATURES);
+  const featureMap = FEATURES ? Object.keys(FEATURES) : [];
   
   featureMap.forEach(featureId => {
     const regex = new RegExp(`\\[${featureId}\\]`, 'g');

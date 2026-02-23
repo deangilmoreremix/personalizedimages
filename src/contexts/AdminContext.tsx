@@ -21,6 +21,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshAdminStatus = async () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -49,6 +53,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
     refreshAdminStatus();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {

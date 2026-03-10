@@ -3,10 +3,16 @@
  *
  * This module provides secure, validated access to environment variables
  * with proper error handling and fallback mechanisms.
+ *
+ * SECURITY WARNING: This module is designed for browser environments and uses Vite's
+ * import.meta.env for accessing environment variables. API keys are validated
+ * but should be rotated regularly and never logged in production.
+ *
+ * RECOMMENDATION: In production, use server-side API proxying instead of client-side
+ * API key management. This implementation provides defense-in-depth but should be
+ * replaced with proper server-side architecture.
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import type { AIProvider } from './api/core/types';
 
 // Environment variable schema
@@ -15,7 +21,7 @@ interface EnvironmentConfig {
   VITE_SUPABASE_URL: string;
   VITE_SUPABASE_ANON_KEY: string;
 
-  // AI API Keys
+  // AI API Keys (WARNING: These are client-side accessible)
   VITE_OPENAI_API_KEY?: string;
   VITE_GEMINI_API_KEY?: string;
   VITE_GEMINI_NANO_API_KEY?: string;
@@ -32,6 +38,13 @@ interface EnvironmentConfig {
   // Feature Flags
   VITE_ENABLE_DEBUG_MODE?: string;
   VITE_ENABLE_ANALYTICS?: string;
+
+  // Security & Rate Limiting
+  VITE_ENABLE_RATE_LIMITING?: string;
+  VITE_MAX_REQUESTS_PER_MINUTE?: string;
+
+  // Encryption
+  VITE_ENCRYPTION_KEY?: string;
 }
 
 // Validation rules for environment variables
@@ -63,36 +76,21 @@ const VALIDATION_RULES = {
   }
 };
 
-// Load environment variables from .env file
-function loadEnvFile(): Record<string, string> {
-  try {
-    const envPath = join(process.cwd(), '.env');
-    const envContent = readFileSync(envPath, 'utf8');
-    const envVars: Record<string, string> = {};
-
-    envContent.split('\n').forEach(line => {
-      const trimmedLine = line.trim();
-      if (trimmedLine && !trimmedLine.startsWith('#')) {
-        const [key, ...valueParts] = trimmedLine.split('=');
-        if (key) {
-          envVars[key.trim()] = valueParts.join('=').trim();
-        }
-      }
-    });
-
-    return envVars;
-  } catch (error) {
-    console.warn('Could not read .env file, using process.env only');
-    return {};
-  }
-}
-
-// Merge environment sources with priority: .env file > process.env
+// Load environment variables from Vite's import.meta.env
 function loadEnvironment(): Record<string, string> {
-  const fileEnv = loadEnvFile();
-  const processEnv = process.env as Record<string, string>;
-
-  return { ...processEnv, ...fileEnv };
+  // In browser environment, use Vite's env system
+  const viteEnv = import.meta.env;
+  
+  // Convert to Record<string, string>, filtering out non-string values
+  const envVars: Record<string, string> = {};
+  
+  for (const [key, value] of Object.entries(viteEnv)) {
+    if (typeof value === 'string') {
+      envVars[key] = value;
+    }
+  }
+  
+  return envVars;
 }
 
 // Validate environment configuration

@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Mail, Copy, Download, Settings, Eye, EyeOff, Sparkles, Trash } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { EMAIL_PROVIDERS, EmailProvider } from '../utils/emailIntegration';
+import { inputValidator } from '../utils/inputValidator';
 
 interface EmailPersonalizationPanelProps {
   imageUrl: string | null;
@@ -79,6 +80,70 @@ const EmailPersonalizationPanel: React.FC<EmailPersonalizationPanelProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState<string | false>(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+
+  const handleUpdateToken = (tokenId: string, property: string, value: any) => {
+    // Validate token value before updating
+    if (property === 'value') {
+      const validation = inputValidator.validateTokenValue(value);
+      if (!validation.isValid) {
+        setValidationErrors(prev => ({
+          ...prev,
+          [tokenId]: validation.errors
+        }));
+        return;
+      }
+      // Clear validation errors for this token
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[tokenId];
+        return newErrors;
+      });
+    }
+    onUpdateToken(tokenId, property, value);
+  };
+
+  const handleUpdateSettings = (updates: any) => {
+    // Validate inputs before updating
+    const newErrors: Record<string, string[]> = {};
+
+    if (updates.subject) {
+      const validation = inputValidator.validatePrompt(updates.subject);
+      if (!validation.isValid) {
+        newErrors.subject = validation.errors;
+      }
+    }
+
+    if (updates.linkUrl) {
+      const validation = inputValidator.validateUrl(updates.linkUrl);
+      if (!validation.isValid) {
+        newErrors.linkUrl = validation.errors;
+      }
+    }
+
+    if (updates.linkText) {
+      const validation = inputValidator.sanitizeString(updates.linkText, 100);
+      if (validation.length === 0) {
+        newErrors.linkText = ['Link text cannot be empty'];
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setValidationErrors(prev => ({ ...prev, ...newErrors }));
+      return;
+    }
+
+    // Clear validation errors
+    setValidationErrors(prev => {
+      const newPrev = { ...prev };
+      delete newPrev.subject;
+      delete newPrev.linkUrl;
+      delete newPrev.linkText;
+      return newPrev;
+    });
+
+    onUpdateSettings(updates);
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
@@ -142,10 +207,17 @@ const EmailPersonalizationPanel: React.FC<EmailPersonalizationPanelProps> = ({
                   <input
                     type="text"
                     value={token.value}
-                    onChange={(e) => onUpdateToken(token.id, 'value', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-sm"
+                    onChange={(e) => handleUpdateToken(token.id, 'value', e.target.value)}
+                    className={`w-full px-2 py-1 border rounded text-sm ${
+                      validationErrors[token.id] ? 'border-red-500 bg-red-50' : ''
+                    }`}
                     placeholder="Token text (e.g., [FIRSTNAME])"
                   />
+                  {validationErrors[token.id] && (
+                    <div className="text-xs text-red-600 mt-1">
+                      {validationErrors[token.id].join(', ')}
+                    </div>
+                  )}
                 </div>
                 <input
                   type="color"
@@ -269,10 +341,17 @@ const EmailPersonalizationPanel: React.FC<EmailPersonalizationPanelProps> = ({
               <input
                 type="text"
                 value={subject}
-                onChange={(e) => onUpdateSettings({ subject: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleUpdateSettings({ subject: e.target.value })}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  validationErrors.subject ? 'border-red-500 bg-red-50' : ''
+                }`}
                 placeholder="Enter email subject"
               />
+              {validationErrors.subject && (
+                <div className="text-xs text-red-600 mt-1">
+                  {validationErrors.subject.join(', ')}
+                </div>
+              )}
             </div>
 
             <div>
@@ -282,10 +361,17 @@ const EmailPersonalizationPanel: React.FC<EmailPersonalizationPanelProps> = ({
               <input
                 type="text"
                 value={linkText}
-                onChange={(e) => onUpdateSettings({ linkText: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleUpdateSettings({ linkText: e.target.value })}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  validationErrors.linkText ? 'border-red-500 bg-red-50' : ''
+                }`}
                 placeholder="Button text"
               />
+              {validationErrors.linkText && (
+                <div className="text-xs text-red-600 mt-1">
+                  {validationErrors.linkText.join(', ')}
+                </div>
+              )}
             </div>
 
             <div>
@@ -295,10 +381,17 @@ const EmailPersonalizationPanel: React.FC<EmailPersonalizationPanelProps> = ({
               <input
                 type="url"
                 value={linkUrl}
-                onChange={(e) => onUpdateSettings({ linkUrl: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleUpdateSettings({ linkUrl: e.target.value })}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  validationErrors.linkUrl ? 'border-red-500 bg-red-50' : ''
+                }`}
                 placeholder="https://example.com"
               />
+              {validationErrors.linkUrl && (
+                <div className="text-xs text-red-600 mt-1">
+                  {validationErrors.linkUrl.join(', ')}
+                </div>
+              )}
             </div>
           </div>
 

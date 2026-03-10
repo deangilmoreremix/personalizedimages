@@ -1,152 +1,190 @@
-// Client-side rate limiting utility
+/**
+ * Rate Limiter Utility
+ *
+ * Implements client-side rate limiting to prevent API abuse and protect against
+ * excessive API calls. This is a defense-in-depth measure and should be combined
+ * with server-side rate limiting.
+ */
+
+import { getEnvironmentConfig } from './env';
+
 interface RateLimitConfig {
   maxRequests: number;
-  windowMs: number; // Time window in milliseconds
-  blockDurationMs?: number; // How long to block after limit exceeded
+  windowMs: number;
 }
 
-interface RateLimitEntry {
-  requests: number[];
-  blockedUntil?: number;
+interface RateLimitRecord {
+  count: number;
+  resetTime: number;
 }
 
-class ClientRateLimiter {
-  private limits = new Map<string, RateLimitEntry>();
+export class RateLimiter {
+  private static instance: RateLimiter;
+  private limits: Map<string, RateLimitRecord> = new Map();
+  private defaultConfig: RateLimitConfig = {
+    maxRequests: 60, // 60 requests per minute
+    windowMs: 60 * 1000, // 1 minute window
+  };
 
-  // Check if request is allowed
-  isAllowed(key: string, config: RateLimitConfig): boolean {
-    const now = Date.now();
-    const entry = this.limits.get(key) || { requests: [] };
+  private constructor() {}
 
-    // Check if currently blocked
-    if (entry.blockedUntil && now < entry.blockedUntil) {
-      return false;
+  static getInstance(): RateLimiter {
+    if (!RateLimiter.instance) {
+      RateLimiter.instance = new RateLimiter();
     }
+    return RateLimiter.instance;
+  }
 
-    // Clean old requests outside the window
-    entry.requests = entry.requests.filter(timestamp => now - timestamp < config.windowMs);
+  /**
+   * Check if a request is allowed for a given key
+   */
+  isAllowed(key: string): boolean {
+    const config = this.getConfig();
+    const now = Date.now();
+    const record = this.limits.get(key);
 
-    // Check if under limit
-    if (entry.requests.length < config.maxRequests) {
-      entry.requests.push(now);
-      this.limits.set(key, entry);
+    if (!record) {
+      // First request for this key
+      this.limits.set(key, {
+        count: 1,
+        resetTime: now + config.windowMs,
+      });
       return true;
     }
 
-    // Exceeded limit - block for specified duration
-    entry.blockedUntil = now + (config.blockDurationMs || config.windowMs);
-    this.limits.set(key, entry);
-    return false;
+    // Check if window has expired
+    if (now >= record.resetTime) {
+      // Reset the counter
+      this.limits.set(key, {
+        count: 1,
+        resetTime: now + config.windowMs,
+      });
+      return true;
+    }
+
+    // Check if we've exceeded the limit
+    if (record.count >= config.maxRequests) {
+      return false;
+    }
+
+    // Increment counter
+    record.count++;
+    return true;
   }
 
-  // Get remaining requests for a key
-  getRemainingRequests(key: string, config: RateLimitConfig): number {
-    const entry = this.limits.get(key);
-    if (!entry) return config.maxRequests;
+  /**
+   * Get remaining requests in current window
+   */
+  getRemaining(key: string): number {
+    const config = this.getConfig();
+    const now = Date.now();
+    const record = this.limits.get(key);
+
+    if (!record) {
+      return config.maxRequests;
+    }
+
+    if (now >= record.resetTime) {
+      return config.maxRequests;
+    }
+
+    return Math.max(0, config.maxRequests - record.count);
+  }
+
+  /**
+   * Get time until reset in milliseconds
+   */
+  getResetTime(key: string): number {
+    const record = this.limits.get(key);
+    if (!record) {
+      return 0;
+    }
 
     const now = Date.now();
-    const validRequests = entry.requests.filter(timestamp => now - timestamp < config.windowMs);
-
-    return Math.max(0, config.maxRequests - validRequests.length);
+    return Math.max(0, record.resetTime - now);
   }
 
-  // Get time until unblocked
-  getTimeUntilUnblocked(key: string): number {
-    const entry = this.limits.get(key);
-    if (!entry?.blockedUntil) return 0;
-
-    const now = Date.now();
-    return Math.max(0, entry.blockedUntil - now);
-  }
-
-  // Reset rate limit for a key
-  reset(key: string): void {
+  /**
+   * Clear rate limit for a specific key
+   */
+  clear(key: string): void {
     this.limits.delete(key);
   }
 
-  // Clean up expired entries
-  cleanup(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.limits.entries()) {
-      // Clean old requests
-      entry.requests = entry.requests.filter(timestamp => now - timestamp < 60000); // 1 minute
+  /**
+   * Clear all rate limits
+   */
+  clearAll(): void {
+    this.limits.clear();
+  }
 
-      // Remove if no requests and not blocked
-      if (entry.requests.length === 0 && (!entry.blockedUntil || now > entry.blockedUntil)) {
-        this.limits.delete(key);
-      }
-    }
+  /**
+   * Get rate limit configuration
+   */
+  private getConfig(): RateLimitConfig {
+    const config = getEnvironmentConfig();
+    const maxRequests = config.VITE_MAX_REQUESTS_PER_MINUTE
+      ? parseInt(config.VITE_MAX_REQUESTS_PER_MINUTE, 10)
+      : this.defaultConfig.maxRequests;
+
+    return {
+      maxRequests: Math.max(1, Math.min(maxRequests, 1000)), // Clamp between 1 and 1000
+      windowMs: this.defaultConfig.windowMs,
+    };
+  }
+
+  /**
+   * Check if rate limiting is enabled
+   */
+  isEnabled(): boolean {
+    const config = getEnvironmentConfig();
+    return config.VITE_ENABLE_RATE_LIMITING === 'true';
+  }
+
+  /**
+   * Get current rate limit status for a key
+   */
+  getStatus(key: string): {
+    allowed: boolean;
+    remaining: number;
+    resetIn: number;
+  } {
+    return {
+      allowed: this.isAllowed(key),
+      remaining: this.getRemaining(key),
+      resetIn: this.getResetTime(key),
+    };
   }
 }
 
-// Global rate limiter instance
-const rateLimiter = new ClientRateLimiter();
+// Export singleton instance
+export const rateLimiter = RateLimiter.getInstance();
 
-// Predefined rate limit configurations
-export const RATE_LIMITS = {
-  // Image generation - strict limits
-  IMAGE_GENERATION: {
-    maxRequests: 5,
-    windowMs: 60000, // 1 minute
-    blockDurationMs: 300000 // 5 minutes block
-  },
-
-  // API calls - moderate limits
-  API_CALLS: {
-    maxRequests: 20,
-    windowMs: 60000, // 1 minute
-  },
-
-  // UI interactions - lenient limits
-  UI_INTERACTIONS: {
-    maxRequests: 100,
-    windowMs: 10000, // 10 seconds
-  }
-} as const;
-
-// Rate limiting hook for React components
-export const useRateLimit = (key: string, config: RateLimitConfig) => {
-  const isAllowed = () => rateLimiter.isAllowed(key, config);
-  const getRemaining = () => rateLimiter.getRemainingRequests(key, config);
-  const getTimeUntilUnblocked = () => rateLimiter.getTimeUntilUnblocked(key);
-  const reset = () => rateLimiter.reset(key);
-
-  return {
-    isAllowed,
-    getRemaining,
-    getTimeUntilUnblocked,
-    reset
-  };
-};
-
-// Utility function for API calls with rate limiting
-export const makeRateLimitedRequest = async (
+/**
+ * Rate limit wrapper for API calls
+ */
+export async function withRateLimit<T>(
   key: string,
-  config: RateLimitConfig,
-  requestFn: () => Promise<any>
-): Promise<any> => {
-  if (!rateLimiter.isAllowed(key, config)) {
-    const timeUntilUnblocked = rateLimiter.getTimeUntilUnblocked(key);
-    throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(timeUntilUnblocked / 1000)} seconds.`);
+  fn: () => Promise<T>,
+  fallback?: T
+): Promise<T> {
+  if (!rateLimiter.isEnabled()) {
+    return fn();
+  }
+
+  if (!rateLimiter.isAllowed(key)) {
+    console.warn(`Rate limit exceeded for key: ${key}`);
+    if (fallback !== undefined) {
+      return fallback;
+    }
+    throw new Error(`Rate limit exceeded. Please try again in ${Math.ceil(rateLimiter.getResetTime(key) / 1000)} seconds.`);
   }
 
   try {
-    return await requestFn();
+    return await fn();
   } catch (error) {
-    // Log rate limit violations for monitoring
-    if (error instanceof Error && error.message?.includes('Rate limit')) {
-      console.warn('Rate limit violation:', { key, config, error: error.message });
-    }
+    // Don't count failed requests against rate limit
+    rateLimiter.clear(key);
     throw error;
   }
-};
-
-// Periodic cleanup
-if (typeof window !== 'undefined') {
-  setInterval(() => {
-    rateLimiter.cleanup();
-  }, 30000); // Clean every 30 seconds
 }
-
-export { rateLimiter, ClientRateLimiter };
-export type { RateLimitConfig, RateLimitEntry };

@@ -13,7 +13,10 @@ export interface OpenAIOptions {
   style?: 'natural' | 'vivid';
   response_format?: 'url' | 'b64_json';
   n?: number; // Number of images to generate (for variations)
+  timeout?: number; // Request timeout in milliseconds (default: 60000)
 }
+
+const DEFAULT_TIMEOUT = 60000; // 60 seconds
 
 export class OpenAIProvider {
   private apiKey: string;
@@ -27,6 +30,33 @@ export class OpenAIProvider {
   }
 
   /**
+   * Helper method to make fetch requests with timeout
+   */
+  private async fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+    timeoutMs: number = DEFAULT_TIMEOUT
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Request timed out after ${timeoutMs}ms`);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Generate image using DALL-E
    */
   async generateImage(prompt: string, options: OpenAIOptions = {}): Promise<string> {
@@ -35,10 +65,11 @@ export class OpenAIProvider {
       size = '1024x1024',
       quality = 'standard',
       style = 'natural',
-      response_format = 'url'
+      response_format = 'url',
+      timeout = DEFAULT_TIMEOUT
     } = options;
 
-    const response = await fetch(`${this.baseUrl}/images/generations`, {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/generations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -87,7 +118,7 @@ export class OpenAIProvider {
     formData.append('size', size);
     formData.append('response_format', response_format);
 
-    const response = await fetch(`${this.baseUrl}/images/edits`, {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/edits`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`
@@ -123,7 +154,7 @@ export class OpenAIProvider {
     formData.append('size', size);
     formData.append('response_format', response_format);
 
-    const response = await fetch(`${this.baseUrl}/images/variations`, {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/variations`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`
@@ -150,7 +181,7 @@ export class OpenAIProvider {
    * Analyze image using GPT-4 Vision
    */
   async analyzeImage(imageUrl: string, prompt: string = 'Describe this image in detail'): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -193,7 +224,7 @@ export class OpenAIProvider {
    */
   async validateApiKey(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/models`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/models`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`
         }

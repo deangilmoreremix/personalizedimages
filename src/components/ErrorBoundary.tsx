@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
+import { captureError, setUser, type ErrorContext } from '../utils/errorTracking';
 
 interface Props {
   children: ReactNode;
@@ -32,7 +33,7 @@ class ErrorBoundary extends Component<Props, State> {
     // Log error for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
-    // Report error to monitoring service in production
+    // Report error to centralized tracking
     this.reportError(error, errorInfo);
 
     // Call optional error handler
@@ -41,43 +42,18 @@ class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  // Report errors to monitoring service
-  private reportError = async (error: Error, errorInfo: ErrorInfo) => {
-    try {
-      // Only report in production
-      if (import.meta.env.PROD) {
-        const errorReport = {
-          message: error.message,
-          stack: error.stack,
-          componentStack: errorInfo.componentStack,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          url: window.location.href,
-          userId: this.getUserId(), // Implement based on your auth system
-        };
+  // Report errors to centralized tracking service
+  private reportError = (error: Error, errorInfo: ErrorInfo) => {
+    const context: ErrorContext = {
+      tags: { type: 'error_boundary' },
+      extras: {
+        componentStack: errorInfo.componentStack,
+        url: window.location.href,
+      },
+    };
 
-        // Send to error monitoring service (implement based on your monitoring solution)
-        // Example: Sentry, LogRocket, or custom endpoint
-        console.warn('Error reported to monitoring service:', errorReport);
-
-        // You can implement actual error reporting here:
-        // await fetch('/api/errors', { method: 'POST', body: JSON.stringify(errorReport) });
-      }
-    } catch (reportingError) {
-      // Don't let error reporting break the app
-      console.error('Failed to report error:', reportingError);
-    }
-  };
-
-  // Get user ID for error context (implement based on your auth)
-  private getUserId = (): string | null => {
-    try {
-      // Implement based on your authentication system
-      // Example: return auth.currentUser?.id || null;
-      return null; // Placeholder
-    } catch {
-      return null;
-    }
+    // Capture error with centralized tracking
+    captureError(error, context, 'fatal');
   };
 
   handleRetry = () => {

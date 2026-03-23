@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './styles/tokens.css';
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -57,7 +59,7 @@
   }
 
   .btn-secondary {
-    @apply bg-secondary-600 text-white hover:bg-secondary-700 shadow hover:shadow-md hover:translate-y-[-1px];
+    @apply bg-primary-500 text-white hover:bg-primary-600 shadow hover:shadow-md hover:translate-y-[-1px];
   }
 
   .btn-accent {

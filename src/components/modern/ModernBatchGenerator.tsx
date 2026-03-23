@@ -192,14 +192,14 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
             <StopCircle className="w-5 h-5" />Stop Processing
           </button>
         ) : (
-          <button onClick={handleProcess} disabled={batchItems.length === 0 || !prompt.trim()} className="w-full py-3 bg-violet-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-violet-700 transition-all">
+          <button onClick={handleProcess} disabled={batchItems.length === 0 || !prompt.trim()} className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-primary-700 transition-all">
             <Play className="w-5 h-5" />Start Batch Generation
           </button>
         )}
         {isProcessing && (
           <div className="mt-3">
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-violet-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+              <div className="bg-primary-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
             </div>
             <p className="text-xs text-gray-600 mt-1 text-center">{Math.round(progress)}% Complete</p>
           </div>
@@ -216,7 +216,7 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
           <div><span className="font-semibold">{batchItems.filter(i => i.status === 'processing').length}</span> <span className="text-gray-600">Processing</span></div>
           <div><span className="font-semibold">{batchItems.filter(i => i.status === 'failed').length}</span> <span className="text-gray-600">Failed</span></div>
         </div>
-        <button className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm flex items-center gap-2 hover:bg-violet-700 transition-colors"><Download className="w-4 h-4" />Download All</button>
+        <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm flex items-center gap-2 hover:bg-primary-700 transition-colors"><Download className="w-4 h-4" />Download All</button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

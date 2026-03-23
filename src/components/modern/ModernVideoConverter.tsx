@@ -103,7 +103,7 @@ const ModernVideoConverter: React.FC = () => {
               key={p.id}
               onClick={() => setPreset(p.id)}
               className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                preset === p.id ? 'bg-violet-100 text-violet-700 border-2 border-violet-300' : 'bg-gray-100 text-gray-700'
+                preset === p.id ? 'bg-primary-100 text-primary-700 border-2 border-primary-300' : 'bg-gray-100 text-gray-700'
               }`}
             >
               <div className="font-medium">{p.name}</div>
@@ -131,7 +131,7 @@ const ModernVideoConverter: React.FC = () => {
               key={e}
               onClick={() => setEffect(e.toLowerCase())}
               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                effect === e.toLowerCase() ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-700'
+                effect === e.toLowerCase() ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-700'
               }`}
             >
               {e}
@@ -147,7 +147,7 @@ const ModernVideoConverter: React.FC = () => {
               key={r}
               onClick={() => setResolution(r)}
               className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                resolution === r ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-700'
+                resolution === r ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-700'
               }`}
             >
               {r}
@@ -157,7 +157,7 @@ const ModernVideoConverter: React.FC = () => {
       </LeftPanelSection>
 
       <LeftPanelFooter>
-        <button onClick={handleGenerate} disabled={isGenerating || !sourceImage} className="w-full py-3 bg-violet-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-violet-700 transition-all flex items-center justify-center gap-2">
+        <button onClick={handleGenerate} disabled={isGenerating || !sourceImage} className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-700 transition-all flex items-center justify-center gap-2">
           {isGenerating ? <><RefreshCw className="w-5 h-5 animate-spin" />Converting...</> : <><Film className="w-5 h-5" />Convert to Video</>}
         </button>
       </LeftPanelFooter>
@@ -170,7 +170,7 @@ const ModernVideoConverter: React.FC = () => {
         <video src={videoUrl} controls className="w-full" />
       </div>
       <div className="flex gap-3">
-        <a href={videoUrl} download className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center justify-center gap-2"><Download className="w-4 h-4" />Download MP4</a>
+        <a href={videoUrl} download className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"><Download className="w-4 h-4" />Download MP4</a>
         <button onClick={handleGenerate} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"><RefreshCw className="w-4 h-4" />Reconvert</button>
       </div>
     </div>
@@ -179,7 +179,7 @@ const ModernVideoConverter: React.FC = () => {
       <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
       <h3 className="text-lg font-semibold text-gray-700 mb-2">Conversion Issue</h3>
       <p className="text-gray-500 text-sm max-w-md mx-auto">{error}</p>
-      <button onClick={handleGenerate} className="mt-4 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700 transition-colors">Try Again</button>
+      <button onClick={handleGenerate} className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors">Try Again</button>
     </div>
   ) : isGenerating ? (
     <div className="p-12 text-center">
@@ -189,7 +189,7 @@ const ModernVideoConverter: React.FC = () => {
       </div>
       <h3 className="text-lg font-semibold text-gray-700 mb-2">Converting to Video...</h3>
       <div className="w-48 mx-auto bg-gray-200 rounded-full h-2 mt-3">
-        <div className="bg-violet-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+        <div className="bg-primary-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
       </div>
       <p className="text-xs text-gray-500 mt-2">{Math.round(progress)}%</p>
     </div>

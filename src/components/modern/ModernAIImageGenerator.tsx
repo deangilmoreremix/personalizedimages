@@ -287,7 +287,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
               <button
                 onClick={() => setQuality('standard')}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  quality === 'standard' ? 'bg-violet-100 text-violet-700 border-2 border-violet-300' : 'bg-gray-100 text-gray-700'
+                  quality === 'standard' ? 'bg-primary-100 text-primary-700 border-2 border-primary-300' : 'bg-gray-100 text-gray-700'
                 }`}
               >
                 Standard
@@ -295,7 +295,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
               <button
                 onClick={() => setQuality('hd')}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  quality === 'hd' ? 'bg-violet-100 text-violet-700 border-2 border-violet-300' : 'bg-gray-100 text-gray-700'
+                  quality === 'hd' ? 'bg-primary-100 text-primary-700 border-2 border-primary-300' : 'bg-gray-100 text-gray-700'
                 }`}
               >
                 HD
@@ -311,7 +311,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
                   key={ratio}
                   onClick={() => setAspectRatio(ratio)}
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                    aspectRatio === ratio ? 'bg-violet-100 text-violet-700 border-2 border-violet-300' : 'bg-gray-100 text-gray-700'
+                    aspectRatio === ratio ? 'bg-primary-100 text-primary-700 border-2 border-primary-300' : 'bg-gray-100 text-gray-700'
                   }`}
                 >
                   {ratio}
@@ -340,7 +340,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
         <button
           onClick={handleGenerate}
           disabled={isGenerating || !prompt.trim()}
-          className="w-full py-3 bg-violet-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-violet-700 transition-all"
+          className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-primary-700 transition-all"
         >
           {isGenerating ? (
             <>

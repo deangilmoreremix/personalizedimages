@@ -216,7 +216,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
                   key={transform}
                   onClick={() => setTextTransform(transform as any)}
                   className={`flex-1 px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                    textTransform === transform ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-700'
+                    textTransform === transform ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-700'
                   }`}
                 >
                   {transform}
@@ -296,7 +296,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
         <button
           onClick={handleGenerate}
           disabled={isGenerating || !memeImage}
-          className="w-full py-3 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
         >
           {isGenerating ? (
             <>
@@ -324,7 +324,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
       <div className="flex gap-3">
         <button
           onClick={handleDownload}
-          className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center justify-center gap-2"
+          className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
         >
           <Download className="w-4 h-4" />
           Download

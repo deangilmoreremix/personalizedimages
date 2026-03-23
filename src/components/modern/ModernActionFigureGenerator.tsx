@@ -159,7 +159,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
               onClick={() => setSelectedCategory(cat.value as any)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedCategory === cat.value
-                  ? 'bg-violet-100 text-violet-700 border-2 border-violet-300'
+                  ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
                   : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
               }`}
             >
@@ -259,7 +259,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
                   key={style}
                   onClick={() => setFigureStyle(style)}
                   className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                    figureStyle === style ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-700'
+                    figureStyle === style ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-700'
                   }`}
                 >
                   {style}
@@ -289,7 +289,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
                   key={pose}
                   onClick={() => setPoseStyle(pose)}
                   className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                    poseStyle === pose ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-700'
+                    poseStyle === pose ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-700'
                   }`}
                 >
                   {pose}
@@ -306,7 +306,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
                   key={pkg}
                   onClick={() => setPackagingStyle(pkg)}
                   className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                    packagingStyle === pkg ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-700'
+                    packagingStyle === pkg ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-700'
                   }`}
                 >
                   {pkg}
@@ -325,7 +325,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
                     onClick={() => toggleAccessory(accessory)}
                     className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                       selectedAccessories.includes(accessory)
-                        ? 'bg-violet-100 text-violet-700 border-2 border-violet-300'
+                        ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
                         : 'bg-gray-100 text-gray-700 border-2 border-transparent'
                     }`}
                   >
@@ -350,7 +350,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
         <button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="w-full py-3 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
         >
           {isGenerating ? (
             <>
@@ -393,7 +393,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
       <div className="flex gap-3">
         <button
           onClick={handleDownload}
-          className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center justify-center gap-2"
+          className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
         >
           <Download className="w-4 h-4" />
           Download

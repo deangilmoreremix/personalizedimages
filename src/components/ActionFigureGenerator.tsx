@@ -592,7 +592,7 @@ const ActionFigureGenerator: React.FC<ActionFigureGeneratorProps> = ({ tokens, o
                 </button>
                 <button
                   onClick={() => setShowSemanticMasking(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
                 >
                   <SlidersHorizontal className="w-4 h-4" />
                   Semantic Masking

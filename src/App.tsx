@@ -190,7 +190,7 @@ function App() {
     <ThemeProvider>
       <StockImageProvider>
         <AssetProvider>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen bg-white">
             <AppLayout />
           </div>
         </AssetProvider>

@@ -1,0 +1,225 @@
+/**
+ * Design Tokens - Centralized Color System
+ * 
+ * This file provides a single source of truth for all colors used in the application.
+ * Use these CSS variables to ensure consistency across all components.
+ * 
+ * Color System:
+ * - brand: Primary brand color (indigo)
+ * - accent: Secondary/Accent color (violet)  
+ * - highlight: Tertiary highlights (fuchsia)
+ * - semantic: Success, Warning, Error, Info colors
+ * 
+ * Usage: var(--color-brand-500) or @apply bg-brand-500
+ */
+
+:root {
+  /* Brand Colors - Indigo (Primary) */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  /* Accent Colors - Violet */
+  --color-accent-50: #f5f3ff;
+  --color-accent-100: #ede9fe;
+  --color-accent-200: #ddd6fe;
+  --color-accent-300: #c4b5fd;
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+  --color-accent-700: #6d28d9;
+  --color-accent-800: #5b21b6;
+  --color-accent-900: #4c1d95;
+  --color-accent-950: #2e1065;
+
+  /* Highlight Colors - Fuchsia */
+  --color-highlight-50: #fdf4ff;
+  --color-highlight-100: #fae8ff;
+  --color-highlight-200: #f5d0fe;
+  --color-highlight-300: #f0abfc;
+  --color-highlight-400: #e879f9;
+  --color-highlight-500: #d946ef;
+  --color-highlight-600: #c026d3;
+  --color-highlight-700: #a21caf;
+  --color-highlight-800: #86198f;
+  --color-highlight-900: #701a75;
+  --color-highlight-950: #4a044e;
+
+  /* Semantic Colors */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+  --color-success-800: #166534;
+  --color-success-900: #14532d;
+
+  --color-warning-50: #fefce8;
+  --color-warning-100: #fef9c3;
+  --color-warning-200: #fef08a;
+  --color-warning-300: #fde047;
+  --color-warning-400: #facc15;
+  --color-warning-500: #eab308;
+  --color-warning-600: #ca8a04;
+  --color-warning-700: #a16207;
+  --color-warning-800: #854d0e;
+  --color-warning-900: #713f12;
+
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
+  --color-error-900: #7f1d1d;
+
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+
+  /* Neutral Colors */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+}
+
+/* Tailwind alias utilities */
+/* 
+ * These classes provide backward compatibility with existing code
+ * that uses primary/secondary/accent naming conventions.
+ * New code should use semantic naming below.
+ */
+
+/* Primary = Brand (Indigo) */
+.bg-primary-50 { background-color: var(--color-brand-50); }
+.bg-primary-100 { background-color: var(--color-brand-100); }
+.bg-primary-200 { background-color: var(--color-brand-200); }
+.bg-primary-300 { background-color: var(--color-brand-300); }
+.bg-primary-400 { background-color: var(--color-brand-400); }
+.bg-primary-500 { background-color: var(--color-brand-500); }
+.bg-primary-600 { background-color: var(--color-brand-600); }
+.bg-primary-700 { background-color: var(--color-brand-700); }
+.bg-primary-800 { background-color: var(--color-brand-800); }
+.bg-primary-900 { background-color: var(--color-brand-900); }
+
+.text-primary-50 { color: var(--color-brand-50); }
+.text-primary-100 { color: var(--color-brand-100); }
+.text-primary-200 { color: var(--color-brand-200); }
+.text-primary-300 { color: var(--color-brand-300); }
+.text-primary-400 { color: var(--color-brand-400); }
+.text-primary-500 { color: var(--color-brand-500); }
+.text-primary-600 { color: var(--color-brand-600); }
+.text-primary-700 { color: var(--color-brand-700); }
+.text-primary-800 { color: var(--color-brand-800); }
+.text-primary-900 { color: var(--color-brand-900); }
+
+.border-primary-200 { border-color: var(--color-brand-200); }
+.border-primary-300 { border-color: var(--color-brand-300); }
+.border-primary-400 { border-color: var(--color-brand-400); }
+.border-primary-500 { border-color: var(--color-brand-500); }
+
+/* Secondary = Accent (Violet) */
+.bg-secondary-50 { background-color: var(--color-accent-50); }
+.bg-secondary-100 { background-color: var(--color-accent-100); }
+.bg-secondary-200 { background-color: var(--color-accent-200); }
+.bg-secondary-300 { background-color: var(--color-accent-300); }
+.bg-secondary-400 { background-color: var(--color-accent-400); }
+.bg-secondary-500 { background-color: var(--color-accent-500); }
+.bg-secondary-600 { background-color: var(--color-accent-600); }
+.bg-secondary-700 { background-color: var(--color-accent-700); }
+
+.text-secondary-50 { color: var(--color-accent-50); }
+.text-secondary-100 { color: var(--color-accent-100); }
+.text-secondary-600 { color: var(--color-accent-600); }
+.text-secondary-700 { color: var(--color-accent-700); }
+.text-secondary-800 { color: var(--color-accent-800); }
+.text-secondary-900 { color: var(--color-accent-900); }
+
+/* Accent = Highlight (Fuchsia) */
+.bg-accent-50 { background-color: var(--color-highlight-50); }
+.bg-accent-100 { background-color: var(--color-highlight-100); }
+.bg-accent-500 { background-color: var(--color-highlight-500); }
+.bg-accent-600 { background-color: var(--color-highlight-600); }
+.bg-accent-700 { background-color: var(--color-highlight-700); }
+
+.text-accent-500 { color: var(--color-highlight-500); }
+.text-accent-600 { color: var(--color-highlight-600); }
+.text-accent-700 { color: var(--color-highlight-700); }
+
+/* 
+ * Semantic Color Utilities
+ * Use these for consistent semantic meaning across the app
+ */
+
+/* Success - Green */
+.bg-success-50 { background-color: var(--color-success-50); }
+.bg-success-100 { background-color: var(--color-success-100); }
+.bg-success-500 { background-color: var(--color-success-500); }
+.bg-success-600 { background-color: var(--color-success-600); }
+.bg-success-700 { background-color: var(--color-success-700); }
+
+.text-success-600 { color: var(--color-success-600); }
+.text-success-700 { color: var(--color-success-700); }
+.text-success-800 { color: var(--color-success-800); }
+
+/* Warning - Yellow */
+.bg-warning-50 { background-color: var(--color-warning-50); }
+.bg-warning-100 { background-color: var(--color-warning-100); }
+.bg-warning-500 { background-color: var(--color-warning-500); }
+.bg-warning-600 { background-color: var(--color-warning-600); }
+.bg-warning-700 { background-color: var(--color-warning-700); }
+
+.text-warning-600 { color: var(--color-warning-600); }
+.text-warning-700 { color: var(--color-warning-700); }
+.text-warning-800 { color: var(--color-warning-800); }
+
+/* Error - Red */
+.bg-error-50 { background-color: var(--color-error-50); }
+.bg-error-100 { background-color: var(--color-error-100); }
+.bg-error-500 { background-color: var(--color-error-500); }
+.bg-error-600 { background-color: var(--color-error-600); }
+.bg-error-700 { background-color: var(--color-error-700); }
+
+.text-error-600 { color: var(--color-error-600); }
+.text-error-700 { color: var(--color-error-700); }
+.text-error-800 { color: var(--color-error-800); }
+
+/* Info - Blue */
+.bg-info-50 { background-color: var(--color-info-50); }
+.bg-info-100 { background-color: var(--color-info-100); }
+.bg-info-500 { background-color: var(--color-info-500); }
+.bg-info-600 { background-color: var(--color-info-600); }
+.bg-info-700 { background-color: var(--color-info-700); }
+
+.text-info-600 { color: var(--color-info-600); }
+.text-info-700 { color: var(--color-info-700); }
+.text-info-800 { color: var(--color-info-800); }

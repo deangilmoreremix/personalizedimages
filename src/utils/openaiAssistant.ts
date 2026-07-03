@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { getUserApiKey } from './userApiKeyStorage';
 
 interface OpenAIAssistantOptions {
   messages: Array<{ role: string; content: string }>;
@@ -15,13 +16,13 @@ interface OpenAIAssistantResponse {
  * Creates and returns an OpenAI assistant instance
  */
 export async function createOpenAIAssistant() {
-  // Initialize the OpenAI client
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-  
+  const userKey = getUserApiKey('openai');
+  const apiKey = userKey || import.meta.env.VITE_OPENAI_API_KEY;
+
   if (!apiKey) {
-    throw new Error('OpenAI API key not found. Make sure VITE_OPENAI_API_KEY is set in your environment variables.');
+    throw new Error('OpenAI API key not found. Set it in Settings > API Keys or as VITE_OPENAI_API_KEY in your environment variables.');
   }
-  
+
   const openai = new OpenAI({
     apiKey,
     dangerouslyAllowBrowser: true // Note: In production, you should use a backend proxy

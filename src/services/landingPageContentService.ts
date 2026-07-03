@@ -27,6 +27,7 @@ export interface ContentRevision {
 const STORAGE_BUCKET = 'landing-page-images';
 
 export async function getImageBySlot(section: string, slot: string): Promise<LandingPageImage | null> {
+  if (!supabase) return null;
   try {
     const { data, error } = await supabase
       .from('landing_page_images')
@@ -49,6 +50,7 @@ export async function getImageBySlot(section: string, slot: string): Promise<Lan
 }
 
 export async function getAllImagesBySection(section: string): Promise<LandingPageImage[]> {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('landing_page_images')
@@ -70,6 +72,7 @@ export async function getAllImagesBySection(section: string): Promise<LandingPag
 }
 
 export async function uploadImageToStorage(file: File, section: string, slot: string): Promise<string | null> {
+  if (!supabase) return null;
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${section}/${slot}/${Date.now()}.${fileExt}`;
@@ -104,6 +107,7 @@ export async function updateLandingPageImage(
   altText: string,
   title?: string
 ): Promise<boolean> {
+  if (!supabase) return false;
   try {
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -157,6 +161,7 @@ export async function updateLandingPageImage(
 }
 
 export async function deactivateImage(imageId: string): Promise<boolean> {
+  if (!supabase) return false;
   try {
     const { error } = await supabase
       .from('landing_page_images')
@@ -176,6 +181,7 @@ export async function deactivateImage(imageId: string): Promise<boolean> {
 }
 
 export async function getImageRevisions(imageId: string): Promise<ContentRevision[]> {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('content_revisions')
@@ -196,6 +202,7 @@ export async function getImageRevisions(imageId: string): Promise<ContentRevisio
 }
 
 export async function ensureStorageBucketExists(): Promise<boolean> {
+  if (!supabase) return false;
   try {
     const { data: buckets } = await supabase.storage.listBuckets();
 

@@ -14,6 +14,7 @@
  */
 
 import type { AIProvider } from './api/core/types';
+import { getUserApiKey, validateUserApiKey } from './userApiKeyStorage';
 
 // Environment variable schema
 interface EnvironmentConfig {
@@ -177,6 +178,12 @@ export function getEnvVar(key: keyof EnvironmentConfig): string | undefined {
  * Check if a specific API key is available and valid
  */
 export function hasValidApiKey(provider: AIProvider): boolean {
+  const userKey = getUserApiKey(provider);
+  if (userKey) {
+    const validation = validateUserApiKey(provider, userKey);
+    if (validation.valid) return true;
+  }
+
   const config = getEnvironmentConfig();
 
   switch (provider) {
@@ -204,6 +211,9 @@ export function getApiKey(provider: AIProvider): string | null {
   if (!hasValidApiKey(provider)) {
     return null;
   }
+
+  const userKey = getUserApiKey(provider);
+  if (userKey) return userKey;
 
   const config = getEnvironmentConfig();
 
@@ -249,21 +259,21 @@ export function getEnvironmentInfo(): {
   const availableProviders = providers.filter(provider => hasValidApiKey(provider));
 
   const requiredKeys = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'];
-  const optionalKeys = [
-    'VITE_OPENAI_API_KEY',
-    'VITE_GEMINI_API_KEY',
-    'VITE_GEMINI_NANO_API_KEY',
-    'VITE_LEONARDO_API_KEY',
-    'VITE_GIPHY_API_KEY',
-    'VITE_FREEPIK_API_KEY'
+  const optionalKeys: Array<{ envKey: string; provider: 'openai' | 'gemini' | 'gemini-nano' | 'leonardo' | 'giphy' | 'freepik' }> = [
+    { envKey: 'VITE_OPENAI_API_KEY', provider: 'openai' },
+    { envKey: 'VITE_GEMINI_API_KEY', provider: 'gemini' },
+    { envKey: 'VITE_GEMINI_NANO_API_KEY', provider: 'gemini-nano' },
+    { envKey: 'VITE_LEONARDO_API_KEY', provider: 'leonardo' },
+    { envKey: 'VITE_GIPHY_API_KEY', provider: 'giphy' },
+    { envKey: 'VITE_FREEPIK_API_KEY', provider: 'freepik' }
   ];
 
   const missingKeys = [
     ...requiredKeys.filter(key => !config[key as keyof EnvironmentConfig]),
-    ...optionalKeys.filter(key => {
-      const value = config[key as keyof EnvironmentConfig];
-      return !value || value.trim() === '';
-    })
+    ...optionalKeys.filter(({ provider }) => {
+      const userHas = getUserApiKey(provider);
+      return !userHas;
+    }).map(({ envKey }) => envKey)
   ];
 
   return {

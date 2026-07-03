@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
-import { User, LogOut, Settings, CreditCard, ChevronDown } from 'lucide-react';
+import { User, LogOut, Settings, CreditCard, ChevronDown, Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const UserMenu: React.FC = () => {
@@ -101,6 +101,17 @@ export const UserMenu: React.FC = () => {
           >
             <Settings className="w-4 h-4 mr-3" />
             Settings
+          </button>
+
+          <button
+            onClick={() => {
+              navigate('/settings/api-keys');
+              setIsOpen(false);
+            }}
+            className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            <Key className="w-4 h-4 mr-3" />
+            API Keys
           </button>
 
           <div className="border-t border-gray-100 mt-1 pt-1">

@@ -1,40 +1,75 @@
 /**
  * Common API utilities and helper functions
- * Updated to use centralized environment configuration
+ * Updated to use centralized environment configuration with user-provided key support
  */
 
 import { getApiKey, hasValidApiKey } from './env';
+import { getUserApiKey, validateUserApiKey } from './userApiKeyStorage';
 
-// Helper function to get the GIPHY API key from environment variables
-export const getGiphyApiKey = () => getApiKey('giphy') || '';
+// Helper function to get the GIPHY API key from environment variables or user settings
+export const getGiphyApiKey = () => {
+  const userKey = getUserApiKey('giphy');
+  if (userKey) return userKey;
+  return getApiKey('giphy') || '';
+};
 
-// Helper function to get the OpenAI API key from environment variables
-export const getOpenAIApiKey = () => getApiKey('openai') || '';
+// Helper function to get the OpenAI API key from environment variables or user settings
+export const getOpenAIApiKey = () => {
+  const userKey = getUserApiKey('openai');
+  if (userKey) return userKey;
+  return getApiKey('openai') || '';
+};
 
-// Helper function to get the Gemini API key from environment variables
-export const getGeminiApiKey = () => getApiKey('gemini') || '';
+// Helper function to get the Gemini API key from environment variables or user settings
+export const getGeminiApiKey = () => {
+  const userKey = getUserApiKey('gemini');
+  if (userKey) return userKey;
+  return getApiKey('gemini') || '';
+};
 
-// Helper function to get the Gemini Nano API key from environment variables
+// Helper function to get the Gemini Nano API key from environment variables or user settings
 // Note: Gemini Nano uses the same API key as regular Gemini
-export const getGeminiNanoApiKey = () => getApiKey('gemini-nano') || getApiKey('gemini') || '';
+export const getGeminiNanoApiKey = () => {
+  const userKey = getUserApiKey('gemini-nano') || getUserApiKey('gemini');
+  if (userKey) return userKey;
+  return getApiKey('gemini-nano') || getApiKey('gemini') || '';
+};
 
-// Helper function to get the Freepik API key from environment variables
-export const getFreepikApiKey = () => getApiKey('freepik') || '';
+// Helper function to get the Freepik API key from environment variables or user settings
+export const getFreepikApiKey = () => {
+  const userKey = getUserApiKey('freepik');
+  if (userKey) return userKey;
+  return getApiKey('freepik') || '';
+};
 
 // Helper function to check if an API key is available
 export const hasApiKey = (provider: string): boolean => {
   switch (provider) {
-    case 'openai':
-      return hasValidApiKey('openai');
+    case 'openai': {
+      const key = getUserApiKey('openai') || getApiKey('openai');
+      return !!(key && key.startsWith('sk-'));
+    }
     case 'gemini':
-    case 'imagen':
-      return hasValidApiKey('gemini');
-    case 'gemini-nano':
-      return hasValidApiKey('gemini-nano') || hasValidApiKey('gemini');
-    case 'giphy':
-      return hasValidApiKey('giphy');
-    case 'freepik':
-      return hasValidApiKey('freepik');
+    case 'imagen': {
+      const key = getUserApiKey('gemini') || getApiKey('gemini');
+      return !!(key && key.startsWith('AIza'));
+    }
+    case 'gemini-nano': {
+      const key = getUserApiKey('gemini-nano') || getUserApiKey('gemini') || getApiKey('gemini-nano') || getApiKey('gemini');
+      return !!(key && key.startsWith('AIza'));
+    }
+    case 'giphy': {
+      const key = getUserApiKey('giphy') || getApiKey('giphy');
+      return !!key;
+    }
+    case 'freepik': {
+      const key = getUserApiKey('freepik') || getApiKey('freepik');
+      return !!(key && /^[A-Za-z0-9]{20,}$/.test(key));
+    }
+    case 'leonardo': {
+      const key = getUserApiKey('leonardo') || getApiKey('leonardo');
+      return !!key;
+    }
     default:
       return false;
   }

@@ -188,3 +188,42 @@ export async function withRateLimit<T>(
     throw error;
   }
 }
+
+/**
+ * Pre-configured rate limit settings for different operations.
+ */
+export const RATE_LIMITS = {
+  IMAGE_GENERATION: { maxRequests: 10, windowMs: 60_000 },
+  UPSCALE: { maxRequests: 15, windowMs: 60_000 },
+  BACKGROUND_REMOVAL: { maxRequests: 20, windowMs: 60_000 },
+  STYLE_TRANSFER: { maxRequests: 15, windowMs: 60_000 },
+  PROMPT_IMPROVEMENT: { maxRequests: 30, windowMs: 60_000 },
+  IMAGE_RELIGHT: { maxRequests: 15, windowMs: 60_000 },
+  DEFAULT: { maxRequests: 30, windowMs: 60_000 },
+};
+
+/**
+ * Per-key rate limit request helper.
+ * Combines rateLimiter with a function call and returns the function result.
+ */
+export async function makeRateLimitedRequest<T>(
+  key: string,
+  config: { maxRequests: number; windowMs: number },
+  fn: () => Promise<T>
+): Promise<T> {
+  const compositeKey = `${key}:${config.maxRequests}:${config.windowMs}`;
+  if (!rateLimiter.isEnabled()) {
+    return fn();
+  }
+  if (!rateLimiter.isAllowed(compositeKey)) {
+    throw new Error(
+      `Rate limit exceeded. Please try again in ${Math.ceil(rateLimiter.getResetTime(compositeKey) / 1000)} seconds.`
+    );
+  }
+  try {
+    return await fn();
+  } catch (error) {
+    rateLimiter.clear(compositeKey);
+    throw error;
+  }
+}

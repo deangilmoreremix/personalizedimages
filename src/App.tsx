@@ -3,23 +3,10 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import ModernHeader from './components/layout/ModernHeader';
 import { ThemeProvider } from './components/ui/ThemeProvider';
-import Hero from './components/Hero';
-import HowItWorks from './components/HowItWorks';
-import Benefits from './components/Benefits';
-import TemplatesShowcase from './components/TemplatesShowcase';
-import Integrations from './components/Integrations';
-import Testimonials from './components/Testimonials';
-import FAQ from './components/FAQ';
-import CTASection from './components/CTASection';
-import Footer from './components/Footer';
-import FeatureShowcase from './components/FeatureShowcase';
-import ActionFigureShowcase from './components/ActionFigureShowcase';
-import CartoonStylesShowcase from './components/CartoonStylesShowcase';
-import FloatingFeatures from './components/FloatingFeatures';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { AssetProvider } from './contexts/AssetContext';
 import { StockImageProvider } from './contexts/StockImageContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { UserApiKeyProvider } from './contexts/UserApiKeyContext';
 import { Loader2 } from 'lucide-react';
 
 const LazyFallback = () => (
@@ -65,6 +52,7 @@ const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const AIToolsHub = React.lazy(() => import('./pages/AIToolsHub'));
 const MarketplacePage = React.lazy(() => import('./pages/MarketplacePage'));
 const FreepikDemo = React.lazy(() => import('./pages/FreepikDemo'));
+const UserApiKeysPage = React.lazy(() => import('./pages/UserApiKeysPage'));
 
 function NotFoundPage() {
   return (
@@ -132,6 +120,7 @@ const AppLayout = () => {
             <Route path="/features/crazy-image" element={<CrazyImagePage />} />
             <Route path="/freepik-demo" element={<FreepikDemo />} />
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/settings/api-keys" element={<ProtectedRoute><UserApiKeysPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
@@ -190,9 +179,11 @@ function App() {
     <ThemeProvider>
       <StockImageProvider>
         <AssetProvider>
-          <div className="min-h-screen bg-white">
-            <AppLayout />
-          </div>
+          <UserApiKeyProvider>
+            <div className="min-h-screen bg-white">
+              <AppLayout />
+            </div>
+          </UserApiKeyProvider>
         </AssetProvider>
       </StockImageProvider>
     </ThemeProvider>

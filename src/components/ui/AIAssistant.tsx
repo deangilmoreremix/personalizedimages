@@ -7,6 +7,7 @@ import { useFeatureDialog } from '../ui/FeatureDialogProvider';
 import { Location, NavigateFunction, useLocation, useNavigate } from 'react-router-dom';
 import { createOpenAIAssistant } from '../../utils/openaiAssistant';
 import { SpeechRecognitionService, SpeechSynthesisService, prepareSpokenResponse } from '../../utils/speechUtils';
+import { getUserApiKey } from '../../utils/userApiKeyStorage';
 
 interface AiAssistantProps {
   onClose: () => void;
@@ -97,10 +98,11 @@ What would you like to work on today?`,
   // Check if OpenAI API key is available and toggle enhanced AI option
   useEffect(() => {
     const checkOpenAIKey = async () => {
-      const openAIKey = import.meta.env.VITE_OPENAI_API_KEY;
-      setUseEnhancedAI(!!openAIKey);
+      const userKey = getUserApiKey('openai');
+      const envKey = import.meta.env.VITE_OPENAI_API_KEY;
+      setUseEnhancedAI(!!(userKey || envKey));
     };
-    
+
     checkOpenAIKey();
   }, []);
   

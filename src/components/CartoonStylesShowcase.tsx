@@ -4,6 +4,7 @@ import { ArrowRight, Sparkles, Paintbrush as PaintBrush, Loader2 } from 'lucide-
 import { Link } from 'react-router-dom';
 import cartoonThemesConfig from '../data/cartoonThemes';
 import { generateCartoonImage } from '../utils/api';
+import { getUserApiKey } from '../utils/userApiKeyStorage';
 
 const CartoonStylesShowcase: React.FC = () => {
   // Get a sample of themes to display
@@ -40,7 +41,7 @@ const CartoonStylesShowcase: React.FC = () => {
     };
 
     // Only generate if we have API keys configured
-    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY) {
+    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY || getUserApiKey('openai')) {
       generateShowcaseImages();
     }
   }, []);

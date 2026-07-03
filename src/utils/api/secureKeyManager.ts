@@ -10,6 +10,7 @@
  */
 
 import { getEnvironmentConfig } from '../env';
+import { getUserApiKey } from '../../userApiKeyStorage';
 import { secureEncryption } from '../secureEncryption';
 
 /**
@@ -35,13 +36,17 @@ export class SecureApiKeyManager {
    * Returns null if key is not available or invalid
    */
   getApiKey(provider: string): string | null {
-    // Check if key rotation is needed
     this.checkRotation();
 
-    // Check cache first
     const cachedKey = this.keyCache.get(provider);
     if (cachedKey) {
       return cachedKey;
+    }
+
+    const userKey = getUserApiKey(provider as any);
+    if (userKey) {
+      this.keyCache.set(provider, userKey);
+      return userKey;
     }
 
     const config = getEnvironmentConfig();
@@ -74,13 +79,11 @@ export class SecureApiKeyManager {
       return null;
     }
 
-    // Validate key format
     if (!this.validateKeyFormat(provider, rawKey)) {
       console.warn(`Invalid API key format for provider: ${provider}`);
       return null;
     }
 
-    // Cache the key
     this.keyCache.set(provider, rawKey);
     return rawKey;
   }

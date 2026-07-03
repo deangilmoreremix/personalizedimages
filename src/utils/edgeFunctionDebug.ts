@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { getUserApiKey } from './userApiKeyStorage';
 
 // Debug flags to control debugging behavior
 const DEBUG_CONFIG = {
@@ -227,8 +228,8 @@ export function logEdgeFunctionDebugInfo() {
   
   // Log API keys
   console.log('🔑 API Keys:');
-  console.log(`   OpenAI API key configured: ${!!import.meta.env.VITE_OPENAI_API_KEY}`);
-  console.log(`   Gemini API key configured: ${!!import.meta.env.VITE_GEMINI_API_KEY}`);
+  console.log(`   OpenAI API key configured: ${!!(import.meta.env.VITE_OPENAI_API_KEY || getUserApiKey('openai'))}`);
+  console.log(`   Gemini API key configured: ${!!(import.meta.env.VITE_GEMINI_API_KEY || getUserApiKey('gemini'))}`);
   
   // Log environment info
   console.log('🌐 Environment:');

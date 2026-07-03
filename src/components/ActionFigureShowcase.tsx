@@ -4,6 +4,7 @@ import { ArrowRight, Box, Camera, Download, Sparkles, Zap, Upload, Image as Imag
 import { Link } from 'react-router-dom';
 import { ActionFigureCarousel } from './ActionFigureCarousel';
 import { generateActionFigure } from '../utils/api';
+import { getUserApiKey } from '../utils/userApiKeyStorage';
 
 const ActionFigureShowcase: React.FC = () => {
   const [activeStyle, setActiveStyle] = useState(0);
@@ -79,8 +80,8 @@ const ActionFigureShowcase: React.FC = () => {
       }
     };
 
-    // Only generate if we have API keys configured
-    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY) {
+    const userOpenAIKey = getUserApiKey('openai');
+    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY || userOpenAIKey) {
       generateShowcaseImages();
     }
   }, []);

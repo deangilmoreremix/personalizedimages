@@ -41,7 +41,7 @@ export class GPT5ImageEditorService {
 
   private ensureApiKey(): void {
     if (!this.apiKey) {
-      throw new Error('OpenAI API key is required for GPT-5 image editing. Please configure VITE_OPENAI_API_KEY in your environment.');
+      throw new Error('OpenAI API key is required for GPT-5 image editing. Please add your own OpenAI API key in settings.');
     }
   }
 

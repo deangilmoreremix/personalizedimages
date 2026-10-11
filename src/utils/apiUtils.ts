@@ -3,28 +3,28 @@
  * Updated to use centralized environment configuration with user-provided key support
  */
 
-import { getApiKey, hasValidApiKey } from './env';
+import { hasValidApiKey } from './env';
 import { getUserApiKey, validateUserApiKey } from './userApiKeyStorage';
 
 // Helper function to get the GIPHY API key from environment variables or user settings
 export const getGiphyApiKey = () => {
   const userKey = getUserApiKey('giphy');
   if (userKey) return userKey;
-  return getApiKey('giphy') || '';
+  return '';
 };
 
 // Helper function to get the OpenAI API key from environment variables or user settings
 export const getOpenAIApiKey = () => {
   const userKey = getUserApiKey('openai');
   if (userKey) return userKey;
-  return getApiKey('openai') || '';
+  return '';
 };
 
 // Helper function to get the Gemini API key from environment variables or user settings
 export const getGeminiApiKey = () => {
   const userKey = getUserApiKey('gemini');
   if (userKey) return userKey;
-  return getApiKey('gemini') || '';
+  return '';
 };
 
 // Helper function to get the Gemini Nano API key from environment variables or user settings
@@ -32,42 +32,42 @@ export const getGeminiApiKey = () => {
 export const getGeminiNanoApiKey = () => {
   const userKey = getUserApiKey('gemini-nano') || getUserApiKey('gemini');
   if (userKey) return userKey;
-  return getApiKey('gemini-nano') || getApiKey('gemini') || '';
+  return '';
 };
 
 // Helper function to get the Freepik API key from environment variables or user settings
 export const getFreepikApiKey = () => {
   const userKey = getUserApiKey('freepik');
   if (userKey) return userKey;
-  return getApiKey('freepik') || '';
+  return '';
 };
 
 // Helper function to check if an API key is available
 export const hasApiKey = (provider: string): boolean => {
   switch (provider) {
     case 'openai': {
-      const key = getUserApiKey('openai') || getApiKey('openai');
+      const key = getUserApiKey('openai');
       return !!(key && key.startsWith('sk-'));
     }
     case 'gemini':
     case 'imagen': {
-      const key = getUserApiKey('gemini') || getApiKey('gemini');
+      const key = getUserApiKey('gemini');
       return !!(key && key.startsWith('AIza'));
     }
     case 'gemini-nano': {
-      const key = getUserApiKey('gemini-nano') || getUserApiKey('gemini') || getApiKey('gemini-nano') || getApiKey('gemini');
+      const key = getUserApiKey('gemini-nano') || getUserApiKey('gemini');
       return !!(key && key.startsWith('AIza'));
     }
     case 'giphy': {
-      const key = getUserApiKey('giphy') || getApiKey('giphy');
+      const key = getUserApiKey('giphy');
       return !!key;
     }
     case 'freepik': {
-      const key = getUserApiKey('freepik') || getApiKey('freepik');
+      const key = getUserApiKey('freepik');
       return !!(key && /^[A-Za-z0-9]{20,}$/.test(key));
     }
     case 'leonardo': {
-      const key = getUserApiKey('leonardo') || getApiKey('leonardo');
+      const key = getUserApiKey('leonardo');
       return !!key;
     }
     default:

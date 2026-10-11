@@ -5,7 +5,7 @@
  * handling authentication, error management, and response normalization.
  */
 
-import { getApiKey } from '../../env.js';
+import { getUserProvidedApiKey as getApiKey } from '../../apiUtils';
 import type { AIProvider } from './types';
 
 export const OPENAI_IMAGE_MODEL = 'gpt-image-2.5-sunburst';

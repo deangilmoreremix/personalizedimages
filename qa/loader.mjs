@@ -10,11 +10,17 @@
 // function files on disk are imported unchanged.
 
 export async function resolve(specifier, context, nextResolve) {
-  if (specifier.startsWith('jsr:')) {
-    return {
-      url: new URL('./stubs/empty-module.mjs', import.meta.url).href,
-      shortCircuit: true,
-    };
-  }
-  return nextResolve(specifier, context);
+    if (specifier.startsWith('jsr:')) {
+      return {
+        url: new URL('./stubs/empty-module.mjs', import.meta.url).href,
+        shortCircuit: true,
+      };
+    }
+    if (specifier.startsWith('npm:')) {
+      return {
+        url: new URL('./stubs/supabase-js.mjs', import.meta.url).href,
+        shortCircuit: true,
+      };
+    }
+    return nextResolve(specifier, context);
 }

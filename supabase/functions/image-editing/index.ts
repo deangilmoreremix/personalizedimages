@@ -1,157 +1,55 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+const IMAGE_MODEL = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-2.5-sunburst";
+const MAX_BYTES = 20 * 1024 * 1024;
+const json = (data: unknown, status: number, headers: Record<string,string>) =>
+  new Response(JSON.stringify(data), { status, headers: { ...headers, "Content-Type": "application/json" } });
 
 Deno.serve(async (req: Request) => {
-  const origin = req.headers.get('origin');
-  const headers = getCorsHeaders(origin);
-
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers });
-  }
-
+  const headers = getCorsHeaders(req.headers.get("origin"));
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, headers);
   try {
     const { user, error: authError } = await authenticateUser(req);
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
+    if (authError || !user) return json({ error: "Authentication required" }, 401, headers);
+    const limit = await checkRateLimit(user.id, true);
+    if (!limit.allowed) return json({ error: "Rate limit exceeded" }, 429, headers);
+
+    const key = Deno.env.get("OPENAI_API_KEY");
+    if (!key) return json({ error: "OpenAI is not configured on the server" }, 503, headers);
+    const { imageUrl, editOptions } = await req.json();
+    if (typeof imageUrl !== "string" || !imageUrl ||
+        !(imageUrl.startsWith("data:image/") || imageUrl.startsWith("https://"))) {
+      return json({ error: "An HTTPS image URL or image data URL is required" }, 400, headers);
     }
+    const prompt = sanitizeInput(editOptions?.prompt || editOptions?.instruction || "", 8000);
+    if (!prompt) return json({ error: "An editing instruction is required" }, 400, headers);
 
-    const rateLimit = await checkRateLimit(user.id, true);
-    if (!rateLimit.allowed) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded' }),
-        { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
+    // Pass the actual source image to the image edits API; generation without it is not an edit.
+    // Remote source URLs are forwarded directly; no server-side fetch (avoids SSRF).
+    if (imageUrl.length > MAX_BYTES) return json({ error: "Image reference too large" }, 413, headers);
+    const upstream = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: IMAGE_MODEL,
+        images: [{ image_url: imageUrl }],
+        prompt,
+        n: 1,
+        output_format: "png",
+      }),
+    });
+    const result = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) {
+      console.error("OpenAI image editing failed", { status: upstream.status, code: result?.error?.code });
+      return json({ error: "Image editing provider rejected the request", providerStatus: upstream.status }, 502, headers);
     }
-
-    const { provider, imageUrl, editOptions, config } = await req.json();
-
-    if (!imageUrl || typeof imageUrl !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Image URL is required' }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!editOptions || typeof editOptions !== 'object') {
-      return new Response(
-        JSON.stringify({ error: 'Edit options are required' }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-
-    if (!geminiKey && !openaiKey) {
-      return new Response(
-        JSON.stringify({ error: 'API keys not configured' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const editPrompt = sanitizeInput(
-      editOptions.prompt || editOptions.instruction || `Edit this image: ${JSON.stringify(editOptions)}`,
-      2000
-    );
-
-    let editedImageUrl = '';
-
-    if (geminiKey) {
-      let imageData = '';
-      let mimeType = 'image/png';
-
-      if (imageUrl.startsWith('data:')) {
-        const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) {
-          mimeType = match[1];
-          imageData = match[2];
-        }
-      } else {
-        const imgResponse = await fetch(imageUrl);
-        if (!imgResponse.ok) throw new Error('Failed to fetch source image');
-        const blob = await imgResponse.blob();
-        mimeType = blob.type || 'image/png';
-        const arrayBuf = await blob.arrayBuffer();
-        const uint8 = new Uint8Array(arrayBuf);
-        imageData = btoa(uint8.reduce((s, b) => s + String.fromCharCode(b), ''));
-      }
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: editPrompt },
-                { inline_data: { mime_type: mimeType, data: imageData } }
-              ]
-            }],
-            generationConfig: { responseMediaType: "IMAGE" }
-          })
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        for (const candidate of data.candidates || []) {
-          for (const part of candidate.content?.parts || []) {
-            if (part.inlineData?.mimeType?.startsWith('image/')) {
-              editedImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-              break;
-            }
-          }
-          if (editedImageUrl) break;
-        }
-      }
-    }
-
-    if (!editedImageUrl && openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: `${editPrompt}. Based on reference image content.`,
-          n: 1,
-          size: '1024x1024'
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        editedImageUrl = data.data?.[0]?.url || '';
-      }
-    }
-
-    if (!editedImageUrl) {
-      return new Response(
-        JSON.stringify({ error: 'Image editing failed' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ imageUrl: editedImageUrl }),
-      { headers: { ...headers, 'Content-Type': 'application/json' } }
-    );
-
+    const image = result?.data?.[0];
+    const imageResult = image?.b64_json ? `data:image/png;base64,${image.b64_json}` : image?.url;
+    if (!imageResult) return json({ error: "Image editing returned no image" }, 502, headers);
+    return json({ imageUrl: imageResult, model: IMAGE_MODEL }, 200, headers);
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: 'Image editing failed. Please try again.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("Image editing exception", error instanceof Error ? error.name : "unknown");
+    return json({ error: "Image editing failed" }, 500, headers);
   }
 });

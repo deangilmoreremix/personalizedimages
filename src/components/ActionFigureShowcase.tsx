@@ -81,7 +81,7 @@ const ActionFigureShowcase: React.FC = () => {
     };
 
     const userOpenAIKey = getUserApiKey('openai');
-    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY || userOpenAIKey) {
+    if (import.meta.env.PROD || userOpenAIKey) {
       generateShowcaseImages();
     }
   }, []);

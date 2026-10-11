@@ -99,7 +99,7 @@ What would you like to work on today?`,
   useEffect(() => {
     const checkOpenAIKey = async () => {
       const userKey = getUserApiKey('openai');
-      const envKey = import.meta.env.VITE_OPENAI_API_KEY;
+      const envKey = undefined;
       setUseEnhancedAI(!!(userKey || envKey));
     };
 

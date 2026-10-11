@@ -228,8 +228,8 @@ export function logEdgeFunctionDebugInfo() {
   
   // Log API keys
   console.log('🔑 API Keys:');
-  console.log(`   OpenAI API key configured: ${!!(import.meta.env.VITE_OPENAI_API_KEY || getUserApiKey('openai'))}`);
-  console.log(`   Gemini API key configured: ${!!(import.meta.env.VITE_GEMINI_API_KEY || getUserApiKey('gemini'))}`);
+  console.log(`   OpenAI API key configured: ${!!getUserApiKey('openai')}`);
+  console.log(`   Gemini API key configured: ${!!getUserApiKey('gemini')}`);
   
   // Log environment info
   console.log('🌐 Environment:');

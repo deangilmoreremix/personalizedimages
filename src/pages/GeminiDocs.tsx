@@ -104,7 +104,7 @@ const GeminiDocs: React.FC = () => {
                     Create a <code className="bg-gray-100 px-1 py-0.5 rounded">.env</code> file in your project root (copy from <code className="bg-gray-100 px-1 py-0.5 rounded">.env.example</code>) and add your Gemini API key:
                   </p>
                   <pre className="bg-gray-100 p-3 rounded-md text-sm mt-2 overflow-auto text-gray-800">
-                    VITE_GEMINI_API_KEY=your_gemini_api_key_here
+                    
                   </pre>
                 </li>
                 
@@ -151,7 +151,7 @@ const GeminiDocs: React.FC = () => {
 {`// Generate an image from a text prompt using Gemini
 async function generateImage(prompt) {
   // Initialize the Gemini client
-  const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   
   // Use the Gemini Flash Image model for image generation
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
@@ -181,7 +181,7 @@ async function generateImage(prompt) {
 {`// Transform an existing image using Gemini
 async function transformImage(imageUrl, prompt) {
   // Initialize the Gemini client
-  const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   
   // Fetch the image
   const response = await fetch(imageUrl);
@@ -221,7 +221,7 @@ async function transformImage(imageUrl, prompt) {
 {`// Analyze an image using Gemini Vision
 async function analyzeImage(imageUrl, prompt = "Describe this image in detail") {
   // Initialize the Gemini client
-  const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   
   // Fetch the image
   const response = await fetch(imageUrl);

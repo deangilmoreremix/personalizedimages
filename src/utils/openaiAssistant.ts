@@ -17,10 +17,10 @@ interface OpenAIAssistantResponse {
  */
 export async function createOpenAIAssistant() {
   const userKey = getUserApiKey('openai');
-  const apiKey = userKey || import.meta.env.VITE_OPENAI_API_KEY;
+  const apiKey = userKey;
 
   if (!apiKey) {
-    throw new Error('OpenAI API key not found. Set it in Settings > API Keys or as VITE_OPENAI_API_KEY in your environment variables.');
+    throw new Error('OpenAI API key not found. Set it in Settings > API Keys.');
   }
 
   const openai = new OpenAI({

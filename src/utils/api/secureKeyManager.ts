@@ -9,7 +9,6 @@
  * as a defense-in-depth measure but should be replaced with server-side API proxying.
  */
 
-import { getEnvironmentConfig } from '../env';
 import { getUserApiKey } from '../../userApiKeyStorage';
 import { secureEncryption } from '../secureEncryption';
 
@@ -49,31 +48,8 @@ export class SecureApiKeyManager {
       return userKey;
     }
 
-    const config = getEnvironmentConfig();
     let rawKey: string | undefined;
-
-    switch (provider) {
-      case 'openai':
-        rawKey = config.VITE_OPENAI_API_KEY;
-        break;
-      case 'gemini':
-        rawKey = config.VITE_GEMINI_API_KEY;
-        break;
-      case 'gemini-nano':
-        rawKey = config.VITE_GEMINI_NANO_API_KEY;
-        break;
-      case 'leonardo':
-        rawKey = config.VITE_LEONARDO_API_KEY;
-        break;
-      case 'giphy':
-        rawKey = config.VITE_GIPHY_API_KEY;
-        break;
-      case 'freepik':
-        rawKey = config.VITE_FREEPIK_API_KEY;
-        break;
-      default:
-        return null;
-    }
+    // BYOK only - no environment fallbacks for direct provider access
 
     if (!rawKey) {
       return null;

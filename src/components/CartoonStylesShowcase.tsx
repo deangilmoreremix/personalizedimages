@@ -41,7 +41,7 @@ const CartoonStylesShowcase: React.FC = () => {
     };
 
     // Only generate if we have API keys configured
-    if (import.meta.env.PROD || import.meta.env.VITE_OPENAI_API_KEY || getUserApiKey('openai')) {
+    if (import.meta.env.PROD || getUserApiKey('openai')) {
       generateShowcaseImages();
     }
   }, []);

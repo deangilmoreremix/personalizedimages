@@ -165,7 +165,7 @@ export async function generateVariations(
 
     // Generate variations
     const urls = await providerInstance.generateVariations(imageUrl, count, {
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash-image',
       temperature: 0.8
     });
 
@@ -177,7 +177,7 @@ export async function generateVariations(
         requestId: generateRequestId(),
         metadata: {
           generationTime: Date.now() - startTime,
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.5-flash-image',
           variationIndex: index + 1,
           totalVariations: count
         }
@@ -236,9 +236,7 @@ function createProviderRequest(prompt: string, provider: AIProvider, options: Pa
     case 'openai':
       baseRequest.options = {
         size: options.size || '1024x1024',
-        quality: options.quality || 'standard',
-        style: options.quality === 'hd' ? 'natural' : 'vivid',
-        response_format: options.outputFormat || 'url'
+        quality: options.quality || 'standard'
       };
       break;
 
@@ -269,9 +267,9 @@ function createProviderRequest(prompt: string, provider: AIProvider, options: Pa
 function getModelForProvider(provider: AIProvider, options: Partial<ImageGenerationRequest>): string {
   switch (provider) {
     case 'openai':
-      return options.quality === 'hd' ? 'dall-e-3' : 'dall-e-3';
+      return 'gpt-image-2.5-sunburst';
     case 'gemini':
-      return options.style === 'ghibli' ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
+      return 'gemini-2.5-flash-image';
     case 'imagen':
       return 'imagen-3.0-generate-001';
     default:
@@ -300,7 +298,7 @@ export const generateImageWithGemini = async (prompt: string, aspectRatio?: stri
 
 export const generateImageWithGemini2Flash = async (prompt: string) => {
   console.warn('generateImageWithGemini2Flash is deprecated. Use generateImage instead.');
-  return generateImage(prompt, { provider: 'gemini', model: 'gemini-2.0-flash-exp' });
+  return generateImage(prompt, { provider: 'gemini', model: 'gemini-2.5-flash-image' });
 };
 
 export const generateImageWithImagen = async (prompt: string, aspectRatio?: string) => {
@@ -310,5 +308,5 @@ export const generateImageWithImagen = async (prompt: string, aspectRatio?: stri
 
 export const generateImageWithGptImage = async (prompt: string) => {
   console.warn('generateImageWithGptImage is deprecated. Use generateImage instead.');
-  return generateImage(prompt, { provider: 'openai', model: 'gpt-4-vision-preview' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.5-sunburst' });
 };

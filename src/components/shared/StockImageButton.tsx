@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, ImagePlus, Sparkles } from 'lucide-react';
+import { Image, ImagePlus, Sparkles, type LucideIcon } from 'lucide-react';
 import StockImagePicker from './StockImagePicker';
 import { StockResource } from '../../services/stockImageService';
 
@@ -8,11 +8,15 @@ interface StockImageButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   label?: string;
+  buttonText?: string;
   icon?: 'image' | 'plus' | 'sparkles';
+  buttonIcon?: LucideIcon;
   className?: string;
+  buttonClassName?: string;
   disabled?: boolean;
   moduleName?: string;
   allowedTypes?: Array<'photo' | 'vector' | 'psd' | 'icon' | 'video'>;
+  defaultSearchTerm?: string;
 }
 
 export function StockImageButton({
@@ -20,11 +24,15 @@ export function StockImageButton({
   variant = 'secondary',
   size = 'md',
   label = 'Browse Stock',
+  buttonText,
   icon = 'image',
+  buttonIcon,
   className = '',
+  buttonClassName,
   disabled = false,
   moduleName = 'stock-button',
-  allowedTypes
+  allowedTypes,
+  defaultSearchTerm = ''
 }: StockImageButtonProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
@@ -39,7 +47,7 @@ export function StockImageButton({
     sparkles: Sparkles
   };
 
-  const IconComponent = icons[icon];
+  const IconComponent = buttonIcon || icons[icon];
 
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-sm gap-1.5',
@@ -70,11 +78,11 @@ export function StockImageButton({
           transition-colors disabled:opacity-50 disabled:cursor-not-allowed
           ${sizeClasses[size]}
           ${variantClasses[variant]}
-          ${className}
+          ${buttonClassName ?? className}
         `}
       >
         <IconComponent className={iconSizes[size]} />
-        {label}
+        {buttonText ?? label}
       </button>
 
       <StockImagePicker
@@ -83,6 +91,7 @@ export function StockImageButton({
         onSelect={handleSelect}
         moduleName={moduleName}
         allowedTypes={allowedTypes}
+        initialQuery={defaultSearchTerm}
       />
     </>
   );

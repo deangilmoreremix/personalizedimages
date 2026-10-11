@@ -1,4 +1,5 @@
 import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { generateWithGptImage, generateWithGeminiImage } from "../_shared/imageProviders.ts"
 
 interface ImageEnhancementRequest {
   imageUrl: string
@@ -70,177 +71,51 @@ Deno.serve(async (req) => {
 
     let resultImageUrl: string = ''
 
-    if (provider === 'gemini' && geminiKey) {
-      try {
-        const imageResponse = await fetch(imageUrl)
-        if (!imageResponse.ok) {
-          throw new Error('Failed to fetch image')
-        }
+    let enhancementPrompt = sanitizedPrompt || 'Enhance this image with improved quality, clarity, and detail.'
 
-        const imageBlob = await imageResponse.blob()
-        const base64Data = await blobToBase64(imageBlob)
+    if (enhancementType === 'upscale') {
+      enhancementPrompt = 'Upscale and enhance this image to higher quality with more detail and clarity.'
+    } else if (enhancementType === 'style-transfer') {
+      enhancementPrompt = `Apply artistic style transformation to this image: ${sanitizedPrompt}`
+    } else if (enhancementType === 'edit') {
+      enhancementPrompt = `Edit this image: ${sanitizedPrompt}`
+    } else if (enhancementType === 'variations') {
+      enhancementPrompt = 'Create a creative variation of this image with different colors and lighting while preserving its subject.'
+    }
 
-        let enhancementPrompt = sanitizedPrompt || 'Enhance this image with improved quality, clarity, and detail.'
-
-        if (enhancementType === 'upscale') {
-          enhancementPrompt = 'Upscale and enhance this image to higher quality with more detail and clarity.'
-        } else if (enhancementType === 'style-transfer') {
-          enhancementPrompt = `Apply artistic style transformation to this image: ${sanitizedPrompt}`
-        } else if (enhancementType === 'edit') {
-          enhancementPrompt = `Edit this image: ${sanitizedPrompt}`
-        }
-
-        const requestBody = {
-          contents: [{
-            parts: [
-              { text: enhancementPrompt },
-              {
-                inline_data: {
-                  mime_type: imageBlob.type,
-                  data: base64Data
-                }
-              }
-            ]
-          }],
-          generationConfig: {
-            responseMediaType: "IMAGE"
-          }
-        }
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-
-        for (const candidate of data.candidates || []) {
-          for (const part of candidate.content?.parts || []) {
-            if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-              resultImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-              break
-            }
-          }
-          if (resultImageUrl) break
-        }
-
-        if (!resultImageUrl) {
-          throw new Error('No image found in Gemini response')
-        }
-
-      } catch (error) {
-        console.error('Gemini enhancement error:', error)
-        throw error
-      }
-
-    } else if (provider === 'openai' && openaiKey) {
-      if (enhancementType === 'variations') {
-        const imageResponse = await fetch(imageUrl)
-        if (!imageResponse.ok) {
-          throw new Error('Failed to fetch image')
-        }
-
-        const imageBlob = await imageResponse.blob()
-        const formData = new FormData()
-        formData.append('image', imageBlob)
-        formData.append('n', '1')
-        formData.append('size', '1024x1024')
-
-        const response = await fetch('https://api.openai.com/v1/images/variations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: formData
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
-
-      } else if (enhancementType === 'edit' && maskUrl && sanitizedPrompt) {
-        const [imageResponse, maskResponse] = await Promise.all([
-          fetch(imageUrl),
-          fetch(maskUrl)
-        ])
-
-        if (!imageResponse.ok || !maskResponse.ok) {
-          throw new Error('Failed to fetch image or mask')
-        }
-
-        const [imageBlob, maskBlob] = await Promise.all([
-          imageResponse.blob(),
-          maskResponse.blob()
-        ])
-
-        const formData = new FormData()
-        formData.append('image', imageBlob)
-        formData.append('mask', maskBlob)
-        formData.append('prompt', sanitizedPrompt)
-        formData.append('n', '1')
-        formData.append('size', '1024x1024')
-
-        const response = await fetch('https://api.openai.com/v1/images/edits', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: formData
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
-
+    try {
+      if (provider === 'gemini' && geminiKey) {
+        resultImageUrl = await generateWithGeminiImage({ prompt: enhancementPrompt, apiKey: geminiKey, referenceImageUrl: imageUrl })
+      } else if (openaiKey) {
+        resultImageUrl = await generateWithGptImage({ prompt: enhancementPrompt, apiKey: openaiKey, referenceImageUrl: imageUrl })
+      } else if (geminiKey) {
+        resultImageUrl = await generateWithGeminiImage({ prompt: enhancementPrompt, apiKey: geminiKey, referenceImageUrl: imageUrl })
       } else {
-        const enhancementPrompt = `An enhanced, higher quality version of: ${sanitizedPrompt || 'professional photograph with improved detail'}`
-
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancementPrompt,
-            n: 1,
-            size: "1024x1024"
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
+        return new Response(
+          JSON.stringify({ error: 'API keys not configured' }),
+          { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        )
       }
-
-    } else {
-      return new Response(
-        JSON.stringify({ error: `Provider ${provider} not available or API key missing` }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-      )
+    } catch (providerError) {
+      console.error('Primary enhancement provider failed:', providerError)
+      try {
+        if (openaiKey && provider === 'gemini') {
+          resultImageUrl = await generateWithGptImage({ prompt: enhancementPrompt, apiKey: openaiKey, referenceImageUrl: imageUrl })
+        } else if (geminiKey) {
+          resultImageUrl = await generateWithGeminiImage({ prompt: enhancementPrompt, apiKey: geminiKey, referenceImageUrl: imageUrl })
+        } else {
+          throw providerError
+        }
+      } catch (fallbackError) {
+        console.error('Fallback enhancement provider failed:', fallbackError)
+        throw providerError
+      }
     }
 
     return new Response(
       JSON.stringify({ imageUrl: resultImageUrl }),
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
+    ),
       { headers: { ...headers, 'Content-Type': 'application/json' } }
     )
 
@@ -254,9 +129,3 @@ Deno.serve(async (req) => {
   }
 })
 
-async function blobToBase64(blob: Blob): Promise<string> {
-  const arrayBuffer = await blob.arrayBuffer()
-  const uint8Array = new Uint8Array(arrayBuffer)
-  const binaryString = uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
-  return btoa(binaryString)
-}

@@ -1,13 +1,13 @@
 /**
  * Google Gemini API Integration for Image Generation and Editing
  * Note: Despite the "Nano" name in this file, this uses the standard Gemini API
- * with the gemini-1.5-flash model for fast, efficient generation
+ * with the gemini-2.5-flash-image (Nano Banana) model for image generation/editing
  */
 
-import { getGeminiNanoApiKey, blobToBase64 } from './apiUtils';
+import { getUserProvidedApiKey, blobToBase64 } from './apiUtils';
 
 export interface GeminiNanoConfig {
-  model?: 'gemini-1.5-flash' | 'gemini-1.5-flash-latest' | 'gemini-2.0-flash-exp' | 'imagen-3.0-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-ultra-generate-001';
+  model?: 'gemini-2.5-flash-image' | 'gemini-3.1-flash-image' | 'imagen-3.0-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-ultra-generate-001';
   temperature?: number;
   maxTokens?: number;
   safetySettings?: SafetySetting[];
@@ -52,7 +52,7 @@ export class GeminiNanoService {
   private baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || getGeminiNanoApiKey();
+    this.apiKey = apiKey || getUserProvidedApiKey('gemini') || '';
   }
 
   /**
@@ -76,7 +76,7 @@ export class GeminiNanoService {
        const { useImagen = false, imagenModel = 'imagen-3.0-generate-001' } = config;
 
        if (!this.apiKey || this.apiKey.length < 20) {
-         throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your.env file.');
+         throw new Error('Your own Gemini API key is required for this action. Add it in settings (starts with AIza).');
        }
 
        // If not explicitly using Imagen, fall back to Gemini's built-in image generation
@@ -129,7 +129,7 @@ export class GeminiNanoService {
          {
            method: 'POST',
            headers: {
-             'Authorization': `Bearer ${this.apiKey}`,
+             'x-goog-api-key': this.apiKey,
              'Content-Type': 'application/json'
            },
            body: JSON.stringify({
@@ -192,7 +192,7 @@ export class GeminiNanoService {
      try {
        console.log('🎨 Generating image with Gemini built-in:', { prompt, options, config });
 
-       const { model = 'gemini-2.0-flash-exp' } = config;
+       const { model = 'gemini-2.5-flash-image' } = config;
        const { aspectRatio = '1:1', negativePrompt } = options;
 
        // Enhance prompt
@@ -207,7 +207,7 @@ export class GeminiNanoService {
          body: JSON.stringify({
            contents: [{ parts: [{ text: enhancedPrompt }] }],
            generationConfig: {
-             responseMediaType: "IMAGE",
+             responseModalities: ['TEXT', 'IMAGE'],
              ...(aspectRatio !== '1:1' && {
                imageConfig: { aspectRatio }
              })
@@ -250,10 +250,10 @@ export class GeminiNanoService {
        console.log('✏️ Editing image with Gemini:', { imageUrl, editOptions, config });
 
        if (!this.apiKey || this.apiKey.length < 20) {
-         throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+         throw new Error('Your own Gemini API key is required for this action. Add it in settings (starts with AIza).');
        }
 
-       const { model = 'gemini-2.0-flash-exp' } = config;
+       const { model = 'gemini-2.5-flash-image' } = config;
 
        // Fetch the original image
        const imageResponse = await fetch(imageUrl);
@@ -279,8 +279,8 @@ export class GeminiNanoService {
 
        // Add image to parts
        requestBody.contents[0].parts.push({
-         inline_data: {
-           mime_type: imageBlob.type,
+         inlineData: {
+           mimeType: imageBlob.type,
            data: base64Data
          }
        });
@@ -294,8 +294,8 @@ export class GeminiNanoService {
                const secondaryBlob = await secondaryResponse.blob();
                const secondaryBase64 = await blobToBase64(secondaryBlob);
                requestBody.contents[0].parts.push({
-                 inline_data: {
-                   mime_type: secondaryBlob.type,
+                 inlineData: {
+                   mimeType: secondaryBlob.type,
                    data: secondaryBase64
                  }
                });
@@ -310,7 +310,7 @@ export class GeminiNanoService {
        if (editOptions.responseModalities) {
          requestBody.generationConfig.responseModalities = editOptions.responseModalities;
        } else {
-         requestBody.generationConfig.responseMediaType = "IMAGE";
+         requestBody.generationConfig.responseModalities = ['TEXT', 'IMAGE'];
        }
 
        // Configure aspect ratio if specified
@@ -361,10 +361,10 @@ export class GeminiNanoService {
       console.log('🔄 Generating variations with Gemini:', { imageUrl, count, config });
 
       if (!this.apiKey || this.apiKey.length < 20) {
-        throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+        throw new Error('Your own Gemini API key is required for this action. Add it in settings (starts with AIza).');
       }
 
-      const { model = 'gemini-2.0-flash-exp' } = config;
+      const { model = 'gemini-2.5-flash-image' } = config;
 
       // Fetch the original image
       const imageResponse = await fetch(imageUrl);
@@ -390,8 +390,8 @@ export class GeminiNanoService {
                 parts: [
                   { text: variationPrompt },
                   {
-                    inline_data: {
-                      mime_type: imageBlob.type,
+                    inlineData: {
+                      mimeType: imageBlob.type,
                       data: base64Data
                     }
                   }
@@ -399,7 +399,7 @@ export class GeminiNanoService {
               }
             ],
             generationConfig: {
-              responseMediaType: "IMAGE",
+              responseModalities: ['TEXT', 'IMAGE'],
               temperature: 0.8 // Higher temperature for more varied results
             }
           })
@@ -563,12 +563,12 @@ export async function maskAndEditImage(options: SemanticMaskOptions): Promise<st
   const { imageUrl, maskData, editPrompt, preserveUnmasked = true, config = {} } = options;
 
   try {
-    const { model = 'gemini-2.0-flash-exp' } = config;
+    const { model = 'gemini-2.5-flash-image' } = config;
     const apiKey = geminiNanoService['apiKey'];
     const baseUrl = geminiNanoService['baseUrl'];
 
     if (!apiKey || apiKey.length < 20) {
-      throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      throw new Error('Your own Gemini API key is required for this action. Add it in settings (starts with AIza).');
     }
 
     // Fetch the original image
@@ -590,21 +590,21 @@ export async function maskAndEditImage(options: SemanticMaskOptions): Promise<st
         parts: [
           { text: maskingPrompt },
           {
-            inline_data: {
-              mime_type: imageBlob.type,
+            inlineData: {
+              mimeType: imageBlob.type,
               data: base64Image
             }
           },
           {
-            inline_data: {
-              mime_type: 'image/png',
+            inlineData: {
+              mimeType: 'image/png',
               data: maskData
             }
           }
         ]
       }],
       generationConfig: {
-        responseMediaType: "IMAGE",
+        responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.3 // Lower temperature for more precise editing
       }
     };
@@ -647,12 +647,12 @@ export async function refineImageConversationally(
   const { currentImageUrl, refinementPrompt, history = [], config = {} } = options;
 
   try {
-    const { model = 'gemini-2.0-flash-exp' } = config;
+    const { model = 'gemini-2.5-flash-image' } = config;
     const apiKey = geminiNanoService['apiKey'];
     const baseUrl = geminiNanoService['baseUrl'];
 
     if (!apiKey || apiKey.length < 20) {
-      throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      throw new Error('Your own Gemini API key is required for this action. Add it in settings (starts with AIza).');
     }
 
     // Fetch current image
@@ -684,15 +684,15 @@ export async function refineImageConversationally(
         parts: [
           { text: contextPrompt },
           {
-            inline_data: {
-              mime_type: imageBlob.type,
+            inlineData: {
+              mimeType: imageBlob.type,
               data: base64Image
             }
           }
         ]
       }],
       generationConfig: {
-        responseMediaType: "IMAGE",
+        responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.6 // Balanced for creativity and consistency
       }
     };
@@ -746,12 +746,12 @@ export async function composeImagesAdvanced(
   }
 
   try {
-    const { model = 'gemini-2.0-flash-exp' } = config;
+    const { model = 'gemini-2.5-flash-image' } = config;
     const apiKey = geminiNanoService['apiKey'];
     const baseUrl = geminiNanoService['baseUrl'];
 
     if (!apiKey || apiKey.length < 20) {
-      throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      throw new Error('Your own Gemini API key is required for this action. Add it in settings (starts with AIza).');
     }
 
     // Fetch and encode all images
@@ -764,8 +764,8 @@ export async function composeImagesAdvanced(
       const base64 = await blobToBase64(blob);
 
       imageParts.push({
-        inline_data: {
-          mime_type: blob.type,
+        inlineData: {
+          mimeType: blob.type,
           data: base64
         }
       });
@@ -804,7 +804,7 @@ export async function composeImagesAdvanced(
         ]
       }],
       generationConfig: {
-        responseMediaType: "IMAGE",
+        responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.7,
         ...(aspectRatio !== '1:1' && {
           imageConfig: { aspectRatio }

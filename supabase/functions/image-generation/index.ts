@@ -19,11 +19,21 @@ interface AppliedToken {
 
 interface ImageGenerationRequest {
   prompt: string
-  provider?: 'gpt-5' | 'gemini' | 'openai'
-  size?: '1024x1024' | '1024x1792' | '1792x1024'
+  provider?: 'gpt-5' | 'gemini' | 'openai' | 'gemini-nano' | 'gpt-image-1' | 'imagen' | 'imagen-4'
+  size?: string
   style?: string
   quality?: 'standard' | 'hd'
   appliedTokens?: AppliedToken[]
+}
+
+const SUPPORTED_PROVIDERS = ['openai', 'gpt-5', 'gemini', 'gemini-nano', 'gpt-image-1', 'imagen', 'imagen-4']
+
+const SIZE_MAP: Record<string, string> = {
+  '1024x1024': '1024x1024',
+  '1536x1024': '1536x1024',
+  '1024x1536': '1024x1536',
+  '1792x1024': '1536x1024',
+  '1024x1792': '1024x1536'
 }
 
 // Process applied tokens to enhance the prompt
@@ -83,6 +93,58 @@ Deno.serve(async (req) => {
       )
     }
 
+    let requestBody: ImageGenerationRequest
+    try {
+      requestBody = await req.json()
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { prompt, provider = 'gpt-5', size = '1024x1024', style, quality = 'standard', appliedTokens } = requestBody
+
+    // Validate and sanitize inputs
+    if (!prompt || typeof prompt !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Valid prompt is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!SUPPORTED_PROVIDERS.includes(provider)) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported provider' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const imageSize = SIZE_MAP[size]
+    if (!imageSize) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported size. Valid sizes are 1024x1024, 1536x1024, 1024x1536, 1792x1024, 1024x1792' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const sanitizedPrompt = sanitizeInput(prompt)
+    const sanitizedStyle = style ? sanitizeInput(style) : ''
+
+    if (!sanitizedPrompt) {
+      return new Response(
+        JSON.stringify({ error: 'Valid prompt is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Process applied tokens to enhance the prompt
+    let enhancedPrompt = sanitizedPrompt
+    if (appliedTokens && appliedTokens.length > 0) {
+      console.log(`🎨 Processing ${appliedTokens.length} applied tokens`)
+      enhancedPrompt = processAppliedTokens(sanitizedPrompt, appliedTokens)
+    }
+
     // Check rate limit
     const rateLimit = await checkRateLimit(user.id, true)
     if (!rateLimit.allowed) {
@@ -123,25 +185,6 @@ Deno.serve(async (req) => {
         }
       )
     }
-    const { prompt, provider = 'gpt-5', size = '1024x1024', style, quality = 'standard', appliedTokens }: ImageGenerationRequest = await req.json()
-
-    // Validate and sanitize inputs
-    if (!prompt || typeof prompt !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Valid prompt is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const sanitizedPrompt = sanitizeInput(prompt)
-    const sanitizedStyle = style ? sanitizeInput(style) : ''
-
-    // Process applied tokens to enhance the prompt
-    let enhancedPrompt = sanitizedPrompt
-    if (appliedTokens && appliedTokens.length > 0) {
-      console.log(`🎨 Processing ${appliedTokens.length} applied tokens`)
-      enhancedPrompt = processAppliedTokens(sanitizedPrompt, appliedTokens)
-    }
 
     // Get and validate API keys
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
@@ -159,11 +202,6 @@ Deno.serve(async (req) => {
         status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    if (!['openai', 'gpt-5', 'gemini'].includes(provider)) {
-      return new Response(JSON.stringify({ error: 'Unsupported provider' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
     // Existing Gemini option retains compatibility but uses the configured OpenAI image backend.
     const imageModel = Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2.5-sunburst';
     const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -173,7 +211,7 @@ Deno.serve(async (req) => {
         model: imageModel,
         prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
         n: 1,
-        size: size === '1792x1024' ? '1536x1024' : size === '1024x1792' ? '1024x1536' : size,
+        size: imageSize,
         quality: quality === 'hd' ? 'high' : 'medium',
         output_format: 'png'
       })
@@ -196,9 +234,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         imageUrl,
+        imageUrls: [imageUrl],
         prompt: sanitizedPrompt,
         provider,
-        size,
+        size: imageSize,
         style: sanitizedStyle,
         quality,
         creditsRemaining: creditCheck.remainingCredits

@@ -2,7 +2,7 @@
 // It supports direct API calls and edge function calls through Supabase
 
 import { callEdgeFunction, isSupabaseConfigured, supabase } from './supabaseClient';
-import { getGeminiApiKey, getOpenAIApiKey, getGiphyApiKey, getFreepikApiKey, hasApiKey, blobToBase64 } from './apiUtils';
+import { getUserProvidedApiKey, blobToBase64 } from './apiUtils';
 import { generateImageWithGeminiNano as generateImageWithGeminiNanoService, editImageWithGeminiNano as editImageWithGeminiNanoService, generateVariationsWithGeminiNano as generateVariationsWithGeminiNanoService, GeminiNanoConfig, ImageEditOptions, ImageGenerationOptions } from './geminiNanoApi';
 import { quickEnhance, type GeneratorCategory } from './promptEnhancer';
 
@@ -27,11 +27,11 @@ export async function generateImageDescriptionWithAI(tokens: Record<string, stri
       }
     }
     
-    // Fall back to direct API call to Gemini
-    const apiKey = getGeminiApiKey();
+    // Fall back to direct API call to Gemini using the USER'S OWN key only (BYOK)
+    const apiKey = getUserProvidedApiKey('gemini');
     if (!apiKey) {
-      // Fallback to dummy response if no API key is available
-      console.warn('No Gemini API key available, returning fallback description');
+      // Fallback to dummy response if no user API key is available
+      console.warn('No user-provided Gemini API key available, returning fallback description');
       return `A personalized marketing image for ${tokens['FIRSTNAME'] || 'the user'} featuring vibrant colors and modern design elements. The image includes professional branding for ${tokens['COMPANY'] || 'the company'} with a clean layout that emphasizes the key message.`;
     }
     
@@ -42,7 +42,7 @@ export async function generateImageDescriptionWithAI(tokens: Record<string, stri
 
     const prompt = `Create a detailed description for a personalized marketing image that includes the following personalization tokens: ${tokenString || 'No tokens provided'}. The description should include visual elements, composition, and how the personalized elements should be integrated. Format the description as a prompt for image generation.`;
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -119,33 +119,37 @@ export async function generateImageWithDalle(
       }
     }
 
-    // Fall back to direct API call
-    const apiKey = getOpenAIApiKey();
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
+    const apiKey = getUserProvidedApiKey('openai');
     if (!apiKey) {
-      throw new Error('OpenAI API key is required. Please configure VITE_OPENAI_API_KEY in your environment variables.');
+      throw new Error('Image generation is unavailable. Please add your own OpenAI API key in settings (starts with sk-) or contact support.');
     }
 
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    // Map legacy DALL-E 3 aspect sizes to GPT Image 2.5 supported sizes
+    const gptSize = size === '1792x1024' ? '1536x1024' : size === '1024x1792' ? '1024x1536' : size;
+
+    // GPT Image 2.5 via the Images API (JSON). GPT image models always return base64.
+    const gptResponse = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: 'gpt-image-2.5-sunburst',
         prompt: prompt,
         n: n,
-        size: size,
-        quality: quality,
-        style: style
+        size: gptSize,
+        quality: quality === 'hd' ? 'high' : 'medium',
+        output_format: 'png'
       }),
     });
 
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
+    if (!gptResponse.ok) {
+      let errorMessage = `${gptResponse.status} `;
 
       try {
-        const errorData = await response.json();
+        const errorData = await gptResponse.json();
         errorMessage += errorData.error?.message || 'Unknown error';
       } catch {
         errorMessage += 'Unknown error';
@@ -154,16 +158,20 @@ export async function generateImageWithDalle(
       throw new Error(errorMessage);
     }
 
-    const data = await response.json();
-    return data.data[0].url;
+    const gptData = await gptResponse.json();
+    const b64 = gptData.data?.[0]?.b64_json;
+    if (!b64) {
+      throw new Error('Image provider returned no image data');
+    }
+    return `data:image/png;base64,${b64}`;
   } catch (error) {
-    console.error('Error generating image with DALL-E:', error);
+    console.error('Error generating image with GPT Image 2.5:', error);
     throw error;
   }
 }
 
 /**
- * Generate image variations with DALL-E
+ * Generate image variations with GPT Image 2.5 (server) or the user's own Gemini key (BYOK)
  */
 export async function generateImageVariations(
   imageUrl: string,
@@ -173,51 +181,90 @@ export async function generateImageVariations(
   } = {}
 ): Promise<string[]> {
   try {
-    console.log('🔄 Generating image variations with DALL-E');
+    console.log('🔄 Generating image variations');
 
     const { n = 1, size = '1024x1024' } = options;
 
-    const apiKey = getOpenAIApiKey();
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required for image variations. Please configure VITE_OPENAI_API_KEY in your environment variables.');
+    // Try edge function first
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await callEdgeFunction('image-variations', {
+          provider: 'openai',
+          imageUrl,
+          count: n
+        });
+
+        if (result && result.imageUrls && Array.isArray(result.imageUrls)) {
+          return result.imageUrls;
+        }
+      } catch (edgeError) {
+        console.warn('Edge function failed for image variations:', edgeError);
+        // Continue to direct API fallback
+      }
     }
 
-    // First, fetch the image and convert to base64
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
+    const apiKey = getUserProvidedApiKey('gemini');
+    if (!apiKey) {
+      throw new Error('Image variations are unavailable. Please add your own Gemini API key in settings (starts with AIza) or contact support.');
+    }
+
+    // Gemini (Nano Banana) image editing: pass the source image with a variation prompt
+    const gptSize = size === '1792x1024' ? '16:9' : size === '1024x1792' ? '9:16' : '1:1';
+    const variationPrompts = [
+      'Create a creative variation of this image with different colors and lighting.',
+      'Create a variation of this image with a different artistic style.',
+      'Create a variation of this image from a different perspective or angle.',
+      'Create a variation of this image with a different mood or atmosphere.'
+    ];
+
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       throw new Error('Failed to fetch reference image');
     }
-
     const imageBlob = await imageResponse.blob();
     const base64Data = await blobToBase64(imageBlob);
 
-    const response = await fetch('https://api.openai.com/v1/images/variations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: new URLSearchParams({
-        image: base64Data,
-        n: n.toString(),
-        size: size
-      })
-    });
+    const variations: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: variationPrompts[i % variationPrompts.length] },
+                { inlineData: { mimeType: imageBlob.type, data: base64Data } }
+              ]
+            }],
+            generationConfig: {
+              responseModalities: ['TEXT', 'IMAGE'],
+              imageConfig: { aspectRatio: gptSize }
+            }
+          })
+        }
+      );
 
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
-
-      try {
-        const errorData = await response.json();
-        errorMessage += errorData.error?.message || 'Unknown error';
-      } catch {
-        errorMessage += 'Unknown error';
+      if (!response.ok) {
+        console.warn(`Variation ${i + 1} failed:`, response.status);
+        continue;
       }
 
-      throw new Error(errorMessage);
+      const data = await response.json();
+      for (const part of data.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData?.mimeType?.startsWith('image/')) {
+          variations.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+          break;
+        }
+      }
     }
 
-    const data = await response.json();
-    return data.data.map((item: any) => item.url);
+    if (variations.length === 0) {
+      throw new Error('No variations could be generated');
+    }
+    return variations;
   } catch (error) {
     console.error('Error generating image variations:', error);
     throw error;
@@ -225,7 +272,7 @@ export async function generateImageVariations(
 }
 
 /**
- * Edit image with DALL-E (inpainting/outpainting)
+ * Edit image with GPT Image 2.5 (server edge function or the user's own key via BYOK)
  */
 export async function editImageWithDalle(
   imageUrl: string,
@@ -236,47 +283,50 @@ export async function editImageWithDalle(
   } = {}
 ): Promise<string> {
   try {
-    console.log('✏️ Editing image with DALL-E');
+    console.log('✏️ Editing image with GPT Image 2.5');
 
     const { size = '1024x1024' } = options;
 
-    const apiKey = getOpenAIApiKey();
+    // Try edge function first
+    if (isSupabaseConfigured()) {
+      try {
+        const result = await callEdgeFunction('image-editing', {
+          imageUrl,
+          editOptions: { prompt, size, maskUrl }
+        });
+
+        if (result && result.imageUrl) {
+          return result.imageUrl;
+        }
+      } catch (edgeError) {
+        console.warn('Edge function failed for image editing:', edgeError);
+        // Continue to direct API fallback
+      }
+    }
+
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
+    const apiKey = getUserProvidedApiKey('openai');
     if (!apiKey) {
-      console.warn('No OpenAI API key available, returning original image');
+      console.warn('No user-provided OpenAI API key available, returning original image');
       return imageUrl;
     }
 
-    // Fetch and convert images to base64
-    const [imageResponse, maskResponse] = await Promise.all([
-      fetch(imageUrl),
-      fetch(maskUrl)
-    ]);
-
-    if (!imageResponse.ok || !maskResponse.ok) {
-      throw new Error('Failed to fetch image or mask');
-    }
-
-    const [imageBlob, maskBlob] = await Promise.all([
-      imageResponse.blob(),
-      maskResponse.blob()
-    ]);
-
-    const [imageBase64, maskBase64] = await Promise.all([
-      blobToBase64(imageBlob),
-      blobToBase64(maskBlob)
-    ]);
-
+    // GPT Image 2.5 edits endpoint accepts JSON with image_url references
+    // (HTTPS URL or base64 data URL), no binary fetch needed.
+    const gptSize = size === '1792x1024' ? '1536x1024' : size === '1024x1792' ? '1024x1536' : size;
     const response = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: new URLSearchParams({
-        image: imageBase64,
-        mask: maskBase64,
+      body: JSON.stringify({
+        model: 'gpt-image-2.5-sunburst',
+        images: [{ image_url: imageUrl }],
         prompt: prompt,
-        n: '1',
-        size: size
+        n: 1,
+        size: gptSize,
+        output_format: 'png'
       })
     });
 
@@ -294,9 +344,13 @@ export async function editImageWithDalle(
     }
 
     const data = await response.json();
-    return data.data[0].url;
+    const b64 = data.data?.[0]?.b64_json;
+    if (!b64) {
+      throw new Error('Image provider returned no image data');
+    }
+    return `data:image/png;base64,${b64}`;
   } catch (error) {
-    console.error('Error editing image with DALL-E:', error);
+    console.error('Error editing image:', error);
     // Return original image as fallback
     return imageUrl;
   }
@@ -326,45 +380,11 @@ export async function generateImageWithGptImage(prompt: string): Promise<string>
       }
     }
     
-    // Fall back to direct API call
-    const apiKey = getOpenAIApiKey();
-    if (!apiKey) {
-      
-
-      throw new Error('API configuration required. Please configure your API keys in environment variables.');
-    }
-    
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024"
-      }),
-    });
-    
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
-      
-      try {
-        const errorData = await response.json();
-        errorMessage += errorData.error?.message || 'Unknown error';
-      } catch {
-        errorMessage += 'Unknown error';
-      }
-      
-      throw new Error(errorMessage);
-    }
-    
-    const data = await response.json();
-    return data.data[0].url;
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
+    // Routes to the GPT Image 2.5 generation call above.
+    return await generateImageWithDalle(prompt);
   } catch (error) {
-    console.error('Error generating image with GPT-4 Vision:', error);
+    console.error('Error generating image with GPT Image 2.5:', error);
     throw error;
   }
 }
@@ -401,13 +421,8 @@ export async function generateImageWithGemini(prompt: string, aspectRatio: strin
       }
     }
 
-    // Fall back to OpenAI DALL-E since Gemini doesn't generate images
-    const openaiKey = getOpenAIApiKey();
-    if (!openaiKey) {
-      throw new Error('OpenAI API key is required for image generation. Please add VITE_OPENAI_API_KEY to your .env file or get a valid API key from https://platform.openai.com/api-keys');
-    }
-
-    // Map aspect ratio to DALL-E sizes
+    // Fall back to GPT Image 2.5 using the user's own key (BYOK); Gemini doesn't generate images
+    // Map aspect ratio to GPT Image 2.5 sizes
     let size: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024';
     if (aspectRatio === '16:9' || aspectRatio === '1792:1024') {
       size = '1792x1024';
@@ -512,7 +527,10 @@ export async function fetchFreepikResources(options: {
   }
 }> {
   try {
-    console.log('📚 Fetching Freepik resources');
+    console.log('📚 Fetching stock resources');
+
+    // The stock-resource provider (Freepik) has been removed from this application.
+    // The edge function returns an explicit unavailability error.
 
     // Try edge function first
     if (isSupabaseConfigured()) {
@@ -526,73 +544,14 @@ export async function fetchFreepikResources(options: {
           };
         }
       } catch (edgeError) {
-        console.warn('Edge function failed for Freepik resources:', edgeError);
-        // Continue to direct API fallback
+        console.warn('Edge function failed for stock resources:', edgeError);
+        throw edgeError;
       }
     }
 
-    // Fall back to direct API call
-    const apiKey = getFreepikApiKey();
-    if (!apiKey) {
-      throw new Error('Freepik API key is required. Please configure VITE_FREEPIK_API_KEY in your environment variables.');
-    }
-
-    // Build query parameters
-    const params = new URLSearchParams();
-    if (options.keywords) params.append('keywords', options.keywords);
-    if (options.content_type) params.append('content_type', options.content_type);
-    if (options.orientation) params.append('orientation', options.orientation);
-    if (options.license) params.append('license', options.license);
-    if (options.page && options.page > 1) params.append('page', options.page.toString());
-    if (options.per_page && options.per_page !== 20) params.append('per_page', options.per_page.toString());
-
-    const response = await fetch(`https://api.freepik.com/v1/resources?${params}`, {
-      method: 'GET',
-      headers: {
-        'x-freepik-api-key': apiKey,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
-
-      try {
-        const errorData = await response.json();
-        errorMessage += errorData.message || 'Unknown error';
-      } catch {
-        errorMessage += 'Unknown error';
-      }
-
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-
-    // Transform response to match our interface
-    const transformedData = data.data?.map((resource: any) => ({
-      id: resource.id,
-      title: resource.title,
-      url: resource.url,
-      filename: resource.filename,
-      thumbnailUrl: resource.image?.source?.url || null,
-      type: resource.image?.type || null,
-      orientation: resource.image?.orientation || null,
-      width: resource.image?.source?.size ? parseInt(resource.image.source.size.split('x')[0]) : null,
-      height: resource.image?.source?.size ? parseInt(resource.image.source.size.split('x')[1]) : null,
-      downloads: resource.stats?.downloads || 0,
-      likes: resource.stats?.likes || 0,
-      author: resource.author?.name || null,
-      publishedAt: resource.meta?.published_at || null,
-      license: resource.licenses?.[0]?.type || null
-    })) || [];
-
-    return {
-      resources: transformedData,
-      meta: data.meta
-    };
+    throw new Error('Stock image search is currently unavailable.');
   } catch (error) {
-    console.error('Error fetching Freepik resources:', error);
+    console.error('Error fetching stock resources:', error);
     throw error;
   }
 }
@@ -643,16 +602,16 @@ export async function generateImageWithImagen4(
       }
     }
 
-    // Fall back to direct API call
-    const apiKey = getGeminiApiKey();
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
+    const apiKey = getUserProvidedApiKey('gemini');
     if (!apiKey) {
-      throw new Error('Gemini API key is required for Imagen 4. Please add VITE_GEMINI_API_KEY to your .env file.');
+      throw new Error('Imagen 4 requires your own Gemini API key (starts with AIza). Add it in settings or contact support.');
     }
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'x-goog-api-key': apiKey,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -849,11 +808,11 @@ async function generateImageWithReferenceGemini(prompt: string, referenceImageUr
       }
     }
     
-    // Fall back to direct API call
-    const apiKey = getGeminiApiKey();
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
+    const apiKey = getUserProvidedApiKey('gemini');
     if (!apiKey) {
       
-      throw new Error('API configuration required. Please configure your API keys in environment variables.');
+      throw new Error('Reference-image generation requires your own Gemini API key (starts with AIza). Add it in settings or contact support.');
     }
     
     try {
@@ -868,8 +827,8 @@ async function generateImageWithReferenceGemini(prompt: string, referenceImageUr
       // Convert to base64
       const base64Data = await blobToBase64(imageBlob);
       
-      // Call Gemini API
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      // Call Gemini Nano Banana image model
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -878,8 +837,8 @@ async function generateImageWithReferenceGemini(prompt: string, referenceImageUr
               parts: [
                 { text: `Using this image as reference, create: ${prompt}` },
                 {
-                  inline_data: {
-                    mime_type: imageBlob.type,
+                  inlineData: {
+                    mimeType: imageBlob.type,
                     data: base64Data
                   }
                 }
@@ -887,7 +846,7 @@ async function generateImageWithReferenceGemini(prompt: string, referenceImageUr
             }
           ],
           generationConfig: {
-            responseMediaType: "IMAGE"
+            responseModalities: ['TEXT', 'IMAGE']
           }
         })
       });
@@ -941,15 +900,9 @@ async function generateImageWithReferenceGptImage(prompt: string, referenceImage
       }
     }
     
-    // Fall back to direct API call
-    const apiKey = getOpenAIApiKey();
-    if (!apiKey) {
-      
-      throw new Error('API configuration required. Please configure your API keys in environment variables.');
-    }
-    
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
     // For now, we'll use a modified prompt that references the image
-    // In a real implementation, you would use the Vision API to analyze the reference image
+    // (GPT Image 2.5 generation improves on the reference via the prompt).
     const enhancedPrompt = `Using a reference image as inspiration: ${prompt}. The reference image contains important visual elements that should be incorporated into the generated image.`;
     
     return generateImageWithGptImage(enhancedPrompt);
@@ -1213,10 +1166,11 @@ export async function getPromptRecommendations(basePrompt: string, tokens: Recor
       }
     }
     
-    // Fall back to direct API call to OpenAI
-    const apiKey = getOpenAIApiKey();
+    // Fall back to direct API call using the USER'S OWN key only (BYOK)
+    // OpenAI text operations go through the Responses API.
+    const apiKey = getUserProvidedApiKey('openai');
     if (!apiKey) {
-      console.warn('No OpenAI API key available, returning basic recommendations');
+      console.warn('No user-provided OpenAI API key available, returning basic recommendations');
       // Return some fallback recommendations
       return [
         `${basePrompt} with detailed lighting and high-quality finish`,
@@ -1230,19 +1184,18 @@ export async function getPromptRecommendations(basePrompt: string, tokens: Recor
       .map(([key, value]) => `${key}: ${value}`)
       .join(', ');
 
-    const prompt = `Based on this prompt: "${basePrompt}" and personalization tokens (${tokenString}), generate 3 enhanced prompt variations for ${modelName} style image generation. Make them detailed and specific, following best practices for DALL-E 3 image generation. Format as a JSON array of strings.`;
+    const prompt = `Based on this prompt: "${basePrompt}" and personalization tokens (${tokenString}), generate 3 enhanced prompt variations for ${modelName} style image generation. Make them detailed and specific, following best practices for image generation. Format as a JSON array of strings.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1024,
+        model: 'gpt-5-mini',
+        input: prompt,
+        max_output_tokens: 1024,
       }),
     });
 
@@ -1251,7 +1204,11 @@ export async function getPromptRecommendations(basePrompt: string, tokens: Recor
     }
 
     const data = await response.json();
-    const responseText = data.choices?.[0]?.message?.content || '';
+    const responseText = (data.output || [])
+      .flatMap((item: any) => item.content || [])
+      .filter((part: any) => part.type === 'output_text')
+      .map((part: any) => part.text || '')
+      .join('');
 
     let recommendations;
 

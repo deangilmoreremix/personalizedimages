@@ -1,4 +1,5 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
+import { generateWithGeminiImage, generateWithGptImage } from "../_shared/imageProviders.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,11 +7,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const VARIATION_PROMPTS = [
+  "Create a creative variation of this image with different colors and lighting.",
+  "Create a variation of this image with a different artistic style.",
+  "Create a variation of this image from a different perspective or angle.",
+  "Create a variation of this image with a different mood or atmosphere.",
+];
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin');
   const headers = getCorsHeaders(origin);
 
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers });
   }
 
@@ -55,93 +63,39 @@ Deno.serve(async (req: Request) => {
     const variations: string[] = [];
 
     if (geminiKey) {
-      let imageData = '';
-      let mimeType = 'image/png';
-
-      if (imageUrl.startsWith('data:')) {
-        const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) {
-          mimeType = match[1];
-          imageData = match[2];
-        }
-      } else {
-        const imgResponse = await fetch(imageUrl);
-        if (!imgResponse.ok) throw new Error('Failed to fetch source image');
-        const blob = await imgResponse.blob();
-        mimeType = blob.type || 'image/png';
-        const arrayBuf = await blob.arrayBuffer();
-        const uint8 = new Uint8Array(arrayBuf);
-        imageData = btoa(uint8.reduce((s, b) => s + String.fromCharCode(b), ''));
-      }
-
-      const variationPrompts = [
-        'Create a creative variation of this image with different colors and lighting.',
-        'Create a variation of this image with a different artistic style.',
-        'Create a variation of this image from a different perspective or angle.',
-        'Create a variation of this image with a different mood or atmosphere.',
-      ];
-
       for (let i = 0; i < variationCount; i++) {
-        const prompt = variationPrompts[i % variationPrompts.length];
-
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  { text: prompt },
-                  { inline_data: { mime_type: mimeType, data: imageData } }
-                ]
-              }],
-              generationConfig: { responseMediaType: "IMAGE" }
-            })
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          for (const candidate of data.candidates || []) {
-            for (const part of candidate.content?.parts || []) {
-              if (part.inlineData?.mimeType?.startsWith('image/')) {
-                variations.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
-                break;
-              }
-            }
-            if (variations.length > i) break;
-          }
+        const prompt = VARIATION_PROMPTS[i % VARIATION_PROMPTS.length];
+        try {
+          const imageResult = await generateWithGeminiImage({
+            prompt,
+            apiKey: geminiKey,
+            referenceImageUrl: imageUrl,
+          });
+          variations.push(imageResult);
+        } catch (geminiError) {
+          console.error('Gemini variation failed', geminiError instanceof Error ? geminiError.message : 'unknown');
         }
       }
     }
 
     if (variations.length === 0 && openaiKey) {
       for (let i = 0; i < variationCount; i++) {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: 'dall-e-3',
-            prompt: `Create a creative variation of the original image. Variation ${i + 1} of ${variationCount}.`,
-            n: 1,
-            size: '1024x1024'
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const url = data.data?.[0]?.url;
-          if (url) variations.push(url);
+        try {
+          const imageResult = await generateWithGptImage({
+            prompt: `Create a creative variation of the provided image. Variation ${i + 1} of ${variationCount}: change the colors, lighting and composition while keeping the main subject recognizable.`,
+            apiKey: openaiKey,
+            referenceImageUrl: imageUrl,
+            size: '1024x1024',
+          });
+          variations.push(imageResult);
+        } catch (openaiError) {
+          console.error('OpenAI variation failed', openaiError instanceof Error ? openaiError.message : 'unknown');
         }
       }
     }
 
     return new Response(
-      JSON.stringify({ variations, count: variations.length }),
+      JSON.stringify({ variations, count: variations.length, imageUrls: variations }),
       { headers: { ...headers, 'Content-Type': 'application/json' } }
     );
 

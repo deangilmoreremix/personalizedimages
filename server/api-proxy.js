@@ -139,12 +139,12 @@ app.post('/api/proxy/openai', validateApiKey, validateInput, async (req, res) =>
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'dall-e-3',
+        model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst',
         prompt: sanitizedPrompt,
         n: 1,
         size: options?.size || '1024x1024',
-        quality: options?.quality || 'standard',
-        style: options?.style || 'natural'
+        quality: options?.quality === 'hd' ? 'high' : 'medium',
+        output_format: 'png'
       })
     });
     
@@ -168,13 +168,13 @@ app.post('/api/proxy/gemini', validateApiKey, validateInput, async (req, res) =>
     const { sanitizedPrompt, options } = req.body;
     const apiKey = req.headers['x-api-key'];
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: sanitizedPrompt }] }],
         generationConfig: {
-          responseMediaType: "IMAGE",
+          responseModalities: ['TEXT', 'IMAGE'],
           ...(options?.aspectRatio && {
             imageConfig: { aspectRatio: options.aspectRatio }
           })
@@ -216,13 +216,13 @@ app.post('/api/proxy/gemini-nano', validateApiKey, validateInput, async (req, re
     const { sanitizedPrompt, options } = req.body;
     const apiKey = req.headers['x-api-key'];
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: sanitizedPrompt }] }],
         generationConfig: {
-          responseMediaType: "IMAGE",
+          responseModalities: ['TEXT', 'IMAGE'],
           temperature: 0.7,
           ...(options?.aspectRatio && {
             imageConfig: { aspectRatio: options.aspectRatio }

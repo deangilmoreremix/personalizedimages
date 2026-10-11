@@ -7,7 +7,7 @@
 import { getApiKey } from '../../../env';
 
 export interface GeminiOptions {
-  model?: 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-2.0-flash-exp';
+  model?: 'gemini-2.5-flash-image' | 'gemini-2.5-flash' | 'gemini-2.5-pro';
   temperature?: number;
   maxTokens?: number;
   aspectRatio?: string;
@@ -17,7 +17,7 @@ export interface GeminiOptions {
 
 export class GeminiProvider {
   private apiKey: string;
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1';
+  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
   constructor() {
     this.apiKey = getApiKey('gemini') || '';
@@ -31,7 +31,7 @@ export class GeminiProvider {
    */
   async generateImage(prompt: string, options: GeminiOptions = {}): Promise<string> {
     const {
-      model = 'gemini-1.5-flash',
+      model = 'gemini-2.5-flash-image',
       temperature = 0.7,
       aspectRatio,
       referenceImages = []
@@ -45,8 +45,8 @@ export class GeminiProvider {
         const base64Data = await this.urlToBase64(imageUrl);
         const mimeType = this.getMimeTypeFromUrl(imageUrl);
         parts.push({
-          inline_data: {
-            mime_type: mimeType,
+          inlineData: {
+            mimeType: mimeType,
             data: base64Data
           }
         });
@@ -58,14 +58,14 @@ export class GeminiProvider {
     const requestBody: any = {
       contents: [{ parts }],
       generationConfig: {
-        responseMediaType: "IMAGE",
+        responseModalities: ['TEXT', 'IMAGE'],
         temperature
       }
     };
 
     // Add aspect ratio if specified
     if (aspectRatio) {
-      requestBody.generationConfig.aspectRatio = aspectRatio;
+      requestBody.generationConfig.imageConfig = { aspectRatio };
     }
 
     const response = await fetch(`${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`, {
@@ -87,7 +87,7 @@ export class GeminiProvider {
    * Edit image using Gemini (instruction-based editing)
    */
   async editImage(imageUrl: string, editPrompt: string, options: GeminiOptions = {}): Promise<string> {
-    const { model = 'gemini-1.5-pro', temperature = 0.3 } = options;
+    const { model = 'gemini-2.5-flash-image', temperature = 0.3 } = options;
 
     try {
       const base64Data = await this.urlToBase64(imageUrl);
@@ -101,15 +101,15 @@ export class GeminiProvider {
             parts: [
               { text: `Edit this image with the following instruction: ${editPrompt}. Return the edited image.` },
               {
-                inline_data: {
-                  mime_type: mimeType,
+                inlineData: {
+                  mimeType: mimeType,
                   data: base64Data
                 }
               }
             ]
           }],
           generationConfig: {
-            responseMediaType: "IMAGE",
+            responseModalities: ['TEXT', 'IMAGE'],
             temperature
           }
         })
@@ -132,7 +132,7 @@ export class GeminiProvider {
    * Analyze image using Gemini
    */
   async analyzeImage(imageUrl: string, analysisPrompt: string = 'Describe this image in detail', options: GeminiOptions = {}): Promise<string> {
-    const { model = 'gemini-1.5-pro', temperature = 0.1, maxTokens = 500 } = options;
+    const { model = 'gemini-2.5-flash', temperature = 0.1, maxTokens = 500 } = options;
 
     try {
       const base64Data = await this.urlToBase64(imageUrl);
@@ -146,8 +146,8 @@ export class GeminiProvider {
             parts: [
               { text: analysisPrompt },
               {
-                inline_data: {
-                  mime_type: mimeType,
+                inlineData: {
+                  mimeType: mimeType,
                   data: base64Data
                 }
               }
@@ -177,7 +177,7 @@ export class GeminiProvider {
    * Generate image variations using Gemini
    */
   async generateVariations(imageUrl: string, count: number = 3, options: GeminiOptions = {}): Promise<string[]> {
-    const { model = 'gemini-1.5-flash', temperature = 0.8 } = options;
+    const { model = 'gemini-2.5-flash-image', temperature = 0.8 } = options;
     const variations: string[] = [];
 
     try {
@@ -193,15 +193,15 @@ export class GeminiProvider {
               parts: [
                 { text: `Create a creative variation of this image. Make it different but keep the same style and main subject. Variation ${i + 1} of ${count}.` },
                 {
-                  inline_data: {
-                    mime_type: mimeType,
+                  inlineData: {
+                    mimeType: mimeType,
                     data: base64Data
                   }
                 }
               ]
             }],
             generationConfig: {
-              responseMediaType: "IMAGE",
+              responseModalities: ['TEXT', 'IMAGE'],
               temperature
             }
           })

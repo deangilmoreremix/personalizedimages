@@ -51,27 +51,30 @@ Deno.serve(async (req: Request) => {
     const prompt = `Generate a detailed, creative image description for personalized content with these attributes: ${tokenEntries}. Write a vivid, descriptive paragraph suitable as an image generation prompt.`;
 
     if (openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${openaiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 300,
-          temperature: 0.8
+          model: Deno.env.get('OPENAI_RESPONSES_MODEL') || 'gpt-5-mini',
+          input: prompt,
+          max_output_tokens: 512
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        description = data.choices?.[0]?.message?.content || '';
+        description = (data.output || [])
+          .flatMap((item: any) => item.content || [])
+          .filter((part: any) => part.type === 'output_text')
+          .map((part: any) => part.text || '')
+          .join('');
       }
     } else if (geminiKey) {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

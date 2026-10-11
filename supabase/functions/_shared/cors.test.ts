@@ -31,37 +31,52 @@ Deno.test("URL Validation", () => {
   assert(!isValidUrl("not-a-url"), "Should reject invalid URL")
 })
 
-Deno.test("Rate Limiting", () => {
+Deno.test("Rate Limiting", async () => {
   const userId = "test-user"
 
+  // Without SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY in the environment the
+  // limiter fails closed (allowed: false).
+  const result1 = await checkRateLimit(userId, true)
+  if (!Deno.env.get("SUPABASE_URL") || !Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+    assert(!result1.allowed, "Should fail closed without Supabase configuration")
+    assertEquals(result1.remaining, 0, "Should have 0 requests remaining")
+    return
+  }
+
   // First request should be allowed
-  const result1 = checkRateLimit(userId, true)
   assert(result1.allowed, "First request should be allowed")
   assertEquals(result1.remaining, 99, "Should have 99 requests remaining")
 
   // Subsequent requests should still be allowed
   for (let i = 0; i < 10; i++) {
-    const result = checkRateLimit(userId, true)
+    const result = await checkRateLimit(userId, true)
     assert(result.allowed, `Request ${i} should be allowed`)
   }
 })
 
-Deno.test("Credit System", () => {
+Deno.test("Credit System", async () => {
   const userId = "test-user-credits"
 
+  // Without Supabase configuration the check fails closed.
+  const result1 = await checkCredits(userId)
+  if (!Deno.env.get("SUPABASE_URL") || !Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+    assert(!result1.allowed, "Should fail closed without Supabase configuration")
+    assertEquals(result1.remainingCredits, 0, "Should have 0 credits remaining")
+    return
+  }
+
   // First request should be allowed
-  const result1 = checkCredits(userId)
   assert(result1.allowed, "First credit check should be allowed")
   assertEquals(result1.remainingCredits, 49, "Should have 49 credits remaining")
 
   // Subsequent requests should deduct credits
   for (let i = 0; i < 10; i++) {
-    const result = checkCredits(userId)
+    const result = await checkCredits(userId)
     assert(result.allowed, `Credit check ${i} should be allowed`)
   }
 
   // Check remaining credits
-  const finalCheck = checkCredits(userId)
+  const finalCheck = await checkCredits(userId)
   assertEquals(finalCheck.remainingCredits, 39, "Should have 39 credits remaining")
 })
 

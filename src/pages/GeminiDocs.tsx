@@ -36,15 +36,16 @@ const GeminiDocs: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold mb-2 text-purple-800">Gemini 1.5 Flash</h3>
+                <h3 className="font-bold mb-2 text-purple-800">Gemini 2.5 Flash Image</h3>
                 <p className="text-sm text-purple-700">
-                  Ultra-fast model for generating images and handling image-to-image transformations.
+                  Ultra-fast image generation model (Nano Banana) for generating images and
+                  handling image-to-image transformations.
                   Great for real-time interactions and quick image generations.
                 </p>
               </div>
               
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold mb-2 text-purple-800">Gemini 1.5 Pro Vision</h3>
+                <h3 className="font-bold mb-2 text-purple-800">Gemini 2.5 Flash (Vision)</h3>
                 <p className="text-sm text-purple-700">
                   Advanced vision understanding model that can analyze images in detail.
                   Powers our image analysis features and comprehension capabilities.
@@ -52,7 +53,7 @@ const GeminiDocs: React.FC = () => {
               </div>
               
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold mb-2 text-purple-800">Gemini 1.5 Pro</h3>
+                <h3 className="font-bold mb-2 text-purple-800">Gemini 2.5 Flash</h3>
                 <p className="text-sm text-purple-700">
                   Powerful model for generating text and handling complex reasoning tasks.
                   Used for generating descriptions, prompt recommendations, and creative content.
@@ -152,14 +153,14 @@ async function generateImage(prompt) {
   // Initialize the Gemini client
   const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
   
-  // Use the Gemini Flash model for image generation
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+  // Use the Gemini Flash Image model for image generation
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
   
   // Generate content with image output
   const result = await model.generateContent({
     contents: [{ text: prompt }],
     generationConfig: {
-      responseMediaType: "IMAGE"
+      responseModalities: ['TEXT', 'IMAGE']
     }
   });
   
@@ -189,8 +190,8 @@ async function transformImage(imageUrl, prompt) {
   // Convert to base64
   const base64Data = await blobToBase64(imageBlob);
   
-  // Use Gemini Flash for image transformation
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+  // Use Gemini Flash Image for image transformation
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
   
   // Generate content based on the image and prompt
   const result = await model.generateContent({
@@ -199,7 +200,7 @@ async function transformImage(imageUrl, prompt) {
       { inlineData: { data: base64Data, mimeType: imageBlob.type } }
     ],
     generationConfig: {
-      responseMediaType: "IMAGE"
+      responseModalities: ['TEXT', 'IMAGE']
     }
   });
   
@@ -229,8 +230,8 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
   // Convert to base64
   const base64Data = await blobToBase64(imageBlob);
   
-  // Use Gemini Pro Vision for image analysis
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-vision-latest' });
+  // Use Gemini Flash for image analysis
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   
   // Generate content based on the image and prompt
   const result = await model.generateContent({
@@ -267,7 +268,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
                 </p>
                 <div className="text-xs font-medium text-gray-500 flex items-center">
                   <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                  Uses gemini-1.5-flash-latest
+                  Uses gemini-2.5-flash-image
                 </div>
               </div>
               
@@ -299,7 +300,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
                 </p>
                 <div className="text-xs font-medium text-gray-500 flex items-center">
                   <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                  Uses gemini-1.5-pro-vision-latest
+                  Uses gemini-2.5-flash
                 </div>
               </div>
               
@@ -315,7 +316,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
                 </p>
                 <div className="text-xs font-medium text-gray-500 flex items-center">
                   <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                  Uses gemini-1.5-pro-latest
+                  Uses gemini-2.5-flash
                 </div>
               </div>
             </div>

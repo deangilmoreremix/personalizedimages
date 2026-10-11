@@ -105,7 +105,7 @@ export async function saveGeneratedImage(
       prompt,
       image_url: imageUrl,
       provider,
-      model: 'dall-e-3',
+      model: 'gpt-image-2.5-sunburst',
       category,
       tokens_used: tokensUsed || {}
     })

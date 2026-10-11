@@ -104,7 +104,7 @@ At the end of your response include a marker with feature IDs like this: FEATURE
     }))
   ];
 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?key=${apiKey}`;
+  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const response = await fetch(apiUrl, {
     method: 'POST',
@@ -120,63 +120,15 @@ At the end of your response include a marker with feature IDs like this: FEATURE
   });
 
   if (!response.ok) {
+    console.error('Gemini API error:', response.status);
     throw new Error(`Gemini API error: ${response.status}`);
   }
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const reader = response.body?.getReader();
-      if (!reader) {
-        controller.close();
-        return;
-      }
+  const result = await response.json().catch(() => ({}));
+  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
-
-          let startIndex = 0;
-          let endIndex = 0;
-
-          while ((endIndex = buffer.indexOf('}\n', startIndex)) !== -1) {
-            const jsonStr = buffer.substring(startIndex, endIndex + 1);
-            startIndex = endIndex + 2;
-
-            try {
-              const data = JSON.parse(jsonStr);
-              if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                const text = data.candidates[0].content.parts[0].text;
-                controller.enqueue(new TextEncoder().encode(text));
-              }
-            } catch (_e) {
-            }
-          }
-
-          buffer = buffer.substring(startIndex);
-        }
-      } catch (error) {
-        console.error('Stream error:', error);
-        controller.error(error);
-      } finally {
-        controller.close();
-      }
-    }
-  });
-
-  return new Response(stream, {
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    }
+  return new Response(JSON.stringify({ text, model: 'gemini-2.5-flash', message: text }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
 
@@ -208,6 +160,12 @@ FEATURES:["image"] JSON array marker. User context: ${JSON.stringify(userContext
   if (!response.ok) {
     console.error("OpenAI Responses request failed", { status: response.status, code: result?.error?.code });
     return new Response(JSON.stringify({ error: "OpenAI Responses request failed", providerStatus: response.status }), {
+      status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+  if (result.status === "incomplete" || result.incomplete_details) {
+    console.error("OpenAI Responses incomplete", { details: result.incomplete_details });
+    return new Response(JSON.stringify({ error: "Model response was incomplete", details: result.incomplete_details ?? null }), {
       status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }

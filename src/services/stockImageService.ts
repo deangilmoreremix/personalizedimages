@@ -1,5 +1,9 @@
 import { supabase, isSupabaseConfigured, callEdgeFunction } from '../utils/supabaseClient';
-import { getFreepikApiKey, hasApiKey } from '../utils/apiUtils';
+
+export const STOCK_IMAGE_SEARCH_AVAILABLE = false;
+
+export const STOCK_SEARCH_UNAVAILABLE_MESSAGE =
+  'Stock image search is no longer available in this application.';
 
 export interface StockResource {
   id: number;
@@ -95,7 +99,7 @@ function setCacheResult(key: string, data: StockSearchResult): void {
 
 export const stockImageService = {
   isAvailable(): boolean {
-    return hasApiKey('freepik') || isSupabaseConfigured();
+    return STOCK_IMAGE_SEARCH_AVAILABLE;
   },
 
   async search(options: StockSearchOptions = {}): Promise<StockSearchResult> {
@@ -125,59 +129,7 @@ export const stockImageService = {
       }
     }
 
-    const apiKey = getFreepikApiKey();
-    if (!apiKey) {
-      throw new Error('Stock image API not configured. Please add VITE_FREEPIK_API_KEY to your environment.');
-    }
-
-    const params = new URLSearchParams();
-    if (options.keywords) params.append('keywords', options.keywords);
-    if (options.content_type) params.append('content_type', options.content_type);
-    if (options.orientation) params.append('orientation', options.orientation);
-    if (options.license) params.append('license', options.license);
-    if (options.page && options.page > 1) params.append('page', options.page.toString());
-    if (options.per_page) params.append('per_page', options.per_page.toString());
-
-    const response = await fetch(`https://api.freepik.com/v1/resources?${params}`, {
-      method: 'GET',
-      headers: {
-        'x-freepik-api-key': apiKey,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Stock API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const searchResult: StockSearchResult = {
-      resources: (data.data || []).map((resource: Record<string, unknown>) => ({
-        id: resource.id,
-        title: resource.title,
-        url: resource.url,
-        filename: resource.filename,
-        thumbnailUrl: (resource.image as Record<string, unknown>)?.source?.url || null,
-        previewUrl: (resource.image as Record<string, unknown>)?.source?.url || null,
-        type: (resource.image as Record<string, unknown>)?.type || null,
-        orientation: (resource.image as Record<string, unknown>)?.orientation || null,
-        width: (resource.image as Record<string, unknown>)?.source?.size
-          ? parseInt(((resource.image as Record<string, unknown>).source as Record<string, unknown>).size?.toString().split('x')[0] || '0')
-          : null,
-        height: (resource.image as Record<string, unknown>)?.source?.size
-          ? parseInt(((resource.image as Record<string, unknown>).source as Record<string, unknown>).size?.toString().split('x')[1] || '0')
-          : null,
-        downloads: (resource.stats as Record<string, unknown>)?.downloads || 0,
-        likes: (resource.stats as Record<string, unknown>)?.likes || 0,
-        author: (resource.author as Record<string, unknown>)?.name || null,
-        publishedAt: (resource.meta as Record<string, unknown>)?.published_at || null,
-        license: (resource.licenses as Array<Record<string, unknown>>)?.[0]?.type || null
-      })),
-      meta: data.meta
-    };
-
-    setCacheResult(cacheKey, searchResult);
-    return searchResult;
+    throw new Error(STOCK_SEARCH_UNAVAILABLE_MESSAGE);
   },
 
   async getResourceDetails(resourceId: string | number): Promise<StockResource | null> {

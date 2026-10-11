@@ -23,11 +23,12 @@ async function generateImage(prompt: string, provider: string, size: string, qua
       'Authorization': `Bearer ${openaiKey}`
     },
     body: JSON.stringify({
-      model: "dall-e-3",
+      model: Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2.5-sunburst',
       prompt: prompt + (style ? ` Style: ${style}` : ''),
       n: 1,
       size,
-      quality
+      quality: quality === 'hd' ? 'high' : 'medium',
+      output_format: 'png'
     })
   });
 
@@ -41,7 +42,11 @@ async function generateImage(prompt: string, provider: string, size: string, qua
   }
 
   const data = await response.json();
-  return data.data[0].url;
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new SecurityError('Image generation returned no image data', 502, 'GENERATION_ERROR');
+  }
+  return `data:image/png;base64,${b64}`;
 }
 
 export default createEdgeFunction(

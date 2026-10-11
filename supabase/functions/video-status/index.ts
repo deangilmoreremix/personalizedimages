@@ -1,10 +1,24 @@
 import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+const MUAPI_BASE = "https://api.muapi.ai/api/v1"
+
+async function pollMuApiTask(
+  requestId: string
+): Promise<{ status: string; outputs: string[]; error: string | null } | null> {
+  const muapiKey = Deno.env.get('MUAPI_API_KEY')
+  if (!muapiKey) return null
+  const res = await fetch(`${MUAPI_BASE}/predictions/${encodeURIComponent(requestId)}/result`, {
+    headers: { 'x-api-key': muapiKey }
+  })
+  if (!res.ok) return null
+  const data = await res.json().catch(() => null)
+  if (!data || typeof data !== 'object') return null
+  return {
+    status: String(data.status ?? '').toLowerCase(),
+    outputs: Array.isArray(data.outputs) ? data.outputs.filter((url: unknown) => typeof url === 'string') : [],
+    error: typeof data.error === 'string' ? data.error : (typeof data.message === 'string' ? data.message : null)
+  }
+}
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin');
@@ -51,7 +65,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/generated_videos?id=eq.${encodeURIComponent(videoId)}&user_id=eq.${encodeURIComponent(user.id)}&select=id,status,progress,error_message,created_at,updated_at`,
+      `${supabaseUrl}/rest/v1/generated_videos?id=eq.${encodeURIComponent(videoId)}&user_id=eq.${encodeURIComponent(user.id)}&select=id,status,progress,error_message,video_url,created_at,updated_at,metadata`,
       {
         headers: {
           'apikey': serviceKey,
@@ -59,6 +73,13 @@ Deno.serve(async (req: Request) => {
         },
       }
     );
+
+    if (!res.ok) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to check video status' }),
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
 
     const rows = await res.json();
     const video = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
@@ -70,12 +91,65 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    let status = video.status || 'processing';
+    let progress = video.progress || 0;
+    let errorMessage = video.error_message || null;
+    let videoUrl = video.video_url || null;
+
+    const providerTaskId = video.metadata?.providerTaskId;
+
+    if ((status === 'pending' || status === 'processing') && providerTaskId) {
+      const provider = await pollMuApiTask(providerTaskId).catch(() => null);
+
+      if (provider) {
+        const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+
+        if (provider.status === 'completed') {
+          const output = provider.outputs[0];
+          if (output) {
+            status = 'completed';
+            progress = 100;
+            videoUrl = output;
+            patch.status = 'completed';
+            patch.progress = 100;
+            patch.video_url = output;
+          } else {
+            status = 'failed';
+            errorMessage = 'Video generation completed without an output';
+            patch.status = 'failed';
+            patch.error_message = errorMessage;
+          }
+        } else if (provider.status === 'failed' || provider.status === 'cancelled') {
+          status = 'failed';
+          errorMessage = provider.error || 'Video generation failed';
+          patch.status = 'failed';
+          patch.error_message = errorMessage;
+        } else {
+          status = 'processing';
+          progress = 50;
+          patch.status = 'processing';
+          patch.progress = 50;
+        }
+
+        await fetch(`${supabaseUrl}/rest/v1/generated_videos?id=eq.${video.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`
+          },
+          body: JSON.stringify(patch)
+        }).catch(() => null);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         id: video.id,
-        status: video.status || 'processing',
-        progress: video.progress || 0,
-        error: video.error_message || null,
+        status: status === 'pending' ? 'queued' : status,
+        progress,
+        videoUrl,
+        error: errorMessage,
         createdAt: video.created_at,
         updatedAt: video.updated_at,
       }),
@@ -85,7 +159,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     return new Response(
       JSON.stringify({ error: 'Failed to check video status' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
 });

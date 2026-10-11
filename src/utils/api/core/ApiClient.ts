@@ -5,8 +5,10 @@
  * handling authentication, error management, and response normalization.
  */
 
-import { getApiKey, hasValidApiKey } from '../../env.js';
+import { getApiKey } from '../../env.js';
 import type { AIProvider } from './types';
+
+export const OPENAI_IMAGE_MODEL = 'gpt-image-2.5-sunburst';
 
 export interface ApiRequest {
   prompt: string;
@@ -50,9 +52,9 @@ export class ApiClient {
     const startTime = Date.now();
 
     try {
-      // Validate provider and API key
+      // Validate provider support
       if (!this.isProviderAvailable(request.provider)) {
-        throw new Error(`Provider ${request.provider} is not available or API key is missing`);
+        throw new Error(`Provider ${request.provider} is not available`);
       }
 
       // Check rate limits
@@ -85,20 +87,30 @@ export class ApiClient {
   }
 
   /**
-   * Check if a provider is available and configured
+   * Resolve a provider to the implementation that actually serves it.
+   * Freepik-routed generation is served by OpenAI GPT Image 2.5.
    */
-  private isProviderAvailable(provider: string): boolean {
+  private resolveProvider(provider: AIProvider): AIProvider | null {
     switch (provider) {
+      case 'freepik':
+        return 'openai';
       case 'openai':
-        return hasValidApiKey('openai');
       case 'gemini':
       case 'gemini-nano':
-        return hasValidApiKey('gemini') || hasValidApiKey('gemini-nano');
       case 'imagen':
-        return hasValidApiKey('gemini'); // Imagen uses Gemini API
+        return provider;
       default:
-        return false;
+        return null;
     }
+  }
+
+  /**
+   * Check if a provider is supported by this client.
+   * Credentials are validated at execution time so that a missing or
+   * malformed key produces an accurate error instead of a generic one.
+   */
+  private isProviderAvailable(provider: string): boolean {
+    return this.resolveProvider(provider as AIProvider) !== null;
   }
 
   /**
@@ -116,7 +128,12 @@ export class ApiClient {
    * Execute provider-specific request
    */
   private async executeProviderRequest(request: ApiRequest): Promise<any> {
-    const { provider, prompt, options = {} } = request;
+    const { prompt, options = {} } = request;
+    const provider = this.resolveProvider(request.provider);
+
+    if (!provider) {
+      throw new Error(`Unsupported provider: ${request.provider}`);
+    }
 
     switch (provider) {
       case 'openai':
@@ -128,7 +145,7 @@ export class ApiClient {
       case 'imagen':
         return this.executeImagenRequest(prompt, options);
       default:
-        throw new Error(`Unsupported provider: ${provider}`);
+        throw new Error(`Unsupported provider: ${request.provider}`);
     }
   }
 
@@ -137,7 +154,7 @@ export class ApiClient {
    */
   private async executeOpenAIRequest(prompt: string, options: any): Promise<any> {
     const apiKey = getApiKey('openai');
-    if (!apiKey) throw new Error('OpenAI API key not available');
+    if (!apiKey) throw new Error('OpenAI API key not available. Image generation requires your own OpenAI API key (starts with sk-).');
 
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -146,25 +163,31 @@ export class ApiClient {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'dall-e-3',
+        model: OPENAI_IMAGE_MODEL,
         prompt,
         n: 1,
         size: options.size || '1024x1024',
-        quality: options.quality || 'standard',
-        style: options.style || 'natural'
+        quality: options.quality === 'hd' ? 'high' : 'medium'
       })
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+      throw new Error(`OpenAI API error: ${error.error?.message || error.error || 'Unknown error'}`);
     }
 
     const data = await response.json();
-    if (!data?.data?.[0]?.url) {
-      throw new Error('No image URL in OpenAI response');
+    const image = data?.data?.[0];
+
+    if (image?.b64_json) {
+      return `data:image/png;base64,${image.b64_json}`;
     }
-    return data.data[0].url;
+
+    if (image?.url) {
+      return image.url;
+    }
+
+    throw new Error('No image URL in OpenAI response');
   }
 
   /**
@@ -174,13 +197,13 @@ export class ApiClient {
     const apiKey = getApiKey('gemini');
     if (!apiKey) throw new Error('Gemini API key not available');
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          responseMediaType: "IMAGE",
+          responseModalities: ['TEXT', 'IMAGE'],
           ...(options.aspectRatio && {
             imageConfig: { aspectRatio: options.aspectRatio }
           })
@@ -215,13 +238,13 @@ export class ApiClient {
     const apiKey = getApiKey('gemini-nano') || getApiKey('gemini');
     if (!apiKey) throw new Error('Gemini Nano API key not available');
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          responseMediaType: "IMAGE",
+          responseModalities: ['TEXT', 'IMAGE'],
           temperature: 0.7, // More creative for Nano
           ...(options.aspectRatio && {
             imageConfig: { aspectRatio: options.aspectRatio }

@@ -76,6 +76,14 @@ export const PROVIDER_CAPABILITIES: Record<AIProvider, ProviderCapabilities> = {
     imageVariations: false,
     streaming: false,
     videoGeneration: false
+  },
+  freepik: {
+    imageGeneration: true,
+    imageEditing: false,
+    imageAnalysis: false,
+    imageVariations: false,
+    streaming: false,
+    videoGeneration: false
   }
 };
 
@@ -84,6 +92,7 @@ export const PROVIDER_CAPABILITIES: Record<AIProvider, ProviderCapabilities> = {
  */
 export function createProvider(provider: AIProvider) {
   switch (provider) {
+    case 'freepik':
     case 'openai':
       const { OpenAIProvider } = require('./OpenAIProvider');
       return new OpenAIProvider();

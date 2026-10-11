@@ -75,6 +75,20 @@ export const hasApiKey = (provider: string): boolean => {
   }
 };
 
+// Direct browser provider calls are only permitted with the USER'S OWN key (BYOK).
+// Shared deployment credentials (VITE_* env vars) must never be used from the browser.
+export const getUserProvidedApiKey = (provider: 'openai' | 'gemini' | 'gemini-nano' | 'freepik' | 'leonardo' | 'giphy'): string | null => {
+  const userKey = provider === 'gemini-nano'
+    ? (getUserApiKey('gemini-nano') || getUserApiKey('gemini'))
+    : getUserApiKey(provider);
+  if (!userKey) return null;
+  if ((provider === 'openai' && userKey.startsWith('sk-')) ||
+      ((provider === 'gemini' || provider === 'gemini-nano') && userKey.startsWith('AIza'))) {
+    return userKey;
+  }
+  return userKey.length >= 10 ? userKey : null;
+};
+
 /**
  * Convert a blob to a base64 string
  */

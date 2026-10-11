@@ -2,7 +2,7 @@
  * This module handles streaming AI responses using the Gemini 1.5 Flash API
  */
 
-import { getGeminiApiKey, hasApiKey } from './apiUtils';
+import { getUserProvidedApiKey } from './apiUtils';
 import { supabase, supabaseUrl, isSupabaseConfigured } from './supabaseClient';
 import { FEATURES } from '../components/ui/FeatureDialogProvider';
 import { generateImageWithDalle, generateImageWithGemini, generateImageWithGemini2Flash, generateImageWithImagen, generateImageWithGptImage } from './api';
@@ -61,53 +61,35 @@ export async function streamAIResponse({
           throw new Error(`Edge function returned status ${response.status}`);
         }
 
-        // The edge function should return a readable stream
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('Response body is not readable');
+        // The assistant-stream edge function returns a single JSON envelope
+        // {text, model, message} for every provider.
+        const payload = await response.json().catch(() => null);
+        const assistantText = typeof payload === 'string'
+          ? payload
+          : (payload?.text || payload?.message || '');
+
+        if (!assistantText) {
+          throw new Error('Assistant returned an empty response');
         }
 
-        const decoder = new TextDecoder();
-        let done = false;
-
-        // Process the stream
-        while (!done) {
-          const { value, done: doneReading } = await reader.read();
-          done = doneReading;
-          
-          if (value) {
-            const text = decoder.decode(value);
-            
-            // Handle special markers in the stream
-            if (text.includes('FEATURES:')) {
-              // Extract feature suggestions
-              const featuresMatch = text.match(/FEATURES:(\[.*?\])/);
-              if (featuresMatch && featuresMatch[1]) {
-                try {
-                  suggestedFeatures = JSON.parse(featuresMatch[1]);
-                } catch (e) {
-                  console.error('Failed to parse feature suggestions:', e);
-                }
-                
-                // Remove the features marker from the displayed text
-                const textWithoutFeatures = text.replace(/FEATURES:\[.*?\]/, '');
-                fullResponse += textWithoutFeatures;
-                onTokenReceived(textWithoutFeatures);
-              }
-            } else {
-              // Regular token
-              fullResponse += text;
-              onTokenReceived(text);
-            }
+        // Extract feature suggestions and strip the marker from the displayed text
+        const featuresMatch = assistantText.match(/FEATURES:(\[.*?\])/);
+        if (featuresMatch && featuresMatch[1]) {
+          try {
+            suggestedFeatures = JSON.parse(featuresMatch[1]);
+          } catch (e) {
+            console.error('Failed to parse feature suggestions:', e);
           }
         }
+        const cleanText = assistantText.replace(/FEATURES:\[.*?\]/g, '').trim();
+        fullResponse = cleanText;
+        onTokenReceived(cleanText);
 
-        console.log(`✅ [${requestId}] Stream completed successfully`);
+        console.log(`✅ [${requestId}] Assistant response received`);
         if (suggestedFeatures.length === 0) {
-          // Try to extract feature suggestions from the content
-          suggestedFeatures = extractFeatureSuggestions(fullResponse);
+          suggestedFeatures = extractFeatureSuggestions(cleanText);
         }
-        
+
         onComplete(fullResponse, suggestedFeatures);
         return;
       } catch (edgeError) {
@@ -116,17 +98,15 @@ export async function streamAIResponse({
       }
     }
 
-    // Fallback: Direct API call to Gemini
-    if (!hasApiKey('gemini')) {
-      throw new Error('Gemini API key is not configured');
+    // Fallback: Direct API call to Gemini using the USER'S OWN key only (BYOK).
+    // Shared deployment credentials must never be used from the browser.
+    const apiKey = getUserProvidedApiKey('gemini');
+    if (!apiKey) {
+      onComplete('Sorry, the AI assistant is not configured. Please add your own Gemini API key in settings or contact support.');
+      return;
     }
 
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      throw new Error('Gemini API key not available');
-    }
-    
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?key=${apiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
     // Format messages for Gemini API
     // Prepend a system message with feature information

@@ -98,7 +98,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
             <div className="flex gap-2">
               <StockImageButton
                 onSelect={handleReferenceImageSelect}
-                buttonText={referenceImage ? "Change Reference" : "Browse Freepik"}
+                buttonText={referenceImage ? "Change Reference" : "Browse Stock Images"}
                 buttonIcon={Search}
                 defaultSearchTerm={prompt || 'professional'}
               />

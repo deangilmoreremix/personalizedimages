@@ -42,6 +42,15 @@ Deno.serve(async (req: Request) => {
     const result = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
       console.error("OpenAI image editing failed", { status: upstream.status, code: result?.error?.code });
+      if (upstream.status === 429) {
+        return json({ error: "Image editing provider rate limit reached", providerStatus: upstream.status }, 429, headers);
+      }
+      if (upstream.status === 401 || upstream.status === 403) {
+        return json({ error: "Image editing provider rejected the server credentials", providerStatus: upstream.status }, 502, headers);
+      }
+      if (upstream.status === 404) {
+        return json({ error: "Image editing provider endpoint not found", providerStatus: upstream.status }, 502, headers);
+      }
       return json({ error: "Image editing provider rejected the request", providerStatus: upstream.status }, 502, headers);
     }
     const image = result?.data?.[0];

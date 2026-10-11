@@ -1,27 +1,66 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts";
+import { generateWithGptImage } from "../_shared/imageProviders.ts";
 
-const FREEPIK_BASE = "https://api.freepik.com/v1";
 const MAX_PROMPT_LENGTH = 2000;
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 10;
+const DEFAULT_SIZE = "1024x1024";
+const MIN_EDGE = 16;
+const MAX_EDGE = 3840;
+const MIN_PIXELS = 655360;
+const MAX_PIXELS = 8294400;
+const DEFAULT_IMAGE_COUNT = 1;
+const MAX_IMAGE_COUNT = 10;
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(clientIp: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(clientIp);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
+function sanitize(text: unknown): string {
+  if (typeof text !== "string") return "";
+  return text.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim().slice(0, MAX_PROMPT_LENGTH);
 }
 
-function sanitize(text: string): string {
-  return text.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim().slice(0, MAX_PROMPT_LENGTH);
+function roundTo16(value: number): number {
+  return Math.max(MIN_EDGE, Math.round(value / 16) * 16);
+}
+
+function mapToGptImageSize(width: unknown, height: unknown): string {
+  const rawWidth = Number(width);
+  const rawHeight = Number(height);
+  if (!Number.isFinite(rawWidth) || !Number.isFinite(rawHeight) || rawWidth <= 0 || rawHeight <= 0) {
+    return DEFAULT_SIZE;
+  }
+  let w = roundTo16(rawWidth);
+  let h = roundTo16(rawHeight);
+  const ratio = w / h;
+  if (ratio > 3) h = roundTo16(w / 3);
+  else if (ratio < 1 / 3) w = roundTo16(h / 3);
+  const shrink = Math.min(1, MAX_EDGE / w, MAX_EDGE / h, Math.sqrt(MAX_PIXELS / (w * h)));
+  if (shrink < 1) {
+    w = roundTo16(w * shrink);
+    h = roundTo16(h * shrink);
+  }
+  while (w * h < MIN_PIXELS && Math.max(w, h) < MAX_EDGE) {
+    w += 16;
+    h += 16;
+  }
+  if (w * h > MAX_PIXELS) {
+    const factor = Math.sqrt(MAX_PIXELS / (w * h));
+    w = roundTo16(w * factor);
+    h = roundTo16(h * factor);
+  }
+  return `${w}x${h}`;
+}
+
+function styleHints(styling: unknown): string {
+  if (!styling || typeof styling !== "object") return "";
+  const record = styling as Record<string, unknown>;
+  const hints: string[] = [];
+  const color = sanitize(record.color);
+  const framing = sanitize(record.framing);
+  const lighting = sanitize(record.lighting);
+  const photography = sanitize(record.photography);
+  if (color) hints.push(`${color} color palette`);
+  if (framing) hints.push(`${framing} framing`);
+  if (lighting) hints.push(`${lighting} lighting`);
+  if (photography) hints.push(`${photography} photography style`);
+  return hints.length > 0 ? ` Style: ${hints.join(", ")}.` : "";
 }
 
 Deno.serve(async (req: Request) => {
@@ -40,120 +79,67 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (!checkRateLimit(clientIp)) {
+    const { user, error: authError } = await authenticateUser(req);
+    if (authError || !user) {
+      return jsonRes({ error: authError || "Authentication required" }, 401);
+    }
+
+    const rateLimit = await checkRateLimit(user.id, true);
+    if (!rateLimit.allowed) {
       return jsonRes({ error: "Rate limit exceeded. Please wait before trying again." }, 429);
     }
 
-    const freepikKey = Deno.env.get("FREEPIK_API_KEY");
-    if (!freepikKey) {
-      return jsonRes({ error: "Freepik API key not configured" }, 500);
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openaiKey) {
+      return jsonRes({ error: "OpenAI API key not configured" }, 503);
     }
 
-    const body = await req.json();
-    const { action, taskId } = body;
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return jsonRes({ error: "Invalid JSON body" }, 400);
+    }
+    const payload = body as Record<string, unknown>;
+    const { action, taskId } = payload;
 
     if (action === "status" && taskId) {
-      const statusRes = await fetch(
-        `${FREEPIK_BASE}/ai/mystic/${taskId}`,
-        {
-          method: "GET",
-          headers: { "x-freepik-api-key": freepikKey },
-        }
+      return jsonRes({ status: "FAILED", error: "This operation is synchronous" });
+    }
+
+    const cleanPrompt = sanitize(payload.prompt);
+    if (!cleanPrompt) {
+      return jsonRes({ error: "prompt is required and must be a non-empty string" }, 400);
+    }
+
+    let prompt = cleanPrompt;
+    const negativePrompt = sanitize(payload.negativePrompt);
+    if (negativePrompt) prompt += `; avoid: ${negativePrompt}`;
+    prompt += styleHints(payload.styling);
+
+    const size = mapToGptImageSize(payload.width, payload.height);
+
+    const rawCount = Number(payload.numImages);
+    const count = Number.isFinite(rawCount)
+      ? Math.min(Math.max(DEFAULT_IMAGE_COUNT, Math.round(rawCount)), MAX_IMAGE_COUNT)
+      : DEFAULT_IMAGE_COUNT;
+
+    let generated: string[];
+    try {
+      generated = await Promise.all(
+        Array.from({ length: count }, () => generateWithGptImage({ prompt, apiKey: openaiKey, size }))
       );
-
-      if (!statusRes.ok) {
-        const errText = await statusRes.text();
-        return jsonRes({ status: "FAILED", error: `Status check failed: ${statusRes.status} ${errText}` });
-      }
-
-      const statusData = await statusRes.json();
-      const taskStatus = statusData.data?.status || statusData.status;
-
-      if (taskStatus === "COMPLETED" || taskStatus === "completed") {
-        const images = statusData.data?.images || statusData.data?.result?.images || [];
-        const urls = images.map((img: { url?: string }) => img.url).filter(Boolean);
-        return jsonRes({ status: "COMPLETED", resultUrl: urls[0] || null, resultUrls: urls });
-      }
-
-      if (taskStatus === "FAILED" || taskStatus === "failed") {
-        return jsonRes({ status: "FAILED", error: statusData.data?.error || "Generation failed" });
-      }
-
-      return jsonRes({ status: "PROCESSING" });
+    } catch (providerError) {
+      console.error("OpenAI image generation failed", providerError instanceof Error ? providerError.message : "unknown");
+      return jsonRes({ error: "Image generation failed" }, 502);
     }
 
-    const {
-      prompt,
-      negativePrompt,
-      width,
-      height,
-      numImages,
-      guidanceScale,
-      seed,
-      styling,
-    } = body;
-
-    if (!prompt || typeof prompt !== "string") {
-      return jsonRes({ error: "prompt is required and must be a string" }, 400);
+    const resultUrls = generated.filter((url) => typeof url === "string" && url.length > 0);
+    if (resultUrls.length === 0) {
+      return jsonRes({ error: "Image generation returned no image" }, 502);
     }
 
-    const cleanPrompt = sanitize(prompt);
-    if (cleanPrompt.length === 0) {
-      return jsonRes({ error: "prompt cannot be empty after sanitization" }, 400);
-    }
-
-    const requestBody: Record<string, unknown> = {
-      prompt: cleanPrompt,
-      num_images: numImages || 1,
-    };
-
-    if (negativePrompt && typeof negativePrompt === "string") {
-      requestBody.negative_prompt = sanitize(negativePrompt);
-    }
-    if (width) requestBody.image = { size: { width, height: height || width } };
-    if (guidanceScale) requestBody.guidance_scale = guidanceScale;
-    if (seed) requestBody.seed = seed;
-
-    if (styling) {
-      requestBody.styling = {};
-      if (styling.color)
-        (requestBody.styling as Record<string, unknown>).color = styling.color;
-      if (styling.framing)
-        (requestBody.styling as Record<string, unknown>).framing = styling.framing;
-      if (styling.lighting)
-        (requestBody.styling as Record<string, unknown>).lighting = styling.lighting;
-      if (styling.photography)
-        (requestBody.styling as Record<string, unknown>).photography =
-          styling.photography;
-    }
-
-    const generateRes = await fetch(`${FREEPIK_BASE}/ai/mystic`, {
-      method: "POST",
-      headers: {
-        "x-freepik-api-key": freepikKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!generateRes.ok) {
-      const errText = await generateRes.text();
-      return jsonRes({ error: `Freepik API error: ${generateRes.status} ${errText}` }, generateRes.status);
-    }
-
-    const data = await generateRes.json();
-
-    const images = data.data?.images || [];
-    if (images.length > 0 && images[0].url) {
-      const urls = images.map((img: { url?: string }) => img.url).filter(Boolean);
-      return jsonRes({ status: "COMPLETED", resultUrl: urls[0], resultUrls: urls });
-    }
-
-    const returnedTaskId = data.data?.task_id || data.data?.id || data.task_id;
-    return jsonRes({ taskId: returnedTaskId, status: "PROCESSING" });
+    return jsonRes({ resultUrls, resultUrl: resultUrls[0] });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonRes({ error: message }, 500);
+    console.error("freepik-ai-image failed", error instanceof Error ? error.name : "unknown");
+    return jsonRes({ error: "Internal server error" }, 500);
   }
 });

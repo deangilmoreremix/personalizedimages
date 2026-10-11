@@ -54,7 +54,7 @@ export const generateImageWithGemini = async (prompt: string, aspectRatio?: stri
 export const generateImageWithGemini2Flash = async (prompt: string) => {
   console.warn('generateImageWithGemini2Flash is deprecated. Use generateImage instead.');
   const { generateImage } = await import('./image/generation');
-  return generateImage(prompt, { provider: 'gemini', model: 'gemini-2.0-flash-exp' });
+  return generateImage(prompt, { provider: 'gemini', model: 'gemini-2.5-flash-image' });
 };
 
 /**
@@ -72,7 +72,7 @@ export const generateImageWithImagen = async (prompt: string, aspectRatio?: stri
 export const generateImageWithGptImage = async (prompt: string) => {
   console.warn('generateImageWithGptImage is deprecated. Use generateImage instead.');
   const { generateImage } = await import('./image/generation');
-  return generateImage(prompt, { provider: 'openai', model: 'gpt-4-vision-preview' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.5-sunburst' });
 };
 
 // Re-export utility functions for convenience

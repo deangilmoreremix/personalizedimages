@@ -1,93 +1,124 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts";
 
-const FREEPIK_BASE = "https://api.freepik.com/v1";
+const RESPONSES_MODEL = Deno.env.get("OPENAI_RESPONSES_MODEL") || "gpt-5-mini";
 const MAX_PROMPT_LENGTH = 2000;
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 20;
+const MAX_OUTPUT_TOKENS = 512;
+const INSTRUCTIONS =
+  "You are an expert image prompt engineer. Rewrite the user's image prompt so it is more vivid, specific and descriptive for an image generation model. Preserve the original subject and intent. Reply with the improved prompt only, as plain text, with no preamble, quotes, labels or explanation.";
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(clientIp: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(clientIp);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
+function sanitize(text: unknown): string {
+  if (typeof text !== "string") return "";
+  return text.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim().slice(0, MAX_PROMPT_LENGTH);
 }
 
-function sanitize(text: string): string {
-  return text.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim().slice(0, MAX_PROMPT_LENGTH);
+function jsonResponse(data: unknown, status: number, headers: Record<string, string>): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
+
+function extractOutputText(payload: any): string {
+  const output = Array.isArray(payload?.output) ? payload.output : [];
+  const texts: string[] = [];
+  for (const item of output) {
+    const content = item?.content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content) {
+      if (part?.type === "output_text" && typeof part.text === "string") {
+        texts.push(part.text);
+      }
+    }
+  }
+  const joined = texts.join("\n").trim();
+  if (joined) return joined;
+  if (typeof payload?.output_text === "string") return payload.output_text.trim();
+  return "";
 }
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-
-  function jsonRes(data: unknown, status = 200) {
-    return new Response(JSON.stringify(data), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const headers = getCorsHeaders(origin);
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 200, headers });
   }
 
   try {
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (!checkRateLimit(clientIp)) {
-      return jsonRes({ error: "Rate limit exceeded. Please wait before trying again." }, 429);
+    const { user, error: authError } = await authenticateUser(req);
+    if (authError || !user) {
+      return jsonResponse({ error: authError || "Authentication required" }, 401, headers);
     }
 
-    const freepikKey = Deno.env.get("FREEPIK_API_KEY");
-    if (!freepikKey) {
-      return jsonRes({ error: "Freepik API key not configured" }, 500);
+    const rateLimit = await checkRateLimit(user.id, true);
+    if (!rateLimit.allowed) {
+      return jsonResponse({ error: "Rate limit exceeded. Please wait before trying again." }, 429, headers);
     }
 
-    const body = await req.json();
-    const { prompt } = body;
-
-    if (!prompt || typeof prompt !== "string") {
-      return jsonRes({ error: "prompt is required and must be a string" }, 400);
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openaiKey) {
+      return jsonResponse({ error: "OpenAI API key not configured" }, 503, headers);
     }
 
-    const cleanPrompt = sanitize(prompt);
-    if (cleanPrompt.length === 0) {
-      return jsonRes({ error: "prompt cannot be empty after sanitization" }, 400);
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return jsonResponse({ error: "Invalid JSON body" }, 400, headers);
     }
 
-    const res = await fetch(`${FREEPIK_BASE}/ai/improve-prompt`, {
+    const cleanPrompt = sanitize((body as Record<string, unknown>).prompt);
+    if (!cleanPrompt) {
+      return jsonResponse({ error: "prompt is required and must be a non-empty string" }, 400, headers);
+    }
+
+    const upstream = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: {
-        "x-freepik-api-key": freepikKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt: cleanPrompt }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+      body: JSON.stringify({
+        model: RESPONSES_MODEL,
+        instructions: INSTRUCTIONS,
+        input: [{ role: "user", content: [{ type: "input_text", text: cleanPrompt }] }],
+        max_output_tokens: MAX_OUTPUT_TOKENS,
+      }),
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return jsonRes({ error: `Freepik API error: ${res.status} ${errText}` }, res.status);
+    const result = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) {
+      console.error("OpenAI Responses request failed", { status: upstream.status, code: result?.error?.code });
+      if (upstream.status === 429) {
+        return jsonResponse(
+          { error: "Prompt improvement provider rate limit reached", providerStatus: upstream.status },
+          429,
+          headers
+        );
+      }
+      if (upstream.status === 401 || upstream.status === 403) {
+        return jsonResponse(
+          { error: "Prompt improvement provider rejected the server credentials", providerStatus: upstream.status },
+          502,
+          headers
+        );
+      }
+      return jsonResponse(
+        { error: "Prompt improvement provider rejected the request", providerStatus: upstream.status },
+        502,
+        headers
+      );
     }
 
-    const data = await res.json();
+    if (result?.status === "incomplete" || result?.incomplete_details) {
+      console.error("OpenAI Responses incomplete", { details: result?.incomplete_details ?? null });
+      return jsonResponse({ error: "Prompt improvement response was incomplete" }, 502, headers);
+    }
 
-    return jsonRes({
-      improvedPrompt:
-        data.data?.improved_prompt ||
-        data.data?.prompt ||
-        data.improved_prompt ||
-        cleanPrompt,
-      originalPrompt: cleanPrompt,
-    });
+    const improvedPrompt = extractOutputText(result);
+    if (!improvedPrompt) {
+      return jsonResponse({ error: "Prompt improvement returned no text" }, 502, headers);
+    }
+
+    return jsonResponse({ improvedPrompt, originalPrompt: cleanPrompt }, 200, headers);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonRes({ error: message }, 500);
+    console.error("freepik-improve-prompt failed", error instanceof Error ? error.name : "unknown");
+    return jsonResponse({ error: "Internal server error" }, 500, headers);
   }
 });

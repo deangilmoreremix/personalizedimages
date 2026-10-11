@@ -73,20 +73,17 @@ Deno.serve(async (req) => {
 
     if (useOpenAI) {
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch('https://api.openai.com/v1/responses', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${openaiKey}`
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 1024
+            model: Deno.env.get('OPENAI_RESPONSES_MODEL') || 'gpt-5-mini',
+            instructions: systemPrompt,
+            input: userPrompt,
+            max_output_tokens: 1024
           })
         })
 
@@ -96,7 +93,11 @@ Deno.serve(async (req) => {
         }
 
         const data = await response.json()
-        const responseText = data.choices?.[0]?.message?.content || ''
+        const responseText = (data.output || [])
+          .flatMap((item: any) => item.content || [])
+          .filter((part: any) => part.type === 'output_text')
+          .map((part: any) => part.text || '')
+          .join('')
 
         try {
           recommendations = JSON.parse(responseText)
@@ -119,7 +120,7 @@ Deno.serve(async (req) => {
 
     if (recommendations.length === 0 && useGemini) {
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

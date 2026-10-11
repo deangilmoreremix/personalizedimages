@@ -2,7 +2,7 @@
 const allowedOrigins = Deno.env.get('ALLOWED_ORIGINS')?.split(',') || ['http://localhost:3000'];
 
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': allowedOrigins[0],
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
@@ -173,7 +173,12 @@ export async function checkCredits(
   }
 
   try {
-    const rpcRes = await fetch(`${config.url}/rest/v1/rpc/check_and_deduct_credit`, {
+    // NOTE: the edge function already authenticated the caller via
+    // authenticateUser() before this point, so the service-role variant of
+    // the RPC (check_and_deduct_credit_service) is used here. The plain
+    // check_and_deduct_credit() validates auth.uid() = p_user_id, which is
+    // always NULL for service-role tokens and would deny every request.
+    const rpcRes = await fetch(`${config.url}/rest/v1/rpc/check_and_deduct_credit_service`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, X, Heart, Download, Grid, List, Filter, Loader2, Image, Camera, PenTool, Layers, Video } from 'lucide-react';
 import { useStockImages, useStockFavorites } from '../../hooks/useStockImages';
-import { StockResource, StockSearchOptions } from '../../services/stockImageService';
+import { StockResource, StockSearchOptions, STOCK_SEARCH_UNAVAILABLE_MESSAGE } from '../../services/stockImageService';
 import { FreepikAttribution } from './FreepikAttribution';
 
 interface StockImagePickerProps {
@@ -248,8 +248,8 @@ export function StockImagePicker({
           {!isAvailable ? (
             <div className="flex flex-col items-center justify-center h-64 text-gray-500">
               <Image className="w-16 h-16 mb-4 opacity-30" />
-              <p className="text-lg font-medium">Stock Library Not Available</p>
-              <p className="text-sm mt-1">Please configure your API key to access stock images.</p>
+              <p className="text-lg font-medium">Stock Image Search Unavailable</p>
+              <p className="text-sm mt-1">Stock image search is no longer available in this application.</p>
             </div>
           ) : error ? (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -348,7 +348,7 @@ export function StockImagePicker({
 
         {!multiSelect && displayResources.length === 0 && (
           <div className="p-3 border-t border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
-            Click an image to use it in your project
+            {isAvailable ? 'Click an image to use it in your project' : STOCK_SEARCH_UNAVAILABLE_MESSAGE}
           </div>
         )}
       </div>

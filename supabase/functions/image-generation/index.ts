@@ -154,118 +154,43 @@ Deno.serve(async (req) => {
       geminiValid: geminiKey ? validateApiKey(geminiKey, 'gemini') : false,
     })
 
-    let imageUrl: string = ''
-
-    if (provider === 'gpt-5' && openaiKey && validateApiKey(openaiKey, 'openai')) {
-      // Use GPT-5 (likely referring to GPT-4o or future GPT-5) for image generation
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3", // Using DALL-E 3 as GPT-5 image generation capability
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`GPT-5/OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
-
-      } catch (error) {
-        console.error('GPT-5 image generation failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        throw new Error(`Image generation failed: ${errorMessage}`)
-      }
-
-    } else if (provider === 'gemini') {
-      // Gemini doesn't support native image generation, fall back to OpenAI
-      console.warn('Gemini does not support image generation, falling back to OpenAI DALL-E')
-
-      if (!openaiKey || !validateApiKey(openaiKey, 'openai')) {
-        return new Response(
-          JSON.stringify({ error: 'OpenAI API key required for image generation (Gemini fallback)' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
-
-      } catch (error) {
-        console.error('OpenAI fallback image generation failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        throw new Error(`Image generation failed: ${errorMessage}`)
-      }
-
-    } else if (provider === 'openai' && openaiKey && validateApiKey(openaiKey, 'openai')) {
-      // Fallback to standard OpenAI DALL-E
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
-
-      } catch (error) {
-        console.error('OpenAI image generation failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        throw new Error(`Image generation failed: ${errorMessage}`)
-      }
-
-    } else {
-      return new Response(
-        JSON.stringify({ error: `Provider ${provider} not available or API key missing/invalid` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (!openaiKey || !validateApiKey(openaiKey, 'openai')) {
+      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
+        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    if (!['openai', 'gpt-5', 'gemini'].includes(provider)) {
+      return new Response(JSON.stringify({ error: 'Unsupported provider' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    // Existing Gemini option retains compatibility but uses the configured OpenAI image backend.
+    const imageModel = Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2.5-sunburst';
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
+      body: JSON.stringify({
+        model: imageModel,
+        prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
+        n: 1,
+        size: size === '1792x1024' ? '1536x1024' : size === '1024x1792' ? '1024x1536' : size,
+        quality: quality === 'hd' ? 'high' : 'medium',
+        output_format: 'png'
+      })
+    });
+    const generated = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('OpenAI image generation rejected', { status: response.status, code: generated?.error?.code });
+      return new Response(JSON.stringify({ error: 'Image provider rejected the request', providerStatus: response.status }), {
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    const data = generated.data?.[0];
+    const imageUrl = data?.b64_json ? `data:image/png;base64,${data.b64_json}` : data?.url;
+    if (!imageUrl) {
+      return new Response(JSON.stringify({ error: 'Image provider returned no image' }), {
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     return new Response(

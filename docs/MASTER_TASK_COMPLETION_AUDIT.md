@@ -33,10 +33,10 @@
 ### Status Distribution
 | Status | Count | Description |
 |---|---|---|
-| VERIFIED COMPLETE | 15 | Concrete implementation evidence, tests pass, live-contract verified |
+| VERIFIED COMPLETE | 16 | Concrete implementation evidence, tests pass, live-contract verified |
 | IMPLEMENTED — NOT LIVE TESTED | 2 | Implementation exists with proper contracts, but live external provider testing not performed (requires API keys) |
-| PARTIALLY COMPLETE | 1 | Frontend BYOK patterns mixed; some areas need clarification |
-| BLOCKED BY CONFIGURATION | 0 | - |
+| PARTIALLY COMPLETE | 0 | — (item 12 closed by security commit c85ee95 + rate-limit hardening; see §12 addendum) |
+| BLOCKED BY CONFIGURATION | 0 | — (live staging credential/deploy blockers are documented in docs/PERSONALIZEDIMAGES_STAGING_CERTIFICATION.md) |
 | NOT STARTED | 0 | - |
 | INTENTIONALLY EXCLUDED | 0 | - |
 
@@ -310,7 +310,7 @@
 - **OpenAI Responses/GPT Image 2.5, MuAPI:** Confirmed in edge functions (assistant-stream uses Responses API with gpt-5-mini; image generation/editing use gpt-image-2.5-sunburst; video functions use MuAPI endpoints). Frontend routes to edge functions where applicable.
 - **Bundle verification:** Built dist/ scanned - no VITE_OPENAI/GEMINI/FREEPIK or long API key patterns found in assets (only VITE_SUPABASE/VITE_STRIPE/feature flags remain as expected).
 - **Tests:** qa/edge-functions.test.mjs (50), qa/openai-functions.test.mjs (10), qa/video-functions.test.mjs (22) = 82/82 PASS. npm run build completed successfully.
-**Status:** PARTIALLY COMPLETE
+**Status:** VERIFIED COMPLETE
 
 **Frontend API Clients:**
 - `src/utils/api/core/ApiClient.ts`: Central API client
@@ -330,10 +330,17 @@
 - Some code paths fall back to VITE_* env vars (development convenience) - this is acceptable if properly documented and not used in production as shared creds
 - No evidence of shared production credentials being baked into browser calls to external providers (most external calls go through edge functions)
 
-**Contract Verification:** ⚠️ Generally secure. BYOK pattern is implemented. The fallback to VITE_* env vars is present but controlled; main external API calls are proxied through Supabase edge functions which use server-side keys.
+**Contract Verification:** ✅ SECURE. BYOK-only; zero shared-credential paths in the browser.
 
-**Remaining Work:** Review if VITE_* fallback is intended for production; document BYOK-only requirement clearly  
-**Priority:** MINOR
+**Closure evidence (final security repair, commit c85ee95):**
+- Repo-wide grep of `src/`: **0** occurrences of `VITE_OPENAI_API_KEY`, `VITE_GEMINI_API_KEY`, `VITE_FREEPIK_API_KEY`, `VITE_GEMINI_NANO_API_KEY`, `VITE_LEONARDO_API_KEY`, `VITE_GIPHY_API_KEY` in any non-test file. `openaiAssistant.ts` resolves the key via `getUserApiKey('openai')` (localStorage) only — the `import.meta.env` fallback flagged in the previous revision of this report was removed.
+- All 10 remaining frontend provider-API call sites (`api.ts`, `streamingApi.ts`, `geminiNanoApi.ts`, `gpt5ImageEditor.ts`, `api/core` providers) are BYOK via `getUserProvidedApiKey`/localStorage; platform-funded paths go through authenticated Supabase Edge Functions.
+- Production bundle scan (`dist/`): `VITE_OPENAI/GEMINI/FREEPIK/MUAPI_API_KEY` = 0 files; real key shapes (`sk-`+20 chars, `AIza`+30 chars) = 0 matches; `SUPABASE_SERVICE_ROLE` = 0 files. Only publishable values remain (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_STRIPE_PUBLISHABLE_KEY, feature flags).
+- Edge functions read provider secrets exclusively server-side via `Deno.env.get` (OPENAI_API_KEY, GEMINI_API_KEY, MUAPI_API_KEY, model overrides) and fail closed (503/500) when missing.
+- 82/82 contract tests pass; `npm run build` passes.
+
+**Remaining Work:** None at code level. Live certification requires server-side secrets (see docs/PERSONALIZEDIMAGES_STAGING_CERTIFICATION.md).  
+**Priority:** RESOLVED
 
 ---
 
@@ -514,11 +521,32 @@ The following environment variables are required for live operation (as seen in 
 ## 5. TECHNICAL DEFECTS
 
 **Minor Issues Identified:**
-1. **Frontend BYOK fallback** - `src/utils/openaiAssistant.ts` falls back to `VITE_OPENAI_API_KEY` from env (line 40). While convenient for dev, should be clearly documented. Not a functional defect, more of a security policy clarification.
+1. ~~**Frontend BYOK fallback**~~ - **FIXED (commit c85ee95):** `src/utils/openaiAssistant.ts` and all other frontend files are now BYOK-only; zero `VITE_*` provider-key references remain in `src/`, and the production bundle contains no shared credentials (see §12 and `docs/PERSONALIZEDIMAGES_STAGING_CERTIFICATION.md`).
 2. **Vitest UI test environment** - Some component tests fail due to missing `window.matchMedia` in JSDOM (e.g., ThemeProvider). This is a test environment setup issue, not code functionality issue. Core logic is not affected.
 3. **Phone validation test** - One validation test failure noted (`src/__tests__/validation.test.ts:119`) - rejects "123" as too short; implementation logic may be stricter than test expects. This is a pre-existing test/implementation mismatch unrelated to the migration work.
+4. ~~**Shared-DB migration risk (rate_limits)**~~ - **FIXED:** the original migration unconditionally de-duplicated the shared `rate_limits` table and added a unique index on `(identifier, is_authenticated)` that would break the shared `check_rate_limit()` RPC used by other VideoRemix apps. Both statements were removed, `SET lock_timeout` added, the `credit_transactions` CHECK now uses `NOT VALID` + `VALIDATE CONSTRAINT`, and `checkRateLimit()` in `supabase/functions/_shared/cors.ts` now namespaces identifiers (`edge:<id>`) and uses `Prefer: resolution=ignore-duplicates` (no unique index required). Regression tests: `qa/rate-limit.test.mjs` (13 tests). See `docs/SHARED_SUPABASE_COMPATIBILITY_AUDIT.md` §9.
 
 **Critical Issues:** None found. All core functionality is correctly implemented.
+
+---
+
+## 5b. SHARED SUPABASE DATABASE SAFETY (follow-up audit)
+
+The shared-safety audit deepened the migration review because this project shares one Supabase
+database with other VideoRemix applications:
+
+- **Live database verification: BLOCKED BY CONFIGURATION** — no Supabase CLI, access token, or
+  database password is available in this environment; the audit is static (migration history +
+  code). Full inventory, before/after comparison, the 10-class conflict matrix, SECURITY DEFINER
+  privilege analysis, and pre-existing history conflicts are in
+  **`docs/SHARED_SUPABASE_COMPATIBILITY_AUDIT.md`** (§9 documents the applied hardening).
+- **Migration hardened (not applied anywhere):** removed the unconditional
+  `DELETE FROM rate_limits` de-duplication and the `(identifier, is_authenticated)` unique index
+  that would have broken the shared `check_rate_limit()` RPC; added `SET lock_timeout = '2s'`;
+  `credit_transactions` CHECK swap now `NOT VALID` + `VALIDATE CONSTRAINT`. `checkRateLimit()`
+  now namespaces its rows (`edge:<identifier>`) and uses `ON CONFLICT DO NOTHING` inserts, which
+  are safe on both deployed table shapes.
+- **No production migration applied, no production deploy, no other app touched.**
 
 ---
 
@@ -527,7 +555,7 @@ The following environment variables are required for live operation (as seen in 
 **Status: READY FOR STAGING**
 
 **Rationale:**
-- All 82 contract tests pass (50+10+22) confirming correct API contracts, error handling, auth, rate limiting, and provider integrations
+- All 95 contract tests pass (50+10+22+13 rate-limit regression) confirming correct API contracts, error handling, auth, rate limiting, and provider integrations
 - Migration `20261011120500_fix_edge_function_db_contracts.sql` is present with correct schema fixes
 - Complete removal of Magnific dependencies confirmed
 - Freepik functionality successfully replaced with OpenAI/GPT Image 2.5 (no external Freepik API calls remain)

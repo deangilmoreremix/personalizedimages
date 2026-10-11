@@ -1,0 +1,206 @@
+/**
+ * QA -- rate-limit (shared-table safety) regression tests.
+ *
+ * The rate_limits table is SHARED with other VideoRemix applications. These
+ * tests pin the shared-database safety contract of checkRateLimit() in
+ * supabase/functions/_shared/cors.ts and of the migration
+ * supabase/migrations/20261011120500_fix_edge_function_db_contracts.sql:
+ *
+ *   1. Edge rows are namespaced with an `edge:` identifier so they can never
+ *      collide with other apps' check_rate_limit() RPC rows.
+ *   2. Inserts use `ON CONFLICT DO NOTHING` (resolution=ignore-duplicates),
+ *      which needs no unique index on this shared table.
+ *   3. The SELECT picks the freshest window (order=window_start.desc).
+ *   4. The migration never deletes or de-duplicates shared rows and never
+ *      creates a unique index on rate_limits (which would break the shared
+ *      check_rate_limit RPC).
+ *
+ * Run: node qa/rate-limit.test.mjs
+ */
+
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import { register } from 'node:module';
+
+const denoEnv = new Map();
+
+globalThis.Deno = {
+  env: {
+    get: (key) => (denoEnv.has(key) ? denoEnv.get(key) : undefined),
+    has: (key) => denoEnv.has(key) ? denoEnv.get(key) : undefined,
+    toObject: () => Object.fromEntries(denoEnv),
+  },
+};
+
+register(new URL('./loader.mjs', import.meta.url));
+
+const { checkRateLimit } = await import('../supabase/functions/_shared/cors.ts');
+
+const SUPABASE = 'https://qa-test-project.supabase.co';
+const jsonResponse = (data, status = 200) =>
+  new Response(typeof data === 'string' ? data : JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+
+let calls = [];
+let state;
+
+function resetState() {
+  calls = [];
+  state = {
+    row: null, // existing rate_limits row as returned by the SELECT
+    postStatus: 200,
+    patchStatus: 200,
+  };
+}
+
+function setEnv(withConfig = true) {
+  denoEnv.clear();
+  if (withConfig) {
+    denoEnv.set('SUPABASE_URL', SUPABASE);
+    denoEnv.set('SUPABASE_SERVICE_ROLE_KEY', 'qa-service-role-key');
+  }
+}
+
+globalThis.fetch = async (input, init = {}) => {
+  const url = typeof input === 'string' ? input : input.url;
+  const method = String(init.method ?? 'GET').toUpperCase();
+  calls.push({ url, method, init });
+  if (url.includes('/rest/v1/rate_limits') && method === 'GET') {
+    return jsonResponse(state.row ? [state.row] : []);
+  }
+  if (url === `${SUPABASE}/rest/v1/rate_limits` && method === 'POST') {
+    return jsonResponse({}, state.postStatus);
+  }
+  if (url.startsWith(`${SUPABASE}/rest/v1/rate_limits?id=eq.`) && method === 'PATCH') {
+    return jsonResponse({}, state.patchStatus);
+  }
+  throw new Error(`Unmocked fetch: ${method} ${url}`);
+};
+
+test.beforeEach(() => {
+  resetState();
+  setEnv(true);
+});
+
+test('edge rate-limit rows are namespaced with the edge: prefix', async () => {
+  const result = await checkRateLimit('qa-user-1', true);
+  assert.equal(result.allowed, true);
+  const select = calls.find((c) => c.method === 'GET');
+  assert.ok(select.url.includes('identifier=eq.edge%3Aqa-user-1'), `SELECT must use namespaced identifier: ${select.url}`);
+  const post = calls.find((c) => c.method === 'POST');
+  const body = JSON.parse(post.init.body);
+  assert.equal(body.identifier, 'edge:qa-user-1');
+  assert.equal(body.is_authenticated, true);
+  assert.equal(body.request_count, 1);
+});
+
+test('insert uses resolution=ignore-duplicates (no unique index required)', async () => {
+  await checkRateLimit('qa-user-1', true);
+  const post = calls.find((c) => c.method === 'POST');
+  assert.equal(post.init.headers['Prefer'], 'resolution=ignore-duplicates');
+  assert.notEqual(post.init.headers['Prefer'], 'resolution=merge-duplicates');
+});
+
+test('SELECT orders by window_start desc to pick the freshest window', async () => {
+  await checkRateLimit('qa-user-1', true);
+  const select = calls.find((c) => c.method === 'GET');
+  assert.ok(select.url.includes('order=window_start.desc'), `SELECT must order by window_start desc: ${select.url}`);
+});
+
+test('existing fresh row is incremented via PATCH, not re-inserted', async () => {
+  // Authenticated limit is 100 requests/hour (RATE_LIMITS in cors.ts).
+  state.row = {
+    id: 'row-1',
+    request_count: 96,
+    window_start: new Date().toISOString(),
+  };
+  const result = await checkRateLimit('qa-user-1', true);
+  assert.equal(result.allowed, true);
+  assert.equal(result.remaining, 3);
+  const patch = calls.find((c) => c.method === 'PATCH');
+  assert.ok(patch, 'PATCH issued for existing row');
+  assert.equal(JSON.parse(patch.init.body).request_count, 97);
+  assert.ok(patch.url.includes('id=eq.row-1'));
+  assert.ok(!calls.some((c) => c.method === 'POST'), 'no INSERT when a fresh row exists');
+});
+
+test('stale window row triggers a fresh INSERT', async () => {
+  state.row = {
+    id: 'row-old',
+    request_count: 99,
+    window_start: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+  };
+  const result = await checkRateLimit('qa-user-1', true);
+  assert.equal(result.allowed, true);
+  assert.ok(calls.some((c) => c.method === 'POST'), 'INSERT issued for stale window');
+});
+
+test('request_count at the limit is denied', async () => {
+  state.row = {
+    id: 'row-1',
+    request_count: 100,
+    window_start: new Date().toISOString(),
+  };
+  const result = await checkRateLimit('qa-user-1', true);
+  assert.equal(result.allowed, false);
+  assert.equal(result.remaining, 0);
+  assert.ok(!calls.some((c) => c.method === 'PATCH'), 'no PATCH when over the limit');
+});
+
+test('anonymous identifiers are namespaced the same way', async () => {
+  await checkRateLimit('1.2.3.4', false);
+  const post = calls.find((c) => c.method === 'POST');
+  assert.equal(JSON.parse(post.init.body).identifier, 'edge:1.2.3.4');
+  assert.equal(JSON.parse(post.init.body).is_authenticated, false);
+});
+
+test('fails closed when service configuration is missing', async () => {
+  setEnv(false);
+  const result = await checkRateLimit('qa-user-1', true);
+  assert.equal(result.allowed, false);
+  assert.equal(calls.length, 0, 'no REST calls without configuration');
+});
+
+test('fails closed when the insert fails', async () => {
+  state.postStatus = 500;
+  const result = await checkRateLimit('qa-user-1', true);
+  assert.equal(result.allowed, false);
+});
+
+// ---------------------------------------------------------------------------
+// Migration safety assertions (the migration must never mutate or uniquely
+// constrain the shared rate_limits table used by other VideoRemix apps)
+// ---------------------------------------------------------------------------
+
+const migration = readFileSync(
+  new URL('../supabase/migrations/20261011120500_fix_edge_function_db_contracts.sql', import.meta.url),
+  'utf8'
+);
+const stripSqlComments = (sql) => sql.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n]*/g, '');
+
+test('migration never deletes or de-duplicates shared rate_limits rows', () => {
+  const sql = stripSqlComments(migration);
+  assert.ok(!/DELETE\s+FROM\s+rate_limits/i.test(sql), 'migration must not DELETE from the shared rate_limits table');
+  assert.ok(!/TRUNCATE/i.test(sql), 'migration must not TRUNCATE any table');
+});
+
+test('migration creates no unique index on the shared rate_limits table', () => {
+  const sql = stripSqlComments(migration);
+  assert.ok(
+    !/CREATE\s+UNIQUE\s+INDEX[^;]*ON\s+rate_limits/i.test(sql),
+    'a unique index on rate_limits would break the shared check_rate_limit RPC'
+  );
+});
+
+test('migration sets a lock_timeout so DDL cannot stall other apps', () => {
+  assert.match(stripSqlComments(migration), /SET\s+lock_timeout/i);
+});
+
+test('migration adds the credit_transactions CHECK as NOT VALID with a separate VALIDATE', () => {
+  const sql = stripSqlComments(migration);
+  assert.match(sql, /credit_transactions_type_check[\s\S]*?NOT\s+VALID/i);
+  assert.match(sql, /VALIDATE\s+CONSTRAINT\s+credit_transactions_type_check/i);
+});

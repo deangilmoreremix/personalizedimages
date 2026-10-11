@@ -88,7 +88,7 @@ async function dbQuery(path: string, body: Record<string, unknown>, serviceKey: 
 }
 
 export async function checkRateLimit(
-  identifier: string,
+  rawIdentifier: string,
   isAuthenticated: boolean = false
 ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
   const limits = isAuthenticated ? RATE_LIMITS.authenticated : RATE_LIMITS.anonymous;
@@ -96,13 +96,19 @@ export async function checkRateLimit(
   const windowStart = new Date(now - limits.windowMs).toISOString();
   const config = getSupabaseServiceClient();
 
+  // The rate_limits table is SHARED with other VideoRemix applications, whose
+  // rows are keyed by (identifier, endpoint, window_start) via the
+  // check_rate_limit RPC. Namespacing the edge-function identifier keeps our
+  // rows isolated from theirs regardless of which table shape is deployed.
+  const identifier = `edge:${rawIdentifier}`;
+
   if (!config) {
     return { allowed: false, remaining: 0, resetTime: now + limits.windowMs };
   }
 
   try {
     const selectRes = await fetch(
-      `${config.url}/rest/v1/rate_limits?identifier=eq.${encodeURIComponent(identifier)}&is_authenticated=eq.${isAuthenticated}&select=id,request_count,window_start`,
+      `${config.url}/rest/v1/rate_limits?identifier=eq.${encodeURIComponent(identifier)}&is_authenticated=eq.${isAuthenticated}&select=id,request_count,window_start&order=window_start.desc`,
       {
         headers: {
           'apikey': config.serviceKey,
@@ -120,7 +126,9 @@ export async function checkRateLimit(
           'Content-Type': 'application/json',
           'apikey': config.serviceKey,
           'Authorization': `Bearer ${config.serviceKey}`,
-          'Prefer': 'resolution=merge-duplicates',
+          // ON CONFLICT DO NOTHING needs no unique index, so it is safe on
+          // every deployed shape of this shared table.
+          'Prefer': 'resolution=ignore-duplicates',
         },
         body: JSON.stringify({
           identifier,

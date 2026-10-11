@@ -25,8 +25,7 @@
 
   2. Changes (all idempotent, safe to re-run)
      - Align `rate_limits` with the edge-function contract (add missing
-       columns, de-duplicate rows, add (identifier, is_authenticated) unique
-       index for PostgREST `Prefer: resolution=merge-duplicates` upserts).
+       columns, keep the service-role upsert pattern working).
      - Add `check_and_deduct_credit_service(p_user_id, p_reason)` —
        SECURITY DEFINER, executable ONLY by service_role (revoked from PUBLIC),
        performing the same atomic deduction without the auth.uid() caller
@@ -43,10 +42,37 @@
        grants are explicit and reverted from PUBLIC.
      - The original caller-validation migration 20260223214134 stays in force
        for direct frontend RPC calls (anon/user JWT path).
+
+  4. Shared-database safety (this project is shared with other VideoRemix apps)
+     - NO data is deleted or rewritten on the shared `rate_limits` table. The
+       earlier revision of this migration de-duplicated rows and added a
+       UNIQUE index on (identifier, is_authenticated); that index is
+       incompatible with the shared `check_rate_limit()` RPC from
+       20251219164908, which inserts one row per
+       (identifier, endpoint, window_start) — the index made its INSERTs fail
+       with unique_violation. The RPC's own UNIQUE(identifier, endpoint,
+       window_start) constraint is left untouched and remains authoritative.
+     - The edge functions now identify their rows with an `edge:`-prefixed
+       identifier and use `ON CONFLICT DO NOTHING` inserts (cors.ts), so they
+       need no unique index and cannot collide with other apps' rows.
+     - `SET lock_timeout` keeps DDL from queueing behind other apps' traffic;
+       `NOT VALID` + `VALIDATE CONSTRAINT` avoids a long table-scan lock on
+       the shared `credit_transactions` table.
 */
+
+-- Fail fast instead of queueing behind concurrent traffic from other apps.
+SET lock_timeout = '2s';
 
 -- ============================================================
 -- 1. rate_limits: match edge-function (service-role) contract
+--
+-- Shared-table safety: do NOT delete or de-duplicate existing rows and do
+-- NOT add a UNIQUE index on (identifier, is_authenticated). The shared
+-- check_rate_limit() RPC (20251219164908) inserts one row per
+-- (identifier, endpoint, window_start); either statement would break it for
+-- every application on this database. Edge functions write their own
+-- `edge:`-prefixed rows with ON CONFLICT DO NOTHING (see cors.ts), so no
+-- unique index is required for them.
 -- ============================================================
 
 ALTER TABLE rate_limits ADD COLUMN IF NOT EXISTS is_authenticated boolean NOT NULL DEFAULT false;
@@ -64,17 +90,6 @@ BEGIN
     ALTER TABLE rate_limits ALTER COLUMN endpoint DROP NOT NULL;
   END IF;
 END $$;
-
--- De-duplicate rows per (identifier, is_authenticated) keeping the newest
--- (highest ctid) so the unique index below can be created on legacy data.
-DELETE FROM rate_limits a
-USING rate_limits b
-WHERE a.identifier = b.identifier
-  AND a.is_authenticated = b.is_authenticated
-  AND a.ctid < b.ctid;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_limits_identifier_auth
-  ON rate_limits (identifier, is_authenticated);
 
 -- Service role needs full access for the edge-function upsert pattern.
 DO $$
@@ -184,13 +199,21 @@ BEGIN
 
   IF v_conname IS NOT NULL AND v_def NOT ILIKE '%deduction%' THEN
     EXECUTE format('ALTER TABLE credit_transactions DROP CONSTRAINT %I', v_conname);
+    -- NOT VALID avoids a full-table-scan lock on this shared table; the
+    -- separate VALIDATE step only takes a SHARE UPDATE EXCLUSIVE lock.
     ALTER TABLE credit_transactions
       ADD CONSTRAINT credit_transactions_type_check
-      CHECK (type IN ('purchase', 'usage', 'refund', 'bonus', 'deduction'));
+      CHECK (type IN ('purchase', 'usage', 'refund', 'bonus', 'deduction'))
+      NOT VALID;
+    ALTER TABLE credit_transactions
+      VALIDATE CONSTRAINT credit_transactions_type_check;
   ELSIF v_conname IS NULL THEN
     ALTER TABLE credit_transactions
       ADD CONSTRAINT credit_transactions_type_check
-      CHECK (type IN ('purchase', 'usage', 'refund', 'bonus', 'deduction'));
+      CHECK (type IN ('purchase', 'usage', 'refund', 'bonus', 'deduction'))
+      NOT VALID;
+    ALTER TABLE credit_transactions
+      VALIDATE CONSTRAINT credit_transactions_type_check;
   END IF;
 END $$;
 

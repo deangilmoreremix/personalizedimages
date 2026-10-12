@@ -198,7 +198,7 @@ test('fails closed when the insert fails', async () => {
 // ---------------------------------------------------------------------------
 
 const migration = readFileSync(
-  new URL('../supabase/migrations/20261011120500_fix_edge_function_db_contracts.sql', import.meta.url),
+  new URL('../supabase/migrations/20261012120000_personalizedimages_minimal_tables.sql', import.meta.url),
   'utf8'
 );
 const stripSqlComments = (sql) => sql.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n]*/g, '');
@@ -217,13 +217,21 @@ test('migration creates no unique index on the shared rate_limits table', () => 
   );
 });
 
-test('migration sets a lock_timeout so DDL cannot stall other apps', () => {
-  assert.match(stripSqlComments(migration), /SET\s+lock_timeout/i);
+test('the new migration does not touch any shared table', () => {
+  const sql = stripSqlComments(migration);
+  for (const shared of ['user_credits', 'credit_transactions', 'rate_limits', 'subscriptions', 'billing_cycles', 'stripe_entitlements']) {
+    assert.ok(
+      !new RegExp(`(ALTER|DROP|DELETE\\s+FROM|TRUNCATE)\\s+(TABLE\\s+)?(public\\.)?${shared}`, 'i').test(sql),
+      `the migration must not modify the shared ${shared} table`
+    );
+  }
 });
 
-test('migration adds the credit_transactions CHECK as NOT VALID with a separate VALIDATE', () => {
+test('the new migration enables RLS with owner-scoped policies on both tables', () => {
   const sql = stripSqlComments(migration);
-  assert.match(sql, /credit_transactions_type_check[\s\S]*?NOT\s+VALID/i);
-  assert.match(sql, /VALIDATE\s+CONSTRAINT\s+credit_transactions_type_check/i);
+  assert.equal((sql.match(/ENABLE ROW LEVEL SECURITY/g) || []).length, 2, 'both tables must enable RLS');
+  for (const table of ['pi_generated_videos', 'pi_user_images']) {
+    assert.match(sql, new RegExp(`auth\\.uid\\(\\) = user_id`), `${table} policies must be owner-scoped`);
+  }
 });
 }

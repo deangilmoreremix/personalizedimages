@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/generated_videos?id=eq.${encodeURIComponent(videoId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*`,
+      `${supabaseUrl}/rest/v1/pi_generated_videos?id=eq.${encodeURIComponent(videoId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*`,
       {
         headers: {
           'apikey': serviceKey,
@@ -137,7 +137,7 @@ Deno.serve(async (req: Request) => {
           patch.progress = 50;
         }
 
-        await fetch(`${supabaseUrl}/rest/v1/generated_videos?id=eq.${video.id}`, {
+        await fetch(`${supabaseUrl}/rest/v1/pi_generated_videos?id=eq.${video.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

@@ -127,12 +127,40 @@ test('no repository code references the undeployed buckets', () => {
   }
 });
 
-test('video persistence gap is documented (generated_videos is not deployed)', () => {
-  // The video pipeline stores task state in generated_videos, which does not
-  // exist in the shared database. The functions must surface an honest failure
-  // rather than a fake success, and the gap must remain documented.
+test('video pipeline targets the new pi_generated_videos table only', () => {
+  // The video pipeline persists task state in a table this app owns. It must
+  // not reference any other application's table (ai_videos, videos, ...) and
+  // must fail honestly rather than reporting a fake success.
+  for (const fn of ['image-to-video', 'video-status', 'video-result']) {
+    const source = read(`supabase/functions/${fn}/index.ts`);
+    assert.ok(source.includes('pi_generated_videos'), `${fn} must target pi_generated_videos`);
+    for (const other of ['/rest/v1/generated_videos', '/rest/v1/ai_videos', '/rest/v1/videos"']) {
+      assert.ok(!source.includes(other), `${fn} must not use ${other}`);
+    }
+  }
   const videoFn = read('supabase/functions/image-to-video/index.ts');
-  assert.ok(videoFn.includes('generated_videos'), 'video pipeline still targets generated_videos');
   assert.match(videoFn, /status: 'failed'/, 'provider/db failures must mark the row failed, not fake success');
+});
+
+test('gallery persists to the new pi_user_images table only', () => {
+  const service = read('src/services/cloudGalleryService.ts');
+  assert.ok(service.includes("from('pi_user_images')"), 'gallery must target pi_user_images');
+  assert.ok(!service.includes("from('user_images')"), 'gallery must not target the undeployed user_images table');
+});
+
+test('the superseded migration that touched shared tables is removed', () => {
+  // The earlier migration added a column to the shared rate_limits table,
+  // altered the shared credit_transactions CHECK and created a bucket that is
+  // no longer used. It was never applied anywhere and is superseded by the
+  // minimal pi_* migration.
+  assert.ok(
+    !existsSync(join(REPO_ROOT, 'supabase/migrations/20261011120500_fix_edge_function_db_contracts.sql')),
+    'the superseded migration must not ship'
+  );
+  const minimal = read('supabase/migrations/20261012120000_personalizedimages_minimal_tables.sql');
+  assert.match(minimal, /CREATE TABLE IF NOT EXISTS public\.pi_generated_videos/);
+  assert.match(minimal, /CREATE TABLE IF NOT EXISTS public\.pi_user_images/);
+  assert.match(minimal, /ENABLE ROW LEVEL SECURITY/);
+  assert.ok(!/DELETE\s+FROM|TRUNCATE/i.test(minimal.replace(/--[^\n]*/g, '')), 'the migration must not delete or truncate');
 });
 }

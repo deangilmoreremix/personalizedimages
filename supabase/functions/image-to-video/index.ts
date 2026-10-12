@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const insertRes = await fetch(`${supabaseUrl}/rest/v1/generated_videos`, {
+    const insertRes = await fetch(`${supabaseUrl}/rest/v1/pi_generated_videos`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
 
     if (!providerRes.ok || !taskId) {
       console.error('MuAPI image-to-video failed:', providerRes.status, providerData?.message)
-      await fetch(`${supabaseUrl}/rest/v1/generated_videos?id=eq.${videoRow.id}`, {
+      await fetch(`${supabaseUrl}/rest/v1/pi_generated_videos?id=eq.${videoRow.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    await fetch(`${supabaseUrl}/rest/v1/generated_videos?id=eq.${videoRow.id}`, {
+    await fetch(`${supabaseUrl}/rest/v1/pi_generated_videos?id=eq.${videoRow.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

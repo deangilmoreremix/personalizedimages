@@ -6,7 +6,7 @@
  * The functions under supabase/functions/* are Deno modules, so this suite
  * imports them directly with Node's TypeScript type stripping, stubbing the
  * `Deno` global (env + serve) and replacing global fetch with a router that
- * emulates Supabase auth / rate limits / the generated_videos table plus the
+ * emulates Supabase auth / rate limits / the pi_generated_videos table plus the
  * OpenAI and MuAPI upstreams. Each registered handler is then driven with
  * crafted Request objects to pin the contract the frontend depends on:
  *
@@ -165,11 +165,11 @@ if (UNDER_VITEST) {
       if (method === 'GET') return jsonResponse([]);
       return jsonResponse({}, 201);
     }
-    if (url === `${SUPABASE}/rest/v1/generated_videos` && method === 'POST') {
+    if (url === `${SUPABASE}/rest/v1/pi_generated_videos` && method === 'POST') {
       mock.insert = JSON.parse(init.body);
       return jsonResponse([{ id: 'video-1' }], 201);
     }
-    if (url.startsWith(`${SUPABASE}/rest/v1/generated_videos?id=eq.`) && method === 'PATCH') {
+    if (url.startsWith(`${SUPABASE}/rest/v1/pi_generated_videos?id=eq.`) && method === 'PATCH') {
       mock.patches.push(JSON.parse(init.body));
       return jsonResponse({}, 200);
     }
@@ -452,7 +452,7 @@ if (UNDER_VITEST) {
     assert.equal(lastPatch().metadata.providerTaskId, 'muapi-task-1');
     assert.ok(
       !JSON.stringify(mock.insert).includes(USER_API_KEY),
-      'the user key must never be written to the generated_videos row'
+      'the user key must never be written to the pi_generated_videos row'
     );
     assertNoDecoyCredentialsLeak();
   });
@@ -468,7 +468,7 @@ if (UNDER_VITEST) {
       assert.equal(body.error, 'MuAPI API key not configured. Add your key in Settings → API Keys.');
     }
     assert.equal(muapiCalls.length, 0, 'the provider must never be called without the user key');
-    assert.equal(mock.insert, null, 'no generated_videos row may be created without the user key');
+    assert.equal(mock.insert, null, 'no pi_generated_videos row may be created without the user key');
   });
 
   test('image-to-video: invalid imageUrl returns 400 without submitting', async () => {

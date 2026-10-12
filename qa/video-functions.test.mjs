@@ -119,11 +119,11 @@ function routeFetch(url, method, init) {
     if (method === 'GET') return jsonResponse(mock.rateLimitRow ? [mock.rateLimitRow] : []);
     return jsonResponse({}, 201);
   }
-  if (url === `${SUPABASE}/rest/v1/generated_videos` && method === 'POST') {
+  if (url === `${SUPABASE}/rest/v1/pi_generated_videos` && method === 'POST') {
     mock.insert = JSON.parse(init.body);
     return jsonResponse([{ id: 'video-1' }], 201);
   }
-  if (url.startsWith(`${SUPABASE}/rest/v1/generated_videos?id=eq.`)) {
+  if (url.startsWith(`${SUPABASE}/rest/v1/pi_generated_videos?id=eq.`)) {
     if (method === 'PATCH') {
       mock.patches.push(JSON.parse(init.body));
       return jsonResponse({}, 200);

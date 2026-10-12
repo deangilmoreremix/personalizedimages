@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { corsHeaders, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
 console.log("Meme Generator Edge Function loaded")
@@ -13,19 +13,29 @@ interface MemeGeneratorRequest {
 }
 
 serve(async (req) => {
+  const headers = getCorsHeaders(req.headers.get('origin'))
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers })
   }
 
   try {
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: authError || 'Authentication required' }),
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { topText, bottomText, referenceImageUrl, additionalStyle, provider }: MemeGeneratorRequest = await req.json()
 
     // Validate and sanitize inputs
     if (!topText && !bottomText) {
       return new Response(
         JSON.stringify({ error: 'At least one of topText or bottomText is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -36,7 +46,7 @@ serve(async (req) => {
     if (!referenceImageUrl || !isValidUrl(referenceImageUrl)) {
       return new Response(
         JSON.stringify({ error: 'Valid reference image URL is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -44,7 +54,7 @@ serve(async (req) => {
     if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
         JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -58,20 +68,20 @@ serve(async (req) => {
       console.error('Meme generation failed:', error)
       return new Response(
         JSON.stringify({ error: 'Meme generation failed. Please try again.' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
     return new Response(
       JSON.stringify({ imageUrl }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('Meme Generator Error:', error)
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
     )
   }
 })

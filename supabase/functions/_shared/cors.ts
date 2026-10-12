@@ -3,7 +3,7 @@ const allowedOrigins = Deno.env.get('ALLOWED_ORIGINS')?.split(',') || ['http://l
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': allowedOrigins[0],
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, x-user-api-key, x-request-id, x-debug-mode',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 

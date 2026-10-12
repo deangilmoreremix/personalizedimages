@@ -1,12 +1,6 @@
 import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR } from "../_shared/cors.ts"
 import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
-
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin');
   const headers = getCorsHeaders(origin);
@@ -75,7 +69,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     return new Response(
       JSON.stringify({ error: 'Failed to generate variations' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
 });

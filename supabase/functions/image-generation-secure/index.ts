@@ -1,5 +1,5 @@
 import { createEdgeFunction, createSecureResponse, SecurityError } from '../_shared/middleware.ts';
-import { validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR } from '../_shared/cors.ts';
+import { validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, getCorsHeaders } from '../_shared/cors.ts';
 
 interface ImageGenerationRequest {
   prompt: string;
@@ -28,9 +28,13 @@ async function generateImage(prompt: string, apiKey: string, size: string, quali
 
   if (!response.ok) {
     const error = await response.json();
+    // Map provider statuses to client-safe codes: upstream auth failures must
+    // not surface as 401/403 (which implies the caller's own session is bad),
+    // and provider rate limits must not surface as 429 for our own limits.
+    const clientStatus = response.status === 429 ? 429 : 502;
     throw new SecurityError(
       `Image generation failed: ${error.error?.message || 'Unknown error'}`,
-      response.status,
+      clientStatus,
       'GENERATION_ERROR'
     );
   }
@@ -49,7 +53,7 @@ export default createEdgeFunction(
 
     const userApiKey = getUserApiKey(req, 'openai');
     if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
-      return createSecureResponse({ error: OPENAI_KEY_MISSING_ERROR }, 400);
+      return createSecureResponse({ error: OPENAI_KEY_MISSING_ERROR }, 400, getCorsHeaders(req.headers.get('origin')));
     }
 
     const imageUrl = await generateImage(prompt, userApiKey, size, quality, style);

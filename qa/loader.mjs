@@ -22,5 +22,14 @@ export async function resolve(specifier, context, nextResolve) {
         shortCircuit: true,
       };
     }
+    // Some functions (e.g. meme-generator) import serve() from a deno.land URL
+    // instead of using the global Deno.serve; the runtime is stubbed, so the
+    // module body is never executed.
+    if (specifier.startsWith('https://')) {
+      return {
+        url: new URL('./stubs/serve.mjs', import.meta.url).href,
+        shortCircuit: true,
+      };
+    }
     return nextResolve(specifier, context);
 }

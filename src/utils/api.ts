@@ -915,6 +915,10 @@ async function generateImageWithReferenceGptImage(prompt: string, referenceImage
 /**
  * Generate Ghibli-style imagery
  */
+function isHttpUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
 export async function generateGhibliStyleImage(prompt: string, provider: string = 'gemini', referenceImageUrl?: string): Promise<string> {
   try {
     console.log(`🌟 Generating Ghibli-style image with ${provider}`);
@@ -927,7 +931,7 @@ export async function generateGhibliStyleImage(prompt: string, provider: string 
         const result = await callEdgeFunction('ghibli-image', {
           prompt: enhancedPrompt,
           provider,
-          referenceImageUrl
+          referenceImageUrl: referenceImageUrl && isHttpUrl(referenceImageUrl) ? referenceImageUrl : undefined
         });
         
         if (result && result.imageUrl) {
@@ -962,6 +966,22 @@ export async function generateGhibliStyleImage(prompt: string, provider: string 
           return generateImageWithGemini(enhancedPrompt);
         }
       } else {
+        if (referenceImageUrl && isHttpUrl(referenceImageUrl) && isSupabaseConfigured()) {
+          try {
+            const referenceResult = await callEdgeFunction('ghibli-image', {
+              prompt: enhancedPrompt,
+              provider: 'openai',
+              referenceImageUrl
+            });
+
+            if (referenceResult && referenceResult.imageUrl) {
+              return referenceResult.imageUrl;
+            }
+          } catch (edgeError) {
+            console.warn('Edge function failed for Ghibli reference-based generation:', edgeError);
+          }
+        }
+
         return generateImageWithDalle(enhancedPrompt);
       }
     }
@@ -985,14 +1005,13 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
     const enhancedPrompt = quickEnhance(`${prompt} in ${style} style`, 'cartoon');
     
     // Try edge function first
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && (provider === 'openai' || provider === 'gemini')) {
       try {
-        const result = await callEdgeFunction('reference-image', {
-          imageType: 'cartoonStyle',
-          basePrompt: enhancedPrompt,
+        const result = await callEdgeFunction('cartoon-style', {
+          prompt: enhancedPrompt,
           provider,
-          referenceImageUrl,
-          style
+          style,
+          referenceImageUrl
         });
         
         if (result && result.imageUrl) {
@@ -1044,34 +1063,31 @@ export async function generateMemeWithReference(topText: string, bottomText: str
   try {
     console.log('🎭 Generating meme with reference');
     
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('meme-generator', {
-          topText,
-          bottomText,
-          referenceImageUrl,
-          additionalStyle,
-          provider: 'gpt-image-1' // Use GPT-4 Vision for enhanced meme generation
-        });
-        
-        if (result && result.imageUrl) {
-          return result.imageUrl;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for meme generation:', edgeError);
-        // Continue to direct API fallback
-      }
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not properly configured for meme generation');
     }
     
-    // If edge function fails, provide a fallback implementation 
-    // This is a simple implementation that returns the reference image with text overlay
-    console.warn('Meme generation via edge function failed, returning reference image as fallback');
-    return referenceImageUrl;
+    try {
+      const result = await callEdgeFunction('meme-generator', {
+        topText,
+        bottomText,
+        referenceImageUrl,
+        additionalStyle,
+        provider: 'gpt-image-1'
+      });
+      
+      if (result && result.imageUrl) {
+        return result.imageUrl;
+      }
+    } catch (edgeError) {
+      console.warn('Edge function failed for meme generation:', edgeError);
+      throw new Error('Failed to generate the AI meme. Please try again.');
+    }
+    
+    throw new Error('Failed to generate the AI meme. Please try again.');
   } catch (error) {
     console.error('Error generating meme:', error);
-    // Return the original reference image as a fallback
-    return referenceImageUrl;
+    throw error;
   }
 }
 

@@ -10,26 +10,26 @@ export async function convertImageToVideo(
 ): Promise<VideoConversionResult> {
   try {
     console.log('🎬 Converting image to video', { imageUrl, options });
-    
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-to-video', {
-          imageUrl,
-          options
-        });
-        
-        if (result && result.id) {
-          return result;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for image-to-video conversion:', edgeError);
-        throw new Error('Failed to convert image to video: Edge function error');
-      }
-    } else {
+
+    if (!isSupabaseConfigured()) {
       throw new Error('Supabase not properly configured for video conversion');
     }
-    
+
+    try {
+      const result = await callEdgeFunction('image-to-video', {
+        imageUrl,
+        duration: options.duration,
+        prompt: (options as VideoConversionOptions & { prompt?: string }).prompt
+      });
+
+      if (result && result.id) {
+        return result;
+      }
+    } catch (edgeError) {
+      console.warn('Edge function failed for image-to-video conversion:', edgeError);
+      throw new Error('Failed to convert image to video: Edge function error');
+    }
+
     throw new Error('Video conversion failed');
   } catch (error) {
     console.error('Error converting image to video:', error);
@@ -108,24 +108,24 @@ export async function createPaymentIntent(videoId: string): Promise<{ clientSecr
   try {
     console.log('💰 Creating payment intent for video', { videoId });
     
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('create-payment-intent', {
-          videoId,
-          amount: 100, // $1.00 in cents
-          currency: 'usd'
-        });
-        
-        if (result && result.clientSecret) {
-          return result;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for payment intent creation:', edgeError);
-        throw new Error('Failed to create payment intent: Edge function error');
-      }
-    } else {
+    if (!isSupabaseConfigured()) {
       throw new Error('Supabase not properly configured for payment processing');
+    }
+    
+    try {
+      const result = await callEdgeFunction('create-payment-intent', {
+        amount: 1,
+        currency: 'usd',
+        description: 'VideoRemix video download',
+        metadata: { videoId }
+      });
+      
+      if (result && result.clientSecret) {
+        return result;
+      }
+    } catch (edgeError) {
+      console.warn('Edge function failed for payment intent creation:', edgeError);
+      throw new Error('Failed to create payment intent: Edge function error');
     }
     
     throw new Error('Payment intent creation failed');

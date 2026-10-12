@@ -12,7 +12,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { CreditManager, CreditTransaction } from '../../lib/credits';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../auth/AuthContext';
 import { CreditDisplay } from './CreditDisplay';
 import { CreditPurchaseModal } from './CreditPurchaseModal';
 

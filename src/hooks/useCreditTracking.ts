@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { CreditManager } from '../../lib/credits';
-import { useAuth } from './useAuth';
+import { useAuth } from '../auth/AuthContext';
 
 interface UseCreditTrackingOptions {
   onInsufficientCredits?: () => void;

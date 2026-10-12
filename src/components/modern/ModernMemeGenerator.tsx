@@ -13,6 +13,9 @@ import { FontSelector } from '../ui/FontSelector';
 import { TokenDragItem } from '../../types/DragTypes';
 import { generateMemeWithReference } from '../../utils/api';
 import { getAllTemplates } from '../../data/memeTemplates';
+import PersonalizationToggle from '../PersonalizationToggle';
+import UniversalPersonalizationPanel from '../UniversalPersonalizationPanel';
+import { usePersonalizationPreferences } from '../../hooks/usePersonalizationPreferences';
 
 interface ModernMemeGeneratorProps {
   tokens: Record<string, string>;
@@ -40,6 +43,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
   const [showTextColorPicker, setShowTextColorPicker] = useState(false);
   const [showStrokeColorPicker, setShowStrokeColorPicker] = useState(false);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const { shouldShowPanel } = usePersonalizationPreferences('meme');
 
   const templates = getAllTemplates();
 
@@ -231,6 +235,23 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 resize-none text-sm"
           rows={2}
         />
+      </LeftPanelSection>
+
+      <LeftPanelSection title="Personalization">
+        <div className="space-y-3">
+          <PersonalizationToggle generatorType="meme" size="sm" />
+          {shouldShowPanel && (
+            <UniversalPersonalizationPanel
+              initialContent={`${topText}\n${bottomText}`}
+              initialContentType="prompt-ai"
+              onContentGenerated={(content) => {
+                const lines = content.split('\n');
+                setTopText(lines[0] || '');
+                setBottomText(lines[1] || '');
+              }}
+            />
+          )}
+        </div>
       </LeftPanelSection>
 
       <LeftPanelSection title="Text Styling" collapsible={true} defaultExpanded={false}>

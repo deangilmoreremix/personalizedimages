@@ -6,8 +6,10 @@
  * personalization_tokens table for authenticated users.
  *
  * Priority order for API key resolution:
- * 1. User-provided keys (via this module)
- * 2. Environment variables (VITE_*)
+ * 1. User-provided keys (via this module, from the user's own settings)
+ *
+ * Shared platform credentials are intentionally NOT read from the browser:
+ * platform-funded requests go through authenticated Supabase Edge Functions.
  */
 
 export type ApiKeyProvider = 

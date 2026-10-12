@@ -11,6 +11,9 @@ import DroppableTextArea from '../DroppableTextArea';
 import { TokenDragItem } from '../../types/DragTypes';
 import { generateImageWithGemini } from '../../utils/api';
 import { ghibliStyles } from '../../data/ghibliStyles';
+import PersonalizationToggle from '../PersonalizationToggle';
+import UniversalPersonalizationPanel from '../UniversalPersonalizationPanel';
+import { usePersonalizationPreferences } from '../../hooks/usePersonalizationPreferences';
 
 interface ModernGhibliImageGeneratorProps {
   tokens: Record<string, string>;
@@ -27,6 +30,7 @@ const ModernGhibliImageGenerator: React.FC<ModernGhibliImageGeneratorProps> = ({
   const [intensity, setIntensity] = useState(80);
   const [mode, setMode] = useState<'character' | 'scene'>('scene');
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const { shouldShowPanel } = usePersonalizationPreferences('ghibli');
 
   const handleDrop = (item: TokenDragItem, caretPosition: number) => {
     const tokenText = `[${item.tokenKey}]`;
@@ -156,6 +160,19 @@ const ModernGhibliImageGenerator: React.FC<ModernGhibliImageGeneratorProps> = ({
           placeholder="Describe your scene or character..."
           className="w-full min-h-[120px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 resize-none text-sm"
         />
+      </LeftPanelSection>
+
+      <LeftPanelSection title="Personalization">
+        <div className="space-y-3">
+          <PersonalizationToggle generatorType="ghibli" size="sm" />
+          {shouldShowPanel && (
+            <UniversalPersonalizationPanel
+              initialContent={prompt}
+              initialContentType="prompt-ai"
+              onContentGenerated={(content) => setPrompt(content)}
+            />
+          )}
+        </div>
       </LeftPanelSection>
 
       <LeftPanelSection title="Style Intensity">

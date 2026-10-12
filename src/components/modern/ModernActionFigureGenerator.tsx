@@ -14,6 +14,9 @@ import ReferenceImageUploader from '../ReferenceImageUploader';
 import { TokenDragItem } from '../../types/DragTypes';
 import { generateActionFigure } from '../../utils/api';
 import templatesService, { ActionFigureTemplate } from '../../services/templatesService';
+import PersonalizationToggle from '../PersonalizationToggle';
+import UniversalPersonalizationPanel from '../UniversalPersonalizationPanel';
+import { usePersonalizationPreferences } from '../../hooks/usePersonalizationPreferences';
 
 interface ModernActionFigureGeneratorProps {
   tokens: Record<string, string>;
@@ -43,6 +46,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
   const [poseStyle, setPoseStyle] = useState('action');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [generationHistory, setGenerationHistory] = useState<string[]>([]);
+  const { shouldShowPanel } = usePersonalizationPreferences('action-figure');
 
   const providerOptions = [
     { value: 'openai', label: 'DALL-E 3', speed: 'Medium', quality: 'Excellent' },
@@ -267,6 +271,19 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
             <Dices className="w-3 h-3" />
             Randomize
           </button>
+        </div>
+      </LeftPanelSection>
+
+      <LeftPanelSection title="Personalization">
+        <div className="space-y-3">
+          <PersonalizationToggle generatorType="action-figure" size="sm" />
+          {shouldShowPanel && (
+            <UniversalPersonalizationPanel
+              initialContent={prompt}
+              initialContentType="prompt-ai"
+              onContentGenerated={(content) => setPrompt(content)}
+            />
+          )}
         </div>
       </LeftPanelSection>
 

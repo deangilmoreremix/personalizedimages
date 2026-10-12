@@ -568,3 +568,155 @@ database with other VideoRemix applications:
 The only failures observed are in Vitest component tests due to test environment setup (window.matchMedia) and a minor validation test mismatch - these do not impact production functionality or the core requirements being audited.
 
 The codebase is ready for staging deployment with proper environment configuration.
+
+---
+
+## FINAL VERIFICATION (2026-10-11, commit 8ca5d7f)
+
+Independent final security verification pass (read-only static audit + reproducible build/test
+evidence). No code, tests, or other docs were modified; this section is the only change.
+Commands below were run from the repo root at commit `8ca5d7f`
+(`git rev-parse --short HEAD` -> `8ca5d7f`, branch `fix/openai-responses-image-2-5`).
+
+### 1. Secret exposure scan (frontend + bundle)
+
+| Check | Command | Result | Evidence |
+|---|---|---|---|
+| API-key env vars in frontend | `grep -rn "VITE_OPENAI_API_KEY\|VITE_GEMINI_API_KEY\|VITE_FREEPIK_API_KEY\|VITE_GEMINI_NANO_API_KEY\|VITE_LEONARDO_API_KEY\|VITE_GIPHY_API_KEY" src/` | **0 hits** | none |
+| service-role material in frontend | `grep -rn "SUPABASE_SERVICE_ROLE_KEY\|service_role" src/` | **2 hits, both a rejection guard — no usage** | `src/config/env.ts:116` and `src/config/env.ts:117` — if `VITE_SUPABASE_ANON_KEY` contains `service_role` or starts with the service-role JWT header, validation pushes an error ("Use the anon/public key for frontend"). It *rejects* misuse; it never sends a service key. |
+| Freepik/Magnific endpoints | `grep -rn "api.freepik.com\|api.magnific.com\|x-freepik-api-key\|x-magnific-api-key" src/ supabase/` | **0 hits** | none |
+
+Production bundle scan — `npm run build` succeeded (`✓ built in 21.30s`, vite 7.2.4), then
+`grep -rEo` over fresh `dist/`:
+
+| Pattern in `dist/` | Occurrences | Files | Classification |
+|---|---|---|---|
+| `sk-[A-Za-z0-9]{20,}` | **0** | 0 | no OpenAI-style key in bundle |
+| `AIza[A-Za-z0-9_-]{30,}` | **0** | 0 | no Google-style key in bundle |
+| `VITE_OPENAI` | **2** | 1 (`dist/assets/generators-BW-Cf7SL.js`) | **not a secret** — both occurrences are the literal env-var *name* string `VITE_OPENAI_ASSISTANT_ID` inside the `Wa()` env-lookup helper (`VITE_OPENAI_ASSISTANT_ID:Wa("VITE_OPENAI_ASSISTANT_ID")`). An assistant ID, not an API key; undefined unless the operator sets it. |
+| `VITE_GEMINI_API` | 0 | 0 | — |
+| `VITE_FREEPIK` | 0 | 0 | — |
+| `SERVICE_ROLE` | 0 | 0 | — |
+
+Note: `sk-` / `AIza` substrings do appear in `src/` only inside `startsWith()`/`validateApiKey()`
+format validation (`supabase/functions/_shared/cors.ts:30`, `cors.ts:32`) — classification code,
+not credentials.
+
+### 2. Server-side secret usage (all reads fail closed or default safely)
+
+Every `Deno.env.get` read of the audited secrets (single- and double-quoted forms both scanned):
+
+| Secret | Reads (file:line) | Missing-secret behavior |
+|---|---|---|
+| `OPENAI_API_KEY` | `action-figure/index.ts:61`, `cartoon-style/index.ts:62`, `ghibli-image/index.ts:71`, `image-description/index.ts:43`, `image-enhancement/index.ts:61`, `image-generation/index.ts:190`, `image-generation-secure/index.ts:13`, `image-variations/index.ts:54`, `meme-generator/index.ts:44`, `prompt-recommendations/index.ts:51`, `reference-image/index.ts:62`, `health-check/index.ts:36`, `assistant-stream/index.ts:46`, `freepik-ai-image/index.ts:92`, `freepik-improve-prompt/index.ts:59`, `freepik-relight/index.ts:74`, `freepik-remove-bg/index.ts:49`, `freepik-style-transfer/index.ts:76`, `freepik-upscale/index.ts:193`, `image-editing/index.ts:18` | **500/503 fail-closed**: 500 guards at `action-figure:64-69`, `cartoon-style:65-71`, `ghibli-image:74-79`, `image-enhancement:64-70`, `image-variations:56-61`, `meme-generator:47-53`, `prompt-recommendations:57-63`, `reference-image:65-71`, `assistant-stream:57-61`, `image-generation-secure:15-17` (throws `SecurityError(500)`); **503** at `image-generation:200-204`, `freepik-ai-image:93-95`, `freepik-improve-prompt:60-62`, `freepik-relight:75-77`, `freepik-remove-bg:50-52`, `freepik-style-transfer:77-79`, `freepik-upscale:194-196`, `image-editing:19`; `health-check:36-37` reports `unhealthy` -> **503**. One benign outlier: `image-description:43-95` degrades to a deterministic template string — no external call, no leak. |
+| `GEMINI_API_KEY` | `action-figure/index.ts:62`, `cartoon-style/index.ts:63`, `ghibli-image/index.ts:72`, `image-description/index.ts:44`, `image-enhancement/index.ts:62`, `image-generation/index.ts:191`, `image-variations/index.ts:53`, `meme-generator/index.ts:45`, `prompt-recommendations/index.ts:52`, `reference-image/index.ts:63`, `assistant-stream/index.ts:45`, `health-check/index.ts:37` | Same combined guards as above (all require a *valid* key for at least one provider, else 500/503). |
+| `MUAPI_API_KEY` | `image-to-video/index.ts:133`, `video-status/index.ts:8`, `video-result/index.ts:8` | **503 fail-closed** at `image-to-video:134-152` (also PATCHes the video row to `failed` with `error_message`). In `video-status`/`video-result` the poll helper returns `null` (`video-status:9`, `video-result:9`), so provider polling is skipped and the DB row's own status is returned — graceful degradation; the *creator* path is the fail-closed gate. |
+| `OPENAI_IMAGE_MODEL` | `image-generation-secure/index.ts:26`, `image-generation/index.ts:206`, `_shared/imageProviders.ts:6`, `freepik-relight/index.ts:4`, `freepik-remove-bg/index.ts:4`, `freepik-style-transfer/index.ts:4`, `image-editing/index.ts:3` | All `\|\| "gpt-image-2.5-sunburst"` — safe default, never unset. |
+| `OPENAI_RESPONSES_MODEL` | `image-description/index.ts:61`, `prompt-recommendations/index.ts:83`, `assistant-stream/index.ts:152`, `freepik-improve-prompt/index.ts:4` | All `\|\| "gpt-5-mini"` — safe default. |
+| `MUAPI_VIDEO_MODEL` | `image-to-video/index.ts:74` | `\|\| DEFAULT_MUAPI_MODEL` — safe default. |
+
+### 3. Auth / RLS static review
+
+**`authenticateUser` (`supabase/functions/_shared/cors.ts:217-248`)** returns `{user: null, error}`
+when the header is missing/non-Bearer (`:219-221`), on a non-OK `/auth/v1/user` response (`:239-241`),
+and on fetch throw (`:245-247`). **22 edge functions call it**: action-figure, assistant-stream,
+cartoon-style, create-payment-intent, freepik-ai-image, freepik-improve-prompt, freepik-relight,
+freepik-remove-bg, freepik-resources, freepik-style-transfer, freepik-upscale, ghibli-image,
+image-description, image-editing, image-enhancement, image-generation, image-to-video,
+image-variations, prompt-recommendations, reference-image, video-result, video-status. **All 22
+return 401** on missing/invalid token: 15 via literal `status: 401` and 7 via helpers
+(`jsonRes(..., 401)` / `jsonResponse(..., 401, headers)` / `json(..., 401, headers)`) —
+freepik-ai-image:84, freepik-remove-bg:41, freepik-relight:66, freepik-improve-prompt:51,
+freepik-style-transfer:68, freepik-upscale:185, image-editing:14. Rate-limit paths return 429.
+
+**RLS in migrations (static — see live-verification note):**
+
+| Table | RLS enabled (file:line) | User-scoped SELECT policy |
+|---|---|---|
+| `user_credits` | `20260112235852_create_credit_system.sql:89` | Yes — `:96-98` `USING (auth.uid() = user_id)` |
+| `credit_transactions` | `20260112235852_create_credit_system.sql:90` | Yes — `:110-112` `USING (auth.uid() = user_id)` |
+| `rate_limits` | `20260222134334_create_rate_limits_table.sql:42` | N/A by design — RLS on with **no** user policies (deny-all for anon/authenticated); service-role-only policy added at `20261011120500:102-106`. Accessed only via service key in `cors.ts`. |
+| `generated_videos` | `20260112235810_create_core_schema.sql:155` | Yes — `:286-288` `USING (auth.uid() = user_id)` |
+| `generated_images` | `20260112235810_create_core_schema.sql:150` | Yes — `:194-196` `USING (auth.uid() = user_id OR user_id IS NULL)` (the `IS NULL` branch deliberately exposes anonymous staging rows) |
+| `user_api_keys` | **Table not present in any migration** | `grep` for `user_api_keys` across `supabase/migrations`, `src/`, and docs: **0 references** — the table does not exist in this codebase; nothing to verify. |
+| `usage_logs` | `20260112235852_create_credit_system.sql:91` | Yes — `:119-121` `USING (auth.uid() = user_id)` |
+
+**Live RLS verification was NOT performed and is not possible in this environment:** there are no
+Supabase CLI credentials, access token, or DB password here, so policy enforcement could not be
+exercised against a live database. All RLS statements above are verified as *present in migration
+files* only.
+
+### 4. Cross-user isolation (static)
+
+- `video-status` DB read filters `user_id=eq.${user.id}` (`video-status/index.ts:68`).
+- `video-result` DB read filters `user_id=eq.${user.id}` (`video-result/index.ts:68`).
+- `image-to-video` insert path scopes the row to the authenticated caller (`image-to-video/index.ts:105` `user_id: user.id`).
+- Storage writes from `src/services/`: the only client-side storage write is
+  `landingPageContentService.ts:80-83` into the intentionally-public `landing-page-images` bucket
+  (created public at `20261011120500:238-240`) with `uploaded_by: user.id` recorded
+  (`:128`, `:146`) — no private user data lands in client-side storage paths; user-generated media
+  URLs are produced server-side by edge functions and gated by the user-scoped RLS above.
+- Additionally, all credit RPCs validate the caller (see §6).
+
+### 5. Migration safety re-confirmation — `supabase/migrations/20261011120500_fix_edge_function_db_contracts.sql`
+
+Re-read in full at `8ca5d7f`; all five required properties confirmed present:
+
+- **No DELETE/TRUNCATE statements** — only comment prose mentions "delete" (`:47`, `:69`); zero DML.
+- **No unique index on `rate_limits`** — comments at `:49-57` and `:69-75` explicitly document that
+  the `(identifier, is_authenticated)` unique index was *removed* for shared-DB safety; the only
+  index added in the file is `idx_generated_videos_user_created` on `generated_videos` (`:231-232`).
+- **`SET lock_timeout`** — `:64` `SET lock_timeout = '2s';`.
+- **`NOT VALID` + `VALIDATE CONSTRAINT` on the `credit_transactions` CHECK** — `:204-209` and
+  `:211-216` add `credit_transactions_type_check` with `NOT VALID` then `VALIDATE CONSTRAINT`.
+- **REVOKE from PUBLIC/authenticated + GRANT to service_role only** for
+  `check_and_deduct_credit_service` — `:165` `REVOKE ALL ... FROM PUBLIC`, `:166`
+  `REVOKE ALL ... FROM authenticated`, `:167` `GRANT EXECUTE ... TO service_role`.
+
+### 6. Auth/caller contract for credit functions
+
+- `check_and_deduct_credit_service(...)` is `SECURITY DEFINER` with `REVOKE ALL FROM PUBLIC` and
+  `FROM authenticated`, `GRANT EXECUTE TO service_role` only
+  (`20261011120500:114-167`) — **reachable only server-side** via `SUPABASE_SERVICE_ROLE_KEY`,
+  and `cors.ts:189-197` calls it only after `authenticateUser()` succeeds (documented at
+  `cors.ts:184-188`).
+- The frontend-facing `check_and_deduct_credit` / `deduct_credit` validate
+  `auth.uid() = p_user_id` and deny otherwise (`20260223214134:29-31` raises Unauthorized;
+  `:63-65` returns `unauthorized`), closing the cross-user credit-theft path for anon/user JWTs.
+
+### 7. Verification runs (reproducible)
+
+| Command | Result |
+|---|---|
+| `npm run build` | **PASS** — `✓ built in 21.30s` |
+| `node --experimental-strip-types --import ./qa/loader.mjs qa/edge-functions.test.mjs` | **PASS — 50 passed, 0 failed** |
+| `node --experimental-strip-types --import ./qa/loader.mjs qa/openai-functions.test.mjs` | **PASS — 10 passed, 0 failed** |
+| `node --experimental-strip-types --import ./qa/loader.mjs qa/video-functions.test.mjs` | **PASS — 22 passed, 0 failed** |
+| `node --experimental-strip-types --import ./qa/loader.mjs qa/rate-limit.test.mjs` | **PASS — 13 passed, 0 failed** |
+| `node --experimental-strip-types --import ./qa/loader.mjs qa/contracts-frontend.test.mjs` | **PASS — 10 passed, 0 failed** |
+| `node --experimental-strip-types --import ./qa/loader.mjs qa/edge-extra.test.mjs` | **PASS — 15 passed, 0 failed** |
+| `npx vitest run` | **PASS — 12 files, 120/120 tests** |
+
+Node QA totals: 50 + 10 + 22 + 13 + 10 + 15 = **120 passed, 0 failed** — matches the expected
+suite sizes exactly.
+
+### 8. Final security verdict
+
+**No shared credentials in the browser; server-side secrets fail closed; RLS is present in
+migrations but NOT live-verified (no DB access in this environment).** Zero API-key env vars or
+key material in `src/` or the production `dist/` bundle (the only `VITE_OPENAI` strings are an
+assistant-ID env *name*); the sole `service_role` mentions in frontend code are a rejection guard.
+All audited server-side secrets fail closed (500/503) or fall back to safe model defaults; all 22
+auth-calling edge functions return 401 without a valid token; DB reads in video-status/video-result
+filter by `user_id`; the credit service RPC is service-role-only and the user-facing RPCs validate
+`auth.uid()`; migration `20261011120500` retains all five required safety properties. Live RLS
+enforcement and migration application could not be executed here (no database credentials) and
+remain the only outstanding, explicitly-noted gap before production.
+
+**Working-tree note:** at commit `8ca5d7f` this worktree is shared with concurrent peer workers;
+uncommitted changes by others exist in `src/components/CreditDashboard.tsx`,
+`src/components/ESPManagerPanel.tsx`, `src/hooks/useCreditTracking.ts`, and new
+`src/components/ui/*.tsx` files. This audit made no changes to any of those files (the only
+modification by this audit is this section). All scans, the bundle rebuild, and the build/test runs
+above were executed against the current working tree **including** those peer changes, and the
+secret-scan results remain 0-hit against them.

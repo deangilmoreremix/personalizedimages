@@ -11,6 +11,9 @@ import DroppableTextArea from '../DroppableTextArea';
 import { TokenDragItem } from '../../types/DragTypes';
 import { generateImageWithGemini } from '../../utils/api';
 import { cartoonThemes } from '../../data/cartoonThemes';
+import PersonalizationToggle from '../PersonalizationToggle';
+import UniversalPersonalizationPanel from '../UniversalPersonalizationPanel';
+import { usePersonalizationPreferences } from '../../hooks/usePersonalizationPreferences';
 
 interface ModernCartoonImageGeneratorProps {
   tokens: Record<string, string>;
@@ -26,6 +29,7 @@ const ModernCartoonImageGenerator: React.FC<ModernCartoonImageGeneratorProps> = 
   const [selectedTheme, setSelectedTheme] = useState(cartoonThemes[0]);
   const [colorfulness, setColorfulness] = useState(80);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const { shouldShowPanel } = usePersonalizationPreferences('cartoon');
 
   const handleDrop = (item: TokenDragItem, caretPosition: number) => {
     const tokenText = `[${item.tokenKey}]`;
@@ -123,6 +127,19 @@ const ModernCartoonImageGenerator: React.FC<ModernCartoonImageGeneratorProps> = 
           placeholder="Describe your cartoon character or scene..."
           className="w-full min-h-[120px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 resize-none text-sm"
         />
+      </LeftPanelSection>
+
+      <LeftPanelSection title="Personalization">
+        <div className="space-y-3">
+          <PersonalizationToggle generatorType="cartoon" size="sm" />
+          {shouldShowPanel && (
+            <UniversalPersonalizationPanel
+              initialContent={prompt}
+              initialContentType="prompt-ai"
+              onContentGenerated={(content) => setPrompt(content)}
+            />
+          )}
+        </div>
       </LeftPanelSection>
 
       <LeftPanelSection title="Colorfulness">

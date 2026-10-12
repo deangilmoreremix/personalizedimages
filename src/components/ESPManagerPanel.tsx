@@ -18,19 +18,15 @@ import {
   Settings,
   CheckCircle,
   AlertCircle,
-  Plus,
   Edit,
   Trash2,
   Download,
-  Upload,
   Zap,
   Shield,
-  Database,
-  Webhook
+  Database
 } from 'lucide-react';
 
-import { espManager, ESP_DATABASE, ESPName } from '../utils/espManager';
-import { EMAIL_SERVICE_PROVIDERS } from '../utils/emailIntegration';
+import { espManager, ESPName } from '../utils/espManager';
 
 interface ESPManagerPanelProps {
   onESPConfigured?: (espName: string, config: any) => void;

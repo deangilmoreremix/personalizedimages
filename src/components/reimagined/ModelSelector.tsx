@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Check, Zap, Camera, Cpu, Sparkles, Eye } from 'lucide-react';
 
 interface ModelSelectorProps {
@@ -75,6 +76,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
   selectedModel,
   onModelChange
 }) => {
+  const navigate = useNavigate();
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
@@ -160,7 +162,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       </div>
 
       {/* Model Comparison Link */}
-      <button className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium text-center py-2">
+      <button
+        onClick={() => navigate('/model-comparison')}
+        className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium text-center py-2"
+      >
         Compare all models →
       </button>
     </div>

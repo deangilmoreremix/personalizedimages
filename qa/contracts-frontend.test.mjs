@@ -455,4 +455,97 @@ if (UNDER_VITEST) {
     }
     assert.deepEqual(offenders, [], `shared AI credentials must live only in the edge functions:\n${offenders.join('\n')}`);
   });
+
+  // ------------------------------------------------------------------ //
+  // BYOK-first credit gating                                            //
+  // ------------------------------------------------------------------ //
+
+  // Extract the body of a function declaration from a source file. Skips the
+  // parameter list (which may contain its own braces via object type
+  // annotations) and returns the balanced function body.
+  function extractFunction(source, signature) {
+    const start = source.indexOf(signature);
+    assert.ok(start !== -1, `signature not found: ${signature}`);
+    const parenIndex = source.indexOf('(', start + signature.length - 1);
+    assert.ok(parenIndex !== -1, `no parameter list for: ${signature}`);
+    // Skip the balanced parameter list.
+    let depth = 0;
+    let i = parenIndex;
+    for (; i < source.length; i += 1) {
+      if (source[i] === '(') depth += 1;
+      else if (source[i] === ')') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    const openIndex = source.indexOf('{', i);
+    assert.ok(openIndex !== -1, `no body for: ${signature}`);
+    return sliceBalanced(source, openIndex);
+  }
+
+  const BYOK_GUARD = "getUserProvidedApiKey(";
+
+  // A function is BYOK-first when the user-key guard appears before the first
+  // metered edge-function call and before any credit check.
+  function assertByokFirst(body, meteredCall, label) {
+    const guardAt = body.indexOf(BYOK_GUARD);
+    const edgeAt = body.indexOf(meteredCall);
+    assert.ok(guardAt !== -1, `${label}: must gate on the user's own key (${BYOK_GUARD})`);
+    assert.ok(edgeAt !== -1, `${label}: must still contain ${meteredCall}`);
+    assert.ok(
+      guardAt < edgeAt,
+      `${label}: the user-key guard must come BEFORE the metered edge call (guard@${guardAt}, edge@${edgeAt})`
+    );
+    return body;
+  }
+
+  test('generateImageWithDalle routes BYOK users before the metered edge call', () => {
+    const body = extractFunction(API, 'export async function generateImageWithDalle');
+    assertByokFirst(body, "callEdgeFunction('image-generation'", 'generateImageWithDalle');
+    assert.ok(
+      body.includes('generateImageWithUserKey'),
+      'generateImageWithDalle: the BYOK branch must call the direct user-key path'
+    );
+  });
+
+  test('generateImageWithGptImage routes BYOK users before the metered edge call', () => {
+    const body = extractFunction(API, 'export async function generateImageWithGptImage');
+    assertByokFirst(body, "callEdgeFunction('image-generation'", 'generateImageWithGptImage');
+  });
+
+  test('generateActionFigure routes BYOK users before the metered edge call', () => {
+    const body = extractFunction(API, 'export async function generateActionFigure');
+    assertByokFirst(body, "callEdgeFunction('action-figure'", 'generateActionFigure');
+  });
+
+  test('generateCartoonImage routes BYOK users before the metered edge call', () => {
+    const body = extractFunction(API, 'export async function generateCartoonImage');
+    assertByokFirst(body, "callEdgeFunction('cartoon-style'", 'generateCartoonImage');
+  });
+
+  test('imageGenerationService.generateImage gates credits only for platform-funded runs', () => {
+    const service = read('src/services/imageGenerationService.ts');
+    const body = extractFunction(service, 'export async function generateImage');
+    const guardAt = body.indexOf(BYOK_GUARD);
+    const creditAt = body.indexOf('checkCredits()');
+    const edgeAt = body.indexOf("callEdgeFunction('image-generation'");
+    assert.ok(guardAt !== -1, 'generateImage: must gate on the user\'s own key');
+    assert.ok(creditAt !== -1, 'generateImage: must still check credits for the platform path');
+    assert.ok(edgeAt !== -1, 'generateImage: must still call the edge function for the platform path');
+    assert.ok(
+      guardAt < creditAt && guardAt < edgeAt,
+      'generateImage: the user-key guard must precede the credit check and the metered edge call'
+    );
+  });
+
+  test('the BYOK path never calls a metered edge function or a credit RPC', () => {
+    const helper = extractFunction(API, 'async function generateImageWithUserKey');
+    assert.ok(!helper.includes('callEdgeFunction'), 'generateImageWithUserKey must not call any edge function');
+    assert.ok(!helper.includes('check_and_deduct'), 'generateImageWithUserKey must not deduct credits');
+    assert.ok(!helper.includes('checkCredits'), 'generateImageWithUserKey must not check credits');
+    assert.ok(
+      helper.includes('https://api.openai.com/v1/images/generations'),
+      'generateImageWithUserKey must call the OpenAI Images API directly with the user key'
+    );
+  });
 }

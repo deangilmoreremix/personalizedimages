@@ -1,4 +1,6 @@
 import { supabase, isSupabaseConfigured, callEdgeFunction } from '../utils/supabaseClient';
+import { getUserProvidedApiKey } from '../utils/apiUtils';
+import { generateImageWithGptImage } from '../utils/api';
 
 export interface GenerationOptions {
   size?: '1024x1024' | '1792x1024' | '1024x1792';
@@ -112,12 +114,24 @@ export async function generateImage(
     throw new GenerationError('Prompt must be at least 3 characters long.');
   }
 
+  const { size = '1024x1024', quality = 'standard', style, category = 'ai-image' } = options;
+
+  // BYOK-first: when the user has supplied their own OpenAI key, generate with
+  // it directly and never meter platform credits (the provider bills the user).
+  if (getUserProvidedApiKey('openai')) {
+    const imageUrl = await generateImageWithGptImage(prompt, { size, quality, style });
+    await saveGeneratedImage(prompt, imageUrl, 'openai', category);
+    return {
+      imageUrl,
+      provider: 'openai',
+    };
+  }
+
+  // Platform-funded path: gated and metered by the server-side edge function.
   const creditCheck = await checkCredits();
   if (creditCheck.balance >= 0 && !creditCheck.allowed) {
     throw new InsufficientCreditsError(creditCheck.balance);
   }
-
-  const { size = '1024x1024', quality = 'standard', style, category = 'ai-image' } = options;
 
   if (isSupabaseConfigured()) {
     try {

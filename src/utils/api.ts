@@ -88,9 +88,9 @@ export async function generateImageWithDalle(
   } = {}
 ): Promise<string> {
   try {
-    console.log('🖼️ Generating image with DALL-E 3 (Enhanced)');
+    console.log('🖼️ Generating image with GPT Image 2.5');
 
-    // Set defaults for DALL-E 3 features
+    // Set defaults for GPT Image 2.5 features
     const {
       size = '1024x1024',
       quality = 'standard',
@@ -98,7 +98,14 @@ export async function generateImageWithDalle(
       n = 1
     } = options;
 
-    // Try edge function first
+    // BYOK-first: when the user has supplied their own OpenAI key, generate
+    // with it directly. The provider bills the user, so platform credits are
+    // never consumed and the metered edge function is not called.
+    if (getUserProvidedApiKey('openai')) {
+      return generateImageWithUserKey(prompt, { size, quality, style, n });
+    }
+
+    // Platform-funded path: metered by the authenticated edge function.
     if (isSupabaseConfigured()) {
       try {
         const result = await callEdgeFunction('image-generation', {
@@ -114,36 +121,58 @@ export async function generateImageWithDalle(
           return result.imageUrl;
         }
       } catch (edgeError) {
-        console.warn('Edge function failed for DALL-E image generation:', edgeError);
-        // Continue to direct API fallback
+        console.warn('Edge function failed for image generation:', edgeError);
+        // Fall through to the unavailable error below
       }
     }
 
-    // Fall back to direct API call using the USER'S OWN key only (BYOK)
-    const apiKey = getUserProvidedApiKey('openai');
-    if (!apiKey) {
-      throw new Error('Image generation is unavailable. Please add your own OpenAI API key in settings (starts with sk-) or contact support.');
-    }
+    throw new Error('Image generation is unavailable. Please add your own OpenAI API key in settings (starts with sk-) or contact support.');
+  } catch (error) {
+    console.error('Error generating image with GPT Image 2.5:', error);
+    throw error;
+  }
+}
 
-    // Map legacy DALL-E 3 aspect sizes to GPT Image 2.5 supported sizes
-    const gptSize = size === '1792x1024' ? '1536x1024' : size === '1024x1792' ? '1024x1536' : size;
+/**
+ * Generate an image directly with the user's own OpenAI key (BYOK only).
+ * Never routes through the platform edge function and never meters credits.
+ */
+async function generateImageWithUserKey(
+  prompt: string,
+  options: {
+    size: '1024x1024' | '1792x1024' | '1024x1792';
+    quality: 'standard' | 'hd';
+    style?: 'natural' | 'vivid';
+    n: number;
+  }
+): Promise<string> {
+  const apiKey = getUserProvidedApiKey('openai');
+  if (!apiKey) {
+    throw new Error('Image generation is unavailable. Please add your own OpenAI API key in settings (starts with sk-) or contact support.');
+  }
 
-    // GPT Image 2.5 via the Images API (JSON). GPT image models always return base64.
-    const gptResponse = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-2.5-sunburst',
-        prompt: prompt,
-        n: n,
-        size: gptSize,
-        quality: quality === 'hd' ? 'high' : 'medium',
-        output_format: 'png'
-      }),
-    });
+  const { size, quality, n } = options;
+  const styleHint = options.style === 'vivid' ? ' vivid' : '';
+
+  // Map legacy aspect sizes to GPT Image 2.5 supported sizes
+  const gptSize = size === '1792x1024' ? '1536x1024' : size === '1024x1792' ? '1024x1536' : size;
+
+  // GPT Image 2.5 via the Images API (JSON). GPT image models always return base64.
+  const gptResponse = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-image-2.5-sunburst',
+      prompt: prompt + styleHint,
+      n: n,
+      size: gptSize,
+      quality: quality === 'hd' ? 'high' : 'medium',
+      output_format: 'png'
+    }),
+  });
 
     if (!gptResponse.ok) {
       let errorMessage = `${gptResponse.status} `;
@@ -164,10 +193,6 @@ export async function generateImageWithDalle(
       throw new Error('Image provider returned no image data');
     }
     return `data:image/png;base64,${b64}`;
-  } catch (error) {
-    console.error('Error generating image with GPT Image 2.5:', error);
-    throw error;
-  }
 }
 
 /**
@@ -361,28 +386,32 @@ export async function editImageWithDalle(
  */
 export async function generateImageWithGptImage(prompt: string): Promise<string> {
   try {
-    console.log('🖼️ Generating image with GPT-4 Vision (gpt-image-1)');
-    
-    // Try edge function first
+    console.log('🖼️ Generating image with GPT Image 2.5');
+
+    // BYOK-first: use the user's own key when supplied so the metered platform
+    // edge function is never called for user-funded generation.
+    if (getUserProvidedApiKey('openai')) {
+      return generateImageWithUserKey(prompt, { size: '1024x1024', quality: 'standard', n: 1 });
+    }
+
+    // Platform-funded path: metered by the authenticated edge function.
     if (isSupabaseConfigured()) {
       try {
         const result = await callEdgeFunction('image-generation', {
           provider: 'gpt-image-1',
           prompt
         });
-        
+
         if (result && result.imageUrl) {
           return result.imageUrl;
         }
       } catch (edgeError) {
-        console.warn('Edge function failed for GPT-4 Vision image generation:', edgeError);
-        // Continue to direct API fallback
+        console.warn('Edge function failed for image generation:', edgeError);
+        // Continue to the unavailable error below
       }
     }
-    
-    // Fall back to direct API call using the USER'S OWN key only (BYOK)
-    // Routes to the GPT Image 2.5 generation call above.
-    return await generateImageWithDalle(prompt);
+
+    throw new Error('Image generation is unavailable. Please add your own OpenAI API key in settings (starts with sk-) or contact support.');
   } catch (error) {
     console.error('Error generating image with GPT Image 2.5:', error);
     throw error;
@@ -396,7 +425,7 @@ export async function generateImageWithGptImage(prompt: string): Promise<string>
 export async function generateImageWithGemini(prompt: string, aspectRatio: string = '1:1', style: string = ''): Promise<string> {
   try {
     console.log('🖼️ Generating image with Gemini (fallback to OpenAI)');
-    console.warn('Note: Gemini does not support native image generation. Using OpenAI DALL-E as fallback.');
+    console.warn('Note: Gemini does not support native image generation. Using OpenAI GPT Image 2.5 as fallback.');
 
     // Enhance prompt with style if provided
     let enhancedPrompt = prompt;
@@ -444,7 +473,7 @@ export async function generateImageWithGemini(prompt: string, aspectRatio: strin
 export async function generateImageWithGemini2Flash(prompt: string): Promise<string> {
   try {
     console.log('🖼️ Generating image with Gemini 2.0 Flash (fallback to OpenAI)');
-    console.warn('Note: Gemini does not support native image generation. Using OpenAI DALL-E as fallback.');
+    console.warn('Note: Gemini does not support native image generation. Using OpenAI GPT Image 2.5 as fallback.');
 
     // Use the standard Gemini function which now properly falls back to OpenAI
     return await generateImageWithGemini(prompt, '1:1', '');
@@ -1003,8 +1032,24 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
     console.log(`🎨 Generating cartoon-style image with ${provider}`);
     
     const enhancedPrompt = quickEnhance(`${prompt} in ${style} style`, 'cartoon');
-    
-    // Try edge function first
+
+    // BYOK-first: when the user has supplied their own provider key, generate
+    // directly so the metered platform edge function is never called.
+    if (getUserProvidedApiKey(provider === 'gemini' || provider === 'gemini-nano' ? 'gemini' : 'openai')) {
+      if (provider === 'gpt-image-1') {
+        return referenceImageUrl
+          ? generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl)
+          : generateImageWithGptImage(enhancedPrompt);
+      }
+      if (provider === 'gemini') {
+        return referenceImageUrl
+          ? generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl)
+          : generateImageWithGemini(enhancedPrompt);
+      }
+      return generateImageWithDalle(enhancedPrompt);
+    }
+
+    // Platform-funded path: metered by the authenticated edge function.
     if (isSupabaseConfigured() && (provider === 'openai' || provider === 'gemini')) {
       try {
         const result = await callEdgeFunction('cartoon-style', {
@@ -1013,7 +1058,7 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
           style,
           referenceImageUrl
         });
-        
+
         if (result && result.imageUrl) {
           return result.imageUrl;
         }
@@ -1031,7 +1076,7 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
         return generateImageWithGptImage(enhancedPrompt);
       }
     } else if (provider === 'gemini' || provider === 'openai') {
-      console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'DALL-E'} API directly for cartoon-style image`);
+      console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API directly for cartoon-style image`);
       
       if (provider === 'gemini') {
         if (referenceImageUrl) {
@@ -1100,7 +1145,26 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
 
     const enhancedPrompt = quickEnhance(`Create an action figure: ${prompt}`, 'action-figure');
 
-    // Try edge function first
+    // BYOK-first: when the user has supplied their own provider key, generate
+    // directly so the metered platform edge function is never called.
+    if (getUserProvidedApiKey(provider === 'gemini' || provider === 'gemini-nano' ? 'gemini' : 'openai')) {
+      if (provider === 'gpt-image-1') {
+        return referenceImageUrl
+          ? generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl)
+          : generateImageWithGptImage(enhancedPrompt);
+      }
+      if (provider === 'gemini-nano') {
+        return generateImageWithGeminiNano(enhancedPrompt, { aspectRatio: '1:1', quality: 'standard' });
+      }
+      if (provider === 'gemini') {
+        return referenceImageUrl
+          ? generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl)
+          : generateImageWithGemini(enhancedPrompt);
+      }
+      return generateImageWithDalle(enhancedPrompt);
+    }
+
+    // Platform-funded path: metered by the authenticated edge function.
     if (isSupabaseConfigured()) {
       try {
         const result = await callEdgeFunction('action-figure', {
@@ -1132,7 +1196,7 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
         quality: 'standard'
       });
     } else if (provider === 'gemini' || provider === 'openai') {
-      console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'DALL-E'} API directly for action figure`);
+      console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API directly for action figure`);
 
       if (provider === 'gemini') {
         if (referenceImageUrl) {

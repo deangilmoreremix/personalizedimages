@@ -76,11 +76,11 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   ];
 
   const models = [
-    { id: 'openai', name: 'DALL-E 3', description: 'OpenAI\'s latest model' },
-    { id: 'gemini', name: 'Gemini', description: 'Google\'s AI model' },
-    { id: 'gemini2flash', name: 'Gemini 2 Flash', description: 'Fast generation' },
-    { id: 'imagen', name: 'Imagen 3', description: 'High quality images' },
-    { id: 'gpt-image-1', name: 'GPT Image', description: 'Advanced AI' }
+    { id: 'openai', name: 'GPT Image 2.5', description: 'OpenAI\'s image model' },
+    { id: 'gemini', name: 'GPT Image 2.5 Natural', description: 'Balanced output' },
+    { id: 'gemini2flash', name: 'GPT Image 2.5 Fast', description: 'Fast generation' },
+    { id: 'imagen', name: 'GPT Image 2.5 HD', description: 'High quality images' },
+    { id: 'gpt-image-1', name: 'GPT Image 2.5 Pro', description: 'Advanced AI' }
   ];
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {

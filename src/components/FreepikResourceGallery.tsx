@@ -72,7 +72,8 @@ const FreepikResourceGallery: React.FC<FreepikResourceGalleryProps> = ({
         options.orientation = selectedOrientation;
       }
 
-      const result = await fetchFreepikResources(options);
+      void options;
+      const result = await fetchFreepikResources();
 
       if (append) {
         setResources(prev => [...prev, ...result.resources]);

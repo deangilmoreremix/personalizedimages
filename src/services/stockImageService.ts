@@ -45,7 +45,6 @@ export interface StockSearchResult {
     per_page: number;
     total: number;
   };
-  creditsRemaining?: number;
 }
 
 export interface StockFavorite {
@@ -118,8 +117,7 @@ export const stockImageService = {
               ...r,
               previewUrl: r.thumbnailUrl
             })),
-            meta: result.meta,
-            creditsRemaining: result.creditsRemaining
+            meta: result.meta
           };
           setCacheResult(cacheKey, searchResult);
           return searchResult;

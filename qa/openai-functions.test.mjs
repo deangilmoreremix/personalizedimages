@@ -44,7 +44,7 @@ const servedHandlers = [];
 globalThis.Deno = {
   env: {
     get: (key) => (denoEnv.has(key) ? denoEnv.get(key) : undefined),
-    has: (key) => (denoEnv.has(key) ? denoEnv.get(key) : undefined),
+    has: (key) => denoEnv.has(key) ? undefined : undefined,
     toObject: () => Object.fromEntries(denoEnv),
   },
   serve(handler) {
@@ -73,6 +73,14 @@ const [
 
 const AUTH_HEADER = 'Bearer qa-test-token';
 const SUPABASE = 'https://qa-test-project.supabase.co';
+
+// The caller's own OpenAI key (100% BYOK) -- sent per request.
+const USER_API_KEY = 'sk-test-user-openai-key-1234567890';
+// Decoy platform credential: no function may read it, so it must never
+// appear in any provider request.
+const DECOY_ENV_KEY = 'sk-DECOY-ENV-OPENAI-KEY-0000000000';
+
+const OPENAI_KEY_MISSING_ERROR = 'OpenAI API key not configured. Add your key in Settings → API Keys.';
 
 let openaiCalls = [];
 let upstream = {
@@ -135,15 +143,19 @@ function resetEnv() {
     SUPABASE_URL: SUPABASE,
     SUPABASE_ANON_KEY: 'qa-anon-key',
     SUPABASE_SERVICE_ROLE_KEY: 'qa-service-role-key',
-    OPENAI_API_KEY: 'sk-qa-test-key',
+    // Decoy only: under BYOK nothing reads env provider keys.
+    OPENAI_API_KEY: DECOY_ENV_KEY,
     OPENAI_RESPONSES_MODEL: 'gpt-5-mini',
   };
   for (const [key, value] of Object.entries(env)) denoEnv.set(key, value);
 }
 
-const invoke = (handler, { body, auth = true, method = 'POST' } = {}) => {
+// `apiKey` is the per-request `x-user-api-key` header value. Pass null to
+// omit the header entirely, '' for a blank value.
+const invoke = (handler, { body, auth = true, method = 'POST', apiKey = USER_API_KEY } = {}) => {
   const headers = { 'content-type': 'application/json', origin: 'https://app.example.com' };
   if (auth) headers.Authorization = AUTH_HEADER;
+  if (apiKey !== null) headers['x-user-api-key'] = apiKey;
   return handler(
     new Request('https://edge.example.com/fn', {
       method,
@@ -154,6 +166,30 @@ const invoke = (handler, { body, auth = true, method = 'POST' } = {}) => {
 };
 
 const readJson = async (res) => ({ status: res.status, body: await res.json() });
+
+const assertNoDecoyLeak = () => {
+  for (const call of openaiCalls) {
+    const serialized = JSON.stringify({ url: call.url, init: call.init });
+    assert.ok(
+      !serialized.includes(DECOY_ENV_KEY),
+      `a provider request leaked the decoy env key: ${call.method} ${call.url}`
+    );
+    assert.equal(
+      call.init.headers.Authorization,
+      `Bearer ${USER_API_KEY}`,
+      `every OpenAI call must carry the requesting user's key, got: ${call.init.headers.Authorization}`
+    );
+  }
+};
+
+const HANDLERS_AND_BODIES = [
+  [aiImageHandler, { action: 'generate', prompt: 'a futuristic city' }],
+  [removeBgHandler, { action: 'remove', imageUrl: 'https://cdn.example.com/a.png' }],
+  [upscaleHandler, { action: 'upscale', imageUrl: 'https://cdn.example.com/a.png', scaleFactor: 2 }],
+  [relightHandler, { action: 'relight', imageUrl: 'https://cdn.example.com/a.png', lightDirection: 'left' }],
+  [styleTransferHandler, { action: 'transfer', imageUrl: 'https://cdn.example.com/a.png', styleImageUrl: 'https://cdn.example.com/style.png', styleName: 'watercolor' }],
+  [improvePromptHandler, { prompt: 'a cat' }],
+];
 
 test.beforeEach(() => {
   resetMocks();
@@ -171,9 +207,11 @@ test('freepik-ai-image: text-to-image returns synchronous resultUrls', async () 
   assert.ok(body.resultUrl.startsWith('data:image/png;base64,'));
   const calls = openaiCalls.filter((c) => c.url.includes('/images/generations'));
   assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.headers.Authorization, `Bearer ${USER_API_KEY}`);
   const payload = JSON.parse(calls[0].init.body);
   assert.equal(payload.model, 'gpt-image-2.5-sunburst');
   assert.equal(payload.prompt, 'a futuristic city');
+  assertNoDecoyLeak();
 });
 
 test('freepik-remove-bg: returns edited resultUrl', async () => {
@@ -185,8 +223,10 @@ test('freepik-remove-bg: returns edited resultUrl', async () => {
   assert.equal(body.resultUrl, 'data:image/png;base64,AAAA');
   const call = openaiCalls.find((c) => c.url.includes('/images/edits'));
   assert.ok(call, 'edits endpoint used');
+  assert.equal(call.init.headers.Authorization, `Bearer ${USER_API_KEY}`);
   const payload = JSON.parse(call.init.body);
   assert.deepEqual(payload.images, [{ image_url: 'https://cdn.example.com/photo.png' }]);
+  assertNoDecoyLeak();
 });
 
 test('freepik-upscale: returns higher-resolution resultUrl', async () => {
@@ -197,6 +237,7 @@ test('freepik-upscale: returns higher-resolution resultUrl', async () => {
   assert.equal(status, 200);
   assert.ok(body.resultUrl.startsWith('data:image/png;base64,'));
   assert.ok(openaiCalls.some((c) => c.url.includes('/images/edits')));
+  assertNoDecoyLeak();
 });
 
 test('freepik-relight: returns relit resultUrl', async () => {
@@ -209,6 +250,7 @@ test('freepik-relight: returns relit resultUrl', async () => {
   const call = openaiCalls.find((c) => c.url.includes('/images/edits'));
   const payload = JSON.parse(call.init.body);
   assert.match(payload.prompt, /left/i);
+  assertNoDecoyLeak();
 });
 
 test('freepik-style-transfer: sends both source and style images', async () => {
@@ -226,6 +268,7 @@ test('freepik-style-transfer: sends both source and style images', async () => {
   const call = openaiCalls.find((c) => c.url.includes('/images/edits'));
   const payload = JSON.parse(call.init.body);
   assert.equal(payload.images.length, 2);
+  assertNoDecoyLeak();
 });
 
 test('freepik-improve-prompt: returns improvedPrompt via Responses API', async () => {
@@ -239,22 +282,35 @@ test('freepik-improve-prompt: returns improvedPrompt via Responses API', async (
   assert.equal(body.originalPrompt, 'a cat');
   const call = openaiCalls.find((c) => c.url.includes('/v1/responses'));
   assert.ok(call, 'Responses API used for text');
+  assert.equal(call.init.headers.Authorization, `Bearer ${USER_API_KEY}`);
   const payload = JSON.parse(call.init.body);
   assert.equal(payload.model, 'gpt-5-mini');
+  assertNoDecoyLeak();
 });
 
 test('all functions: missing auth returns 401', async () => {
-  for (const [handler, body] of [
-    [removeBgHandler, { action: 'remove', imageUrl: 'https://cdn.example.com/a.png' }],
-    [relightHandler, { action: 'relight', imageUrl: 'https://cdn.example.com/a.png' }],
-    [styleTransferHandler, { action: 'transfer', imageUrl: 'https://cdn.example.com/a.png' }],
-    [upscaleHandler, { action: 'upscale', imageUrl: 'https://cdn.example.com/a.png' }],
-    [aiImageHandler, { action: 'generate', prompt: 'x' }],
-    [improvePromptHandler, { prompt: 'x' }],
-  ]) {
+  for (const [handler, body] of HANDLERS_AND_BODIES) {
     const res = await invoke(handler, { body, auth: false });
     assert.equal(res.status, 401, `handler returned ${res.status}`);
   }
+});
+
+test('all six functions: missing x-user-api-key returns 400 with the exact setup message and no provider call', async () => {
+  for (const apiKey of [null, '', '   ', 'not-a-valid-openai-key', 'sk-short']) {
+    openaiCalls = [];
+    for (const [handler, body] of HANDLERS_AND_BODIES) {
+      const res = await invoke(handler, { body, apiKey });
+      assert.equal(
+        res.status,
+        400,
+        `apiKey ${JSON.stringify(apiKey)} must be rejected with 400 (got ${res.status})`
+      );
+      const payload = await res.json();
+      assert.deepEqual(payload, { error: OPENAI_KEY_MISSING_ERROR });
+    }
+  }
+  assert.equal(openaiCalls.length, 0, 'the provider must never be called without a valid user key');
+  assertNoDecoyLeak();
 });
 
 test('upstream failures map to safe statuses without leaking credentials', async () => {
@@ -266,7 +322,8 @@ test('upstream failures map to safe statuses without leaking credentials', async
   const { status, body } = await readJson(res);
   assert.equal(status, 429);
   assert.equal(body.providerStatus, 429);
-  assert.ok(!JSON.stringify(body).includes('sk-qa-test-key'));
+  assert.ok(!JSON.stringify(body).includes(USER_API_KEY));
+  assert.ok(!JSON.stringify(body).includes(DECOY_ENV_KEY));
 });
 
 test('upstream auth failures map to 502 for the client', async () => {
@@ -277,7 +334,8 @@ test('upstream auth failures map to 502 for the client', async () => {
   });
   const { status, body } = await readJson(res);
   assert.equal(status, 502);
-  assert.ok(!JSON.stringify(body).includes('sk-qa-test-key'));
+  assert.ok(!JSON.stringify(body).includes(USER_API_KEY));
+  assert.ok(!JSON.stringify(body).includes(DECOY_ENV_KEY));
 });
 
 test('missing imageUrl returns 400', async () => {

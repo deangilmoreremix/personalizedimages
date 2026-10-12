@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getCorsHeaders, authenticateUser, checkRateLimit, isValidUrl } from "../_shared/cors.ts";
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, isValidUrl } from "../_shared/cors.ts";
 
 const IMAGE_MODEL = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-2.5-sunburst";
 const BASE_PROMPT =
@@ -73,9 +73,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Rate limit exceeded. Please wait before trying again." }, 429, headers);
     }
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openaiKey) {
-      return jsonResponse({ error: "OpenAI API key not configured" }, 503, headers);
+    const userApiKey = getUserApiKey(req, "openai");
+    if (!userApiKey || !validateApiKey(userApiKey, "openai")) {
+      return jsonResponse({ error: OPENAI_KEY_MISSING_ERROR }, 400, headers);
     }
 
     const body = await req.json().catch(() => null);
@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
 
     const upstream = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${userApiKey}` },
       body: JSON.stringify({
         model: IMAGE_MODEL,
         images,

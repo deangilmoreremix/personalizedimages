@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Dices, ChevronDown, ChevronUp, Zap, Layers, Shapes, Search } from 'lucide-react';
-import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
+import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import ReferenceImageUploader from './ReferenceImageUploader';

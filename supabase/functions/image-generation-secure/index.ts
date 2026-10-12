@@ -1,26 +1,20 @@
 import { createEdgeFunction, createSecureResponse, SecurityError } from '../_shared/middleware.ts';
-import { validateApiKey } from '../_shared/cors.ts';
+import { validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR } from '../_shared/cors.ts';
 
 interface ImageGenerationRequest {
   prompt: string;
-  provider?: 'gpt-5' | 'gemini' | 'openai';
+  provider?: 'gpt-5' | 'openai';
   size?: '1024x1024' | '1024x1792' | '1792x1024';
   style?: string;
   quality?: 'standard' | 'hd';
 }
 
-async function generateImage(prompt: string, provider: string, size: string, quality: string, style?: string): Promise<string> {
-  const openaiKey = Deno.env.get('OPENAI_API_KEY');
-
-  if (!openaiKey || !validateApiKey(openaiKey, 'openai')) {
-    throw new SecurityError('OpenAI API key not configured', 500, 'API_KEY_ERROR');
-  }
-
+async function generateImage(prompt: string, apiKey: string, size: string, quality: string, style?: string): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openaiKey}`
+      'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
       model: Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2.5-sunburst',
@@ -53,7 +47,12 @@ export default createEdgeFunction(
   async (req, context) => {
     const { prompt, provider = 'openai', size = '1024x1024', style, quality = 'standard' } = context.body as ImageGenerationRequest;
 
-    const imageUrl = await generateImage(prompt, provider, size, quality, style);
+    const userApiKey = getUserApiKey(req, 'openai');
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
+      return createSecureResponse({ error: OPENAI_KEY_MISSING_ERROR }, 400);
+    }
+
+    const imageUrl = await generateImage(prompt, userApiKey, size, quality, style);
 
     return createSecureResponse({
       imageUrl,

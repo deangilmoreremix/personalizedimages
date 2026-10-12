@@ -6,7 +6,6 @@ import {
   DollarSign,
   Clock,
   Image as ImageIcon,
-  Users,
   Zap,
   Download,
   RefreshCw,
@@ -33,7 +32,6 @@ interface AnalyticsData {
     avgRating: number;
   }>;
   activeGenerations: number;
-  creditsUsed: number;
 }
 
 async function fetchRealAnalytics(startDate: string): Promise<AnalyticsData> {
@@ -49,24 +47,21 @@ async function fetchRealAnalytics(startDate: string): Promise<AnalyticsData> {
     dailyStats: [],
     topPrompts: [],
     activeGenerations: 0,
-    creditsUsed: 0,
   };
 
   if (!sb || !userId) return defaults;
 
-  const [imagesRes, eventsRes, promptsRes, queueRes, creditsRes] = await Promise.all([
+  const [imagesRes, eventsRes, promptsRes, queueRes] = await Promise.all([
     sb.from('generated_images').select('id, provider, model, created_at, tokens_used').eq('user_id', userId).gte('created_at', startDate),
     cloudGalleryService.getAnalytics({ startDate, limit: 5000 }),
     cloudGalleryService.getMostUsedPrompts(10),
     sb.from('generation_queue').select('id, status').eq('user_id', userId).in('status', ['pending', 'processing']),
-    sb.from('user_credits').select('total_used').eq('user_id', userId).maybeSingle(),
   ]);
 
   const images = imagesRes?.data || [];
   const events = eventsRes || [];
   const prompts = promptsRes || [];
   const activeQueue = queueRes?.data || [];
-  const credits = creditsRes?.data;
 
   const modelCounts: Record<string, number> = {};
   images.forEach((img: any) => {
@@ -132,7 +127,6 @@ async function fetchRealAnalytics(startDate: string): Promise<AnalyticsData> {
     dailyStats,
     topPrompts,
     activeGenerations: activeQueue.length,
-    creditsUsed: credits?.total_used || 0,
   };
 }
 
@@ -175,7 +169,6 @@ const AnalyticsDashboard: React.FC = () => {
       `Total Images,${analyticsData.totalImages}`,
       `Total Cost,${analyticsData.totalCost}`,
       `Avg Generation Time (ms),${analyticsData.avgGenerationTime}`,
-      `Credits Used,${analyticsData.creditsUsed}`,
       `Active Generations,${analyticsData.activeGenerations}`,
       '',
       'Model,Usage %',
@@ -256,7 +249,6 @@ const AnalyticsDashboard: React.FC = () => {
           { label: 'Total Images', value: analyticsData.totalImages.toLocaleString(), icon: ImageIcon, from: 'from-blue-50', to: 'to-blue-100', border: 'border-blue-200', textColor: 'text-blue-600', valueColor: 'text-blue-900', iconColor: 'text-blue-600' },
           { label: 'Total Cost', value: formatCurrency(analyticsData.totalCost), icon: DollarSign, from: 'from-emerald-50', to: 'to-emerald-100', border: 'border-emerald-200', textColor: 'text-emerald-600', valueColor: 'text-emerald-900', iconColor: 'text-emerald-600' },
           { label: 'Avg Gen Time', value: formatTime(analyticsData.avgGenerationTime), icon: Clock, from: 'from-amber-50', to: 'to-amber-100', border: 'border-amber-200', textColor: 'text-amber-600', valueColor: 'text-amber-900', iconColor: 'text-amber-600' },
-          { label: 'Credits Used', value: analyticsData.creditsUsed.toLocaleString(), icon: Zap, from: 'from-rose-50', to: 'to-rose-100', border: 'border-rose-200', textColor: 'text-rose-600', valueColor: 'text-rose-900', iconColor: 'text-rose-600' },
         ].map((metric, i) => (
           <motion.div
             key={metric.label}
@@ -434,30 +426,6 @@ const AnalyticsDashboard: React.FC = () => {
                 <span className="text-sm font-medium text-blue-900">Images Generated</span>
               </div>
               <span className="text-lg font-bold text-blue-900">{analyticsData.totalImages}</span>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm font-medium text-emerald-900">Credits Used</span>
-              </div>
-              <span className="text-lg font-bold text-emerald-900">{analyticsData.creditsUsed}</span>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-amber-600" />
-                <span className="text-sm font-medium text-amber-900">In Queue</span>
-              </div>
-              <span className="text-lg font-bold text-amber-900">{analyticsData.activeGenerations}</span>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-900">Models Used</span>
-              </div>
-              <span className="text-lg font-bold text-gray-900">{Object.keys(analyticsData.modelUsage).length}</span>
             </div>
           </div>
         </motion.div>

@@ -1,4 +1,4 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput } from "../_shared/cors.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,8 +40,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    const userApiKey = getUserApiKey(req, 'openai');
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
+      return new Response(
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let description = '';
 
@@ -50,45 +55,26 @@ Deno.serve(async (req: Request) => {
       .join(', ');
     const prompt = `Generate a detailed, creative image description for personalized content with these attributes: ${tokenEntries}. Write a vivid, descriptive paragraph suitable as an image generation prompt.`;
 
-    if (openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: Deno.env.get('OPENAI_RESPONSES_MODEL') || 'gpt-5-mini',
-          input: prompt,
-          max_output_tokens: 512
-        })
-      });
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userApiKey}`
+      },
+      body: JSON.stringify({
+        model: Deno.env.get('OPENAI_RESPONSES_MODEL') || 'gpt-5-mini',
+        input: prompt,
+        max_output_tokens: 512
+      })
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        description = (data.output || [])
-          .flatMap((item: any) => item.content || [])
-          .filter((part: any) => part.type === 'output_text')
-          .map((part: any) => part.text || '')
-          .join('');
-      }
-    } else if (geminiKey) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 300, temperature: 0.8 }
-          })
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        description = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      }
+    if (response.ok) {
+      const data = await response.json();
+      description = (data.output || [])
+        .flatMap((item: any) => item.content || [])
+        .filter((part: any) => part.type === 'output_text')
+        .map((part: any) => part.text || '')
+        .join('');
     }
 
     if (!description) {

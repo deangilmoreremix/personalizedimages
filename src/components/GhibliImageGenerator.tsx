@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes, PaintBucket, Tag } from 'lucide-react';
-import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
+import { generateImage, GenerationError } from '../services/imageGenerationService';
+import { isApiKeyMissingError } from '../utils/apiKeyMissing';
+import ApiKeyMissingNotice from './ApiKeyMissingNotice';
 import { callEdgeFunction } from '../utils/supabaseClient';
-import { generateImageWithGemini, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import DroppableInput from './DroppableInput';
@@ -32,6 +33,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [sceneType, setSceneType] = useState<string>('nature');
   const [characterType, setCharacterType] = useState<string>('human');
@@ -157,17 +159,6 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   };
 
   const generateGhibliWithProvider = async (styledPrompt: string): Promise<string> => {
-    if (selectedProvider === 'gemini') {
-      return generateImageWithGemini(styledPrompt, '16:9', 'illustration');
-    }
-
-    if (selectedProvider === 'gemini-nano') {
-      return generateImageWithGeminiNano(styledPrompt, {
-        style: 'ghibli',
-        aspectRatio: '16:9'
-      });
-    }
-
     const result = await generateImage(styledPrompt, {
       style: 'Studio Ghibli anime',
       category: 'ghibli'
@@ -186,6 +177,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
     try {
       setIsGenerating(true);
       setError(null);
+      setApiKeyMissing(false);
       setReferenceNotice(null);
 
       const finalPrompt = prompt || generatePrompt();
@@ -208,7 +200,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           try {
             const referenceResult = await callEdgeFunction('ghibli-image', {
               prompt: styledPrompt,
-              provider: selectedProvider === 'gemini' ? 'gemini' : 'openai',
+              provider: 'openai',
               referenceImageUrl: referenceImage
             });
 
@@ -235,9 +227,8 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
         onImageGenerated(imageUrl);
       }
     } catch (err) {
-      if (err instanceof InsufficientCreditsError) {
-        setError(`Insufficient credits (${err.remainingCredits} remaining). Purchase more to continue.`);
-      } else if (err instanceof GenerationError) {
+      setApiKeyMissing(isApiKeyMissingError(err));
+      if (err instanceof GenerationError) {
         setError(err.message);
       } else {
         setError(`Failed to generate Ghibli-style image: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -543,6 +534,8 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
               {error}
             </div>
           )}
+
+          {apiKeyMissing && <ApiKeyMissingNotice className="mt-3" />}
 
           {referenceNotice && (
             <div className={getAlertClasses('warning')}>

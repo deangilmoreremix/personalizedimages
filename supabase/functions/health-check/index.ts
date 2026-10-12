@@ -33,20 +33,22 @@ Deno.serve(async (req) => {
       dbHealthy = false
     }
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-    const apiKeysHealthy = !!(openaiKey || geminiKey)
+    // PersonalizedImages is 100% BYOK: provider API keys are supplied per
+    // request by each user, so there are no platform provider keys to verify
+    // server-side. Report the BYOK mode truthfully instead of failing when no
+    // shared key is deployed.
+    const providerKeysHealthy = true
 
     const memUsage = Deno.memoryUsage?.() || { rss: 0, heapUsed: 0, heapTotal: 0 }
     const memoryHealthy = memUsage.heapUsed < (memUsage.heapTotal * 0.9)
 
     const response: HealthCheckResponse = {
-      status: dbHealthy && apiKeysHealthy && memoryHealthy ? 'healthy' : 'unhealthy',
+      status: dbHealthy && providerKeysHealthy && memoryHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
       checks: {
         database: dbHealthy,
-        api_keys: apiKeysHealthy,
+        api_keys: providerKeysHealthy,
         memory: {
           used: Math.round(memUsage.heapUsed / 1024 / 1024),
           available: memoryHealthy

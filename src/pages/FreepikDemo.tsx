@@ -302,7 +302,7 @@ await stockImageService.recordDownload(
           <ul className="space-y-2 text-sm text-blue-800">
             <li>✅ Secure API key storage via Supabase secrets</li>
             <li>✅ Automatic rate limiting (100 requests per 15 minutes)</li>
-            <li>✅ Credit tracking (500 credits per day)</li>
+            <li>✅ Bring-your-own-key generation</li>
             <li>✅ Response caching (5-minute duration)</li>
             <li>✅ User authentication required</li>
             <li>✅ Favorites and download tracking</li>

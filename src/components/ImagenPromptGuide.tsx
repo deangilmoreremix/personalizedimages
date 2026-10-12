@@ -439,37 +439,37 @@ const ImagenPromptGuide: React.FC<ImagenPromptGuideProps> = ({ onPromptSelect })
     },
     {
       id: 'imagen3',
-      title: 'Imagen 3 Specific',
+      title: 'GPT Image 2.5 HD Specific',
       icon: <Sparkles />,
-      description: 'Optimize your prompts for Imagen 3, Google\'s highest quality text-to-image model.',
+      description: 'Optimize your prompts for GPT Image 2.5 at high quality for maximum detail.',
       examples: [
         {
           title: 'Enhanced Detail',
           text: 'Ultra detailed photograph of a Robot holding a red skateboard, 8k resolution, professional lighting',
-          description: 'Leverages Imagen 3\'s enhanced detail capabilities'
+          description: 'Leverages GPT Image 2.5\'s enhanced detail capabilities'
         },
         {
           title: 'Rich Lighting',
           text: 'Two fuzzy bunnies in the kitchen, cinematic lighting, golden hour, high-end photography',
-          description: 'Takes advantage of Imagen 3\'s improved lighting rendering'
+          description: 'Takes advantage of GPT Image 2.5\'s improved lighting rendering'
         },
         {
           title: 'Text Rendering',
           text: 'A vintage movie poster for "SPACE ADVENTURE" with clear bold text and a dramatic space scene',
-          description: 'Uses Imagen 3\'s better text rendering capabilities'
+          description: 'Uses GPT Image 2.5\'s better text rendering capabilities'
         },
         {
           title: 'Natural Language',
           text: 'I want a cozy cabin in the woods with a light dusting of snow and smoke coming from the chimney',
-          description: 'Shows Imagen 3\'s ability to understand natural language'
+          description: 'Shows GPT Image 2.5\'s ability to understand natural language'
         }
       ]
     },
     {
       id: 'gemini2',
-      title: 'Gemini 2.0 Flash Specific',
+      title: 'GPT Image 2.5 Fast Specific',
       icon: <Sparkles />,
-      description: 'Create prompts tailored for Gemini 2.0 Flash\'s unique text and image generation capabilities.',
+      description: 'Create prompts tailored for GPT Image 2.5 fast generation with tight, descriptive wording.',
       examples: [
         {
           title: 'Recipe Illustration',
@@ -518,7 +518,7 @@ const ImagenPromptGuide: React.FC<ImagenPromptGuideProps> = ({ onPromptSelect })
       <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
         <div className="flex items-center">
           <Sparkles className="h-5 w-5 text-primary-600 mr-2" />
-          <h3 className="text-lg font-bold">Imagen & Gemini Prompt Guide</h3>
+          <h3 className="text-lg font-bold">GPT Image 2.5 Prompt Guide</h3>
         </div>
         {isOpen ? (
           <ChevronUp className="h-5 w-5 text-gray-500" />
@@ -530,7 +530,7 @@ const ImagenPromptGuide: React.FC<ImagenPromptGuideProps> = ({ onPromptSelect })
       {isOpen && (
         <div className="mt-4">
           <p className="text-gray-600 mb-4">
-            Refine your prompts using Google's comprehensive Imagen and Gemini guidance to create stunning AI-generated images. 
+            Refine your prompts with guidance tuned for GPT Image 2.5 to create stunning AI-generated images.
             Use these examples as starting points and customize them for your needs.
           </p>
 
@@ -600,8 +600,8 @@ const ImagenPromptGuide: React.FC<ImagenPromptGuideProps> = ({ onPromptSelect })
               <li>Specify lens types for different effects (macro, wide-angle, telephoto)</li>
               <li>Keep text short (under 25 characters) for better text rendering</li>
               <li>Add aspect ratio specifications at the end of your prompt</li>
-              <li>For Imagen 3, include quality terms like "4K" or "HDR" for better detail</li>
-              <li>For Gemini 2.0 Flash, explicitly ask for images in your prompt when needed</li>
+              <li>For GPT Image 2.5 HD, include quality terms like "4K" or "HDR" for better detail</li>
+              <li>For GPT Image 2.5 Fast, keep prompts short and explicit for quickest results</li>
               <li>Try iterating prompts - refinement often leads to better results</li>
             </ul>
           </div>
@@ -610,7 +610,7 @@ const ImagenPromptGuide: React.FC<ImagenPromptGuideProps> = ({ onPromptSelect })
             <h4 className="font-medium text-gray-700 mb-2">Model Comparison:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-white rounded shadow-sm">
-                <h5 className="font-medium mb-2 text-primary-700">Imagen 3</h5>
+                <h5 className="font-medium mb-2 text-primary-700">GPT Image 2.5 HD</h5>
                 <p className="text-gray-600 mb-2">Best for high-quality standalone images</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700">
                   <li>Photorealistic quality</li>
@@ -620,7 +620,7 @@ const ImagenPromptGuide: React.FC<ImagenPromptGuideProps> = ({ onPromptSelect })
                 </ul>
               </div>
               <div className="p-3 bg-white rounded shadow-sm">
-                <h5 className="font-medium mb-2 text-secondary-700">Gemini 2.0 Flash</h5>
+                <h5 className="font-medium mb-2 text-secondary-700">GPT Image 2.5 Fast</h5>
                 <p className="text-gray-600 mb-2">Best for combined text+image outputs</p>
                 <ul className="list-disc pl-5 text-xs text-gray-700">
                   <li>Text and image in same response</li>

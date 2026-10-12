@@ -1,10 +1,47 @@
 // This utility file handles API calls to various AI services
 // It supports direct API calls and edge function calls through Supabase
 
-import { callEdgeFunction, isSupabaseConfigured, supabase } from './supabaseClient';
-import { getUserProvidedApiKey, blobToBase64 } from './apiUtils';
-import { generateImageWithGeminiNano as generateImageWithGeminiNanoService, editImageWithGeminiNano as editImageWithGeminiNanoService, generateVariationsWithGeminiNano as generateVariationsWithGeminiNanoService, GeminiNanoConfig, ImageEditOptions, ImageGenerationOptions } from './geminiNanoApi';
+import { callEdgeFunction, isSupabaseConfigured } from './supabaseClient';
+import { getUserProvidedApiKey } from './apiUtils';
 import { quickEnhance, type GeneratorCategory } from './promptEnhancer';
+import { STOCK_SEARCH_UNAVAILABLE_MESSAGE } from '../services/stockImageService';
+
+export interface OpenAIConfig {
+  model?: string;
+  aspectRatio?: string;
+  style?: string;
+  temperature?: number;
+}
+
+export interface ImageGenerationOptions {
+  aspectRatio?: string;
+  style?: string;
+  quality?: 'standard' | 'high';
+  negativePrompt?: string;
+}
+
+export interface ImageEditOptions {
+  mode: 'enhance' | 'colorize' | 'restore' | 'stylize' | 'remove_background' | 'blur_background' | 'custom' | 'text_render' | 'compose' | 'style_transfer' | 'semantic_mask';
+  intensity?: number;
+  style?: string;
+  customPrompt?: string;
+  textToRender?: string;
+  fontStyle?: string;
+  secondaryImages?: string[];
+  aspectRatio?: string;
+  responseModalities?: ('Text' | 'Image')[];
+  maskData?: string;
+  maskPrompt?: string;
+}
+
+const OPENAI_KEY_MISSING_MESSAGE =
+  'OpenAI API key not configured. Add your key in Settings → API Keys.';
+
+function requireOpenAIKey(): string {
+  const apiKey = getUserProvidedApiKey('openai');
+  if (!apiKey) throw new Error(OPENAI_KEY_MISSING_MESSAGE);
+  return apiKey;
+}
 
 /**
  * Generate an image description that can be used for AI image generation
@@ -27,51 +64,48 @@ export async function generateImageDescriptionWithAI(tokens: Record<string, stri
       }
     }
     
-    // Fall back to direct API call to Gemini using the USER'S OWN key only (BYOK)
-    const apiKey = getUserProvidedApiKey('gemini');
-    if (!apiKey) {
-      // Fallback to dummy response if no user API key is available
-      console.warn('No user-provided Gemini API key available, returning fallback description');
-      return `A personalized marketing image for ${tokens['FIRSTNAME'] || 'the user'} featuring vibrant colors and modern design elements. The image includes professional branding for ${tokens['COMPANY'] || 'the company'} with a clean layout that emphasizes the key message.`;
-    }
-    
+    const apiKey = requireOpenAIKey();
+
     // Convert tokens to a string representation
     const tokenString = Object.entries(tokens)
       .map(([key, value]) => `${key}: ${value}`)
       .join(', ');
 
     const prompt = `Create a detailed description for a personalized marketing image that includes the following personalization tokens: ${tokenString || 'No tokens provided'}. The description should include visual elements, composition, and how the personalized elements should be integrated. Format the description as a prompt for image generation.`;
-    
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
+        model: 'gpt-5-mini',
+        input: prompt,
+        max_output_tokens: 1024,
       }),
     });
-    
+
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    const description = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
+    const description = (data.output || [])
+      .flatMap((item: any) => item.content || [])
+      .filter((part: any) => part.type === 'output_text')
+      .map((part: any) => part.text || '')
+      .join('')
+      .trim();
+
     if (!description) {
       throw new Error('No description generated');
     }
-    
+
     return description;
   } catch (error) {
     console.error('Error generating image description:', error);
-    // Return a fallback description if all else fails
-    return `A personalized high-quality marketing image for ${tokens['FIRSTNAME'] || 'the user'} from ${tokens['COMPANY'] || 'the company'}.`;
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
@@ -135,7 +169,7 @@ export async function generateImageWithDalle(
 
 /**
  * Generate an image directly with the user's own OpenAI key (BYOK only).
- * Never routes through the platform edge function and never meters credits.
+ * Never routes through the platform edge function.
  */
 async function generateImageWithUserKey(
   prompt: string,
@@ -196,7 +230,7 @@ async function generateImageWithUserKey(
 }
 
 /**
- * Generate image variations with GPT Image 2.5 (server) or the user's own Gemini key (BYOK)
+ * Generate image variations with GPT Image 2.5
  */
 export async function generateImageVariations(
   imageUrl: string,
@@ -224,18 +258,12 @@ export async function generateImageVariations(
         }
       } catch (edgeError) {
         console.warn('Edge function failed for image variations:', edgeError);
-        // Continue to direct API fallback
+
       }
     }
 
-    // Fall back to direct API call using the USER'S OWN key only (BYOK)
-    const apiKey = getUserProvidedApiKey('gemini');
-    if (!apiKey) {
-      throw new Error('Image variations are unavailable. Please add your own Gemini API key in settings (starts with AIza) or contact support.');
-    }
+    requireOpenAIKey();
 
-    // Gemini (Nano Banana) image editing: pass the source image with a variation prompt
-    const gptSize = size === '1792x1024' ? '16:9' : size === '1024x1792' ? '9:16' : '1:1';
     const variationPrompts = [
       'Create a creative variation of this image with different colors and lighting.',
       'Create a variation of this image with a different artistic style.',
@@ -243,47 +271,15 @@ export async function generateImageVariations(
       'Create a variation of this image with a different mood or atmosphere.'
     ];
 
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error('Failed to fetch reference image');
-    }
-    const imageBlob = await imageResponse.blob();
-    const base64Data = await blobToBase64(imageBlob);
-
     const variations: string[] = [];
     for (let i = 0; i < n; i++) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: variationPrompts[i % variationPrompts.length] },
-                { inlineData: { mimeType: imageBlob.type, data: base64Data } }
-              ]
-            }],
-            generationConfig: {
-              responseModalities: ['TEXT', 'IMAGE'],
-              imageConfig: { aspectRatio: gptSize }
-            }
-          })
-        }
+      const variation = await editImageWithDalle(
+        imageUrl,
+        '',
+        variationPrompts[i % variationPrompts.length],
+        { size }
       );
-
-      if (!response.ok) {
-        console.warn(`Variation ${i + 1} failed:`, response.status);
-        continue;
-      }
-
-      const data = await response.json();
-      for (const part of data.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData?.mimeType?.startsWith('image/')) {
-          variations.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
-          break;
-        }
-      }
+      variations.push(variation);
     }
 
     if (variations.length === 0) {
@@ -407,7 +403,6 @@ export async function generateImageWithGptImage(prompt: string): Promise<string>
         }
       } catch (edgeError) {
         console.warn('Edge function failed for image generation:', edgeError);
-        // Continue to the unavailable error below
       }
     }
 
@@ -419,13 +414,11 @@ export async function generateImageWithGptImage(prompt: string): Promise<string>
 }
 
 /**
- * Generate an image with Gemini
- * NOTE: Gemini doesn't natively generate images, so this falls back to OpenAI DALL-E
+ * Generate an image with GPT Image 2.5
  */
 export async function generateImageWithGemini(prompt: string, aspectRatio: string = '1:1', style: string = ''): Promise<string> {
   try {
-    console.log('🖼️ Generating image with Gemini (fallback to OpenAI)');
-    console.warn('Note: Gemini does not support native image generation. Using OpenAI GPT Image 2.5 as fallback.');
+    console.log('🖼️ Generating image with GPT Image 2.5');
 
     // Enhance prompt with style if provided
     let enhancedPrompt = prompt;
@@ -433,24 +426,6 @@ export async function generateImageWithGemini(prompt: string, aspectRatio: strin
       enhancedPrompt = `${prompt} (${style} style)`;
     }
 
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-generation', {
-          provider: 'openai',
-          prompt: enhancedPrompt,
-          aspectRatio
-        });
-
-        if (result && result.imageUrl) {
-          return result.imageUrl;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for image generation:', edgeError);
-      }
-    }
-
-    // Fall back to GPT Image 2.5 using the user's own key (BYOK); Gemini doesn't generate images
     // Map aspect ratio to GPT Image 2.5 sizes
     let size: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024';
     if (aspectRatio === '16:9' || aspectRatio === '1792:1024') {
@@ -467,71 +442,47 @@ export async function generateImageWithGemini(prompt: string, aspectRatio: strin
 }
 
 /**
- * Generate an image with Gemini 2.0 Flash
- * NOTE: Gemini doesn't natively generate images, so this falls back to OpenAI DALL-E
+ * Generate an image with GPT Image 2.5
  */
 export async function generateImageWithGemini2Flash(prompt: string): Promise<string> {
   try {
-    console.log('🖼️ Generating image with Gemini 2.0 Flash (fallback to OpenAI)');
-    console.warn('Note: Gemini does not support native image generation. Using OpenAI GPT Image 2.5 as fallback.');
-
-    // Use the standard Gemini function which now properly falls back to OpenAI
+    console.log('🖼️ Generating image with GPT Image 2.5');
     return await generateImageWithGemini(prompt, '1:1', '');
   } catch (error) {
-    console.error('Error generating image with Gemini 2.0 Flash:', error);
+    console.error('Error generating image:', error);
     throw error;
   }
 }
 
 /**
- * Generate an image with Gemini Nano (Optimized for speed and efficiency)
+ * Generate an image with GPT Image 2.5
  */
 export async function generateImageWithGeminiNano(
   prompt: string,
   options: ImageGenerationOptions = {},
-  config: GeminiNanoConfig = {}
+  _config: OpenAIConfig = {}
 ): Promise<string> {
   try {
-    console.log('🚀 Generating image with Gemini Nano (Optimized)');
+    console.log('🚀 Generating image with GPT Image 2.5');
 
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-generation', {
-          provider: 'gemini-nano',
-          prompt,
-          options,
-          config
-        });
+    const size: '1024x1024' | '1792x1024' | '1024x1792' =
+      options.aspectRatio === '16:9' ? '1792x1024' : options.aspectRatio === '9:16' ? '1024x1792' : '1024x1024';
 
-        if (result && result.imageUrl) {
-          return result.imageUrl;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for Gemini Nano image generation:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-
-    // Fall back to direct API call using Gemini Nano service
-    return await generateImageWithGeminiNanoService(prompt, options, config);
+    return await generateImageWithDalle(prompt, {
+      size,
+      quality: options.quality === 'high' ? 'hd' : 'standard',
+      style: 'natural'
+    });
   } catch (error) {
-    console.error('Error generating image with Gemini Nano:', error);
-    throw new Error('Invalid provider specified for action figure generation');
+    console.error('Error generating image:', error);
+    throw error;
   }
 }
 
 /**
- * Fetch resources from Freepik API
+ * Stock resource search is no longer available in this application.
  */
-export async function fetchFreepikResources(options: {
-  keywords?: string
-  content_type?: 'photo' | 'vector' | 'psd' | 'icon' | 'video'
-  orientation?: 'horizontal' | 'vertical' | 'square'
-  license?: string
-  page?: number
-  per_page?: number
-}): Promise<{
+export async function fetchFreepikResources(): Promise<{
   resources: Array<{
     id: number
     title: string
@@ -555,351 +506,75 @@ export async function fetchFreepikResources(options: {
     total: number
   }
 }> {
-  try {
-    console.log('📚 Fetching stock resources');
-
-    // The stock-resource provider (Freepik) has been removed from this application.
-    // The edge function returns an explicit unavailability error.
-
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('freepik-resources', options);
-
-        if (result && result.resources) {
-          return {
-            resources: result.resources,
-            meta: result.meta
-          };
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for stock resources:', edgeError);
-        throw edgeError;
-      }
-    }
-
-    throw new Error('Stock image search is currently unavailable.');
-  } catch (error) {
-    console.error('Error fetching stock resources:', error);
-    throw error;
-  }
+  throw new Error(STOCK_SEARCH_UNAVAILABLE_MESSAGE);
 }
 
 /**
- * Generate an image with Imagen 4 (Google's high-fidelity model)
- */
-export async function generateImageWithImagen4(
-  prompt: string,
-  options: {
-    aspectRatio?: string;
-    quality?: 'standard' | 'high';
-    negativePrompt?: string;
-    personGeneration?: 'dont_allow' | 'allow_adult' | 'allow_all';
-    numberOfImages?: number;
-  } = {}
-): Promise<string[]> {
-  try {
-    console.log('🎨 Generating image with Imagen 4');
-
-    const {
-      aspectRatio = '1:1',
-      quality = 'standard',
-      negativePrompt = '',
-      personGeneration = 'allow_adult',
-      numberOfImages = 1
-    } = options;
-
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-generation', {
-          provider: 'imagen-4',
-          prompt,
-          aspectRatio,
-          quality,
-          negativePrompt,
-          personGeneration,
-          numberOfImages
-        });
-
-        if (result && result.imageUrls && Array.isArray(result.imageUrls)) {
-          return result.imageUrls;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for Imagen 4 image generation:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-
-    // Fall back to direct API call using the USER'S OWN key only (BYOK)
-    const apiKey = getUserProvidedApiKey('gemini');
-    if (!apiKey) {
-      throw new Error('Imagen 4 requires your own Gemini API key (starts with AIza). Add it in settings or contact support.');
-    }
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`, {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': apiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        instances: [{
-          prompt: prompt + (negativePrompt ? `. Avoid: ${negativePrompt}` : '')
-        }],
-        parameters: {
-          sampleCount: Math.min(numberOfImages, 4), // Imagen 4 supports up to 4
-          aspectRatio,
-          imageSize: quality === 'high' ? '2K' : '1K',
-          personGeneration
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Imagen 4 API error response:', errorText);
-
-      if (response.status === 403) {
-        throw new Error(
-          'Imagen 4 API access denied. This typically means:\n' +
-          '1. The API key needs proper authentication setup\n' +
-          '2. Imagen 4 requires a Google Cloud project with billing enabled\n' +
-          '3. You may need to use a different image generation provider\n\n' +
-          'For now, please use OpenAI DALL-E or Gemini Nano as your image generation provider.'
-        );
-      }
-
-      throw new Error(`Imagen 4 API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    // Extract images from Imagen 4 response
-    const imageUrls: string[] = [];
-    if (data.predictions && Array.isArray(data.predictions)) {
-      for (const prediction of data.predictions) {
-        if (prediction.bytesBase64Encoded) {
-          imageUrls.push(`data:image/png;base64,${prediction.bytesBase64Encoded}`);
-        }
-      }
-    }
-
-    if (imageUrls.length === 0) {
-      throw new Error('No images found in Imagen 4 API response');
-    }
-
-    return imageUrls;
-  } catch (error) {
-    console.error('Error generating image with Imagen 4:', error);
-    throw new Error('Invalid provider specified for cartoon-style image generation');
-  }
-}
-
-/**
- * Edit an image with Gemini Nano
+ * Edit an image with GPT Image 2.5
  */
 export async function editImageWithGeminiNano(
   imageUrl: string,
   editOptions: ImageEditOptions,
-  config: GeminiNanoConfig = {}
+  _config: OpenAIConfig = {}
 ): Promise<string> {
-  try {
-    console.log('✏️ Editing image with Gemini Nano');
-
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-editing', {
-          provider: 'gemini-nano',
-          imageUrl,
-          editOptions,
-          config
-        });
-
-        if (result && result.imageUrl) {
-          return result.imageUrl;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for Gemini Nano image editing:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-
-    // Fall back to direct API call using Gemini Nano service
-    return await editImageWithGeminiNanoService(imageUrl, editOptions, config);
-  } catch (error) {
-    console.error('Error editing image with Gemini Nano:', error);
-    // Return original image as fallback
-    return imageUrl;
-  }
+  const prompt = buildEditPrompt(editOptions);
+  return editImageWithDalle(imageUrl, editOptions.maskData ? `data:image/png;base64,${editOptions.maskData}` : '', prompt);
 }
 
 /**
- * Generate image variations with Gemini Nano
+ * Generate image variations with GPT Image 2.5
  */
 export async function generateVariationsWithGeminiNano(
   imageUrl: string,
   count: number = 3,
-  config: GeminiNanoConfig = {}
+  _config: OpenAIConfig = {}
 ): Promise<string[]> {
-  try {
-    console.log('🔄 Generating variations with Gemini Nano');
+  return generateImageVariations(imageUrl, { n: count });
+}
 
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-variations', {
-          provider: 'gemini-nano',
-          imageUrl,
-          count,
-          config
-        });
+function buildEditPrompt(editOptions: ImageEditOptions): string {
+  if (editOptions.customPrompt) return editOptions.customPrompt;
+  if (editOptions.maskPrompt) return editOptions.maskPrompt;
 
-        if (result && result.imageUrls && Array.isArray(result.imageUrls)) {
-          return result.imageUrls;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for Gemini Nano variations:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-
-    // Fall back to direct API call using Gemini Nano service
-    return await generateVariationsWithGeminiNanoService(imageUrl, count, config);
-  } catch (error) {
-    console.error('Error generating variations with Gemini Nano:', error);
-    throw error;
+  switch (editOptions.mode) {
+    case 'colorize':
+      return 'Add natural, realistic colors to this image.';
+    case 'restore':
+      return 'Restore and improve the quality of this image.';
+    case 'stylize':
+      return `Restyle this image${editOptions.style ? ` in a ${editOptions.style} style` : ''}.`;
+    case 'remove_background':
+      return 'Remove the background from this image, leaving the subject on a clean transparent background.';
+    case 'blur_background':
+      return 'Blur the background of this image while keeping the subject sharp.';
+    case 'text_render':
+      return `Render the text "${editOptions.textToRender || ''}"${editOptions.fontStyle ? ` in a ${editOptions.fontStyle} font` : ''} onto this image.`;
+    case 'compose':
+      return 'Compose this image with the provided secondary images into a single cohesive image.';
+    case 'style_transfer':
+      return `Transfer the artistic style${editOptions.style ? ` of ${editOptions.style}` : ''} onto this image.`;
+    case 'enhance':
+    default:
+      return 'Enhance the quality, sharpness and lighting of this image.';
   }
 }
 
 /**
- * Generate an image with Imagen (Google)
+ * Generate an image with GPT Image 2.5
  */
 export async function generateImageWithImagen(prompt: string, aspectRatio: string = '1:1'): Promise<string> {
   try {
-    console.log('🖼️ Generating image with Imagen');
-    
+    console.log('🖼️ Generating image with GPT Image 2.5');
+
     // Add aspect ratio if not already in prompt
     let enhancedPrompt = prompt;
     if (!enhancedPrompt.toLowerCase().includes('aspect ratio')) {
       enhancedPrompt = `${enhancedPrompt} (${aspectRatio} aspect ratio)`;
     }
-    
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-generation', {
-          provider: 'imagen',
-          prompt: enhancedPrompt,
-          aspectRatio
-        });
-        
-        if (result && result.imageUrl) {
-          return result.imageUrl;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for Imagen image generation:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-    
-    // For now, we use Gemini's API as a proxy to Imagen capabilities
+
     return generateImageWithGemini(enhancedPrompt, aspectRatio);
   } catch (error) {
-    console.error('Error generating image with Imagen:', error);
-    throw error;
-  }
-}
-
-/**
- * Generate an image using a reference image
- */
-async function generateImageWithReferenceGemini(prompt: string, referenceImageUrl: string): Promise<string> {
-  try {
-    console.log('🖼️ Generating image with reference using Gemini');
-    
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('reference-image', {
-          provider: 'gemini',
-          prompt,
-          referenceImageUrl
-        });
-        
-        if (result && result.imageUrl) {
-          return result.imageUrl;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for reference-based image generation:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-    
-    // Fall back to direct API call using the USER'S OWN key only (BYOK)
-    const apiKey = getUserProvidedApiKey('gemini');
-    if (!apiKey) {
-      
-      throw new Error('Reference-image generation requires your own Gemini API key (starts with AIza). Add it in settings or contact support.');
-    }
-    
-    try {
-      // Fetch the reference image
-      const imageResponse = await fetch(referenceImageUrl);
-      if (!imageResponse.ok) {
-        throw new Error('Failed to fetch reference image');
-      }
-      
-      const imageBlob = await imageResponse.blob();
-      
-      // Convert to base64
-      const base64Data = await blobToBase64(imageBlob);
-      
-      // Call Gemini Nano Banana image model
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: `Using this image as reference, create: ${prompt}` },
-                {
-                  inlineData: {
-                    mimeType: imageBlob.type,
-                    data: base64Data
-                  }
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE']
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Extract the image from the response
-      for (const part of data.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-      }
-      
-      throw new Error('No image found in Gemini response');
-    } catch (error) {
-      console.error('Error with direct API call for reference image:', error);
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error generating image with reference:', error);
+    console.error('Error generating image:', error);
     throw error;
   }
 }
@@ -948,76 +623,32 @@ function isHttpUrl(url: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
-export async function generateGhibliStyleImage(prompt: string, provider: string = 'gemini', referenceImageUrl?: string): Promise<string> {
+export async function generateGhibliStyleImage(prompt: string, provider: string = 'openai', referenceImageUrl?: string): Promise<string> {
   try {
     console.log(`🌟 Generating Ghibli-style image with ${provider}`);
-    
+
     const enhancedPrompt = quickEnhance(`Studio Ghibli style: ${prompt}`, 'ghibli');
-    
-    // Try edge function first
+
     if (isSupabaseConfigured()) {
       try {
         const result = await callEdgeFunction('ghibli-image', {
           prompt: enhancedPrompt,
-          provider,
+          provider: 'openai',
           referenceImageUrl: referenceImageUrl && isHttpUrl(referenceImageUrl) ? referenceImageUrl : undefined
         });
-        
+
         if (result && result.imageUrl) {
           return result.imageUrl;
         }
       } catch (edgeError) {
         console.warn('Edge function failed for Ghibli-style image generation:', edgeError);
-        // Continue to direct API fallback
       }
     }
-    
-    // Fall back to using appropriate provider
-    if (provider === 'gpt-image-1') {
-      if (referenceImageUrl) {
-        return generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl);
-      } else {
-        return generateImageWithGptImage(enhancedPrompt);
-      }
-    } else if (provider === 'gemini' || provider === 'gemini-nano' || provider === 'openai') {
-      console.log(`Using ${provider === 'gemini' ? 'Gemini' : provider === 'gemini-nano' ? 'Gemini Nano' : 'DALL-E'} API directly for Ghibli-style image`);
 
-      if (provider === 'gemini-nano') {
-        // Use Gemini Nano for faster generation
-        return generateImageWithGeminiNano(enhancedPrompt, {
-          style: 'ghibli',
-          aspectRatio: '16:9'
-        });
-      } else if (provider === 'gemini') {
-        if (referenceImageUrl) {
-          return generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl);
-        } else {
-          return generateImageWithGemini(enhancedPrompt);
-        }
-      } else {
-        if (referenceImageUrl && isHttpUrl(referenceImageUrl) && isSupabaseConfigured()) {
-          try {
-            const referenceResult = await callEdgeFunction('ghibli-image', {
-              prompt: enhancedPrompt,
-              provider: 'openai',
-              referenceImageUrl
-            });
-
-            if (referenceResult && referenceResult.imageUrl) {
-              return referenceResult.imageUrl;
-            }
-          } catch (edgeError) {
-            console.warn('Edge function failed for Ghibli reference-based generation:', edgeError);
-          }
-        }
-
-        return generateImageWithDalle(enhancedPrompt);
-      }
+    if (referenceImageUrl) {
+      return generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl);
     }
-    
-    // If no provider matches, use fallback image
-    console.warn('Invalid provider specified, using placeholder image');
-    throw new Error('API configuration required. Please configure your API keys in environment variables.');
+    return generateImageWithDalle(enhancedPrompt);
   } catch (error) {
     console.error('Error generating Ghibli-style image:', error);
     throw error;
@@ -1030,31 +661,21 @@ export async function generateGhibliStyleImage(prompt: string, provider: string 
 export async function generateCartoonImage(prompt: string, provider: string = 'openai', referenceImageUrl?: string, style: string = 'cartoon'): Promise<string> {
   try {
     console.log(`🎨 Generating cartoon-style image with ${provider}`);
-    
+
     const enhancedPrompt = quickEnhance(`${prompt} in ${style} style`, 'cartoon');
 
-    // BYOK-first: when the user has supplied their own provider key, generate
-    // directly so the metered platform edge function is never called.
-    if (getUserProvidedApiKey(provider === 'gemini' || provider === 'gemini-nano' ? 'gemini' : 'openai')) {
-      if (provider === 'gpt-image-1') {
-        return referenceImageUrl
-          ? generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl)
-          : generateImageWithGptImage(enhancedPrompt);
-      }
-      if (provider === 'gemini') {
-        return referenceImageUrl
-          ? generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl)
-          : generateImageWithGemini(enhancedPrompt);
+    if (getUserProvidedApiKey('openai')) {
+      if (referenceImageUrl) {
+        return generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl);
       }
       return generateImageWithDalle(enhancedPrompt);
     }
 
-    // Platform-funded path: metered by the authenticated edge function.
-    if (isSupabaseConfigured() && (provider === 'openai' || provider === 'gemini')) {
+    if (isSupabaseConfigured()) {
       try {
         const result = await callEdgeFunction('cartoon-style', {
           prompt: enhancedPrompt,
-          provider,
+          provider: 'openai',
           style,
           referenceImageUrl
         });
@@ -1064,37 +685,10 @@ export async function generateCartoonImage(prompt: string, provider: string = 'o
         }
       } catch (edgeError) {
         console.warn('Edge function failed for cartoon-style image generation:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-    
-    // Fall back to using appropriate provider
-    if (provider === 'gpt-image-1') {
-      if (referenceImageUrl) {
-        return generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl);
-      } else {
-        return generateImageWithGptImage(enhancedPrompt);
-      }
-    } else if (provider === 'gemini' || provider === 'openai') {
-      console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API directly for cartoon-style image`);
-      
-      if (provider === 'gemini') {
-        if (referenceImageUrl) {
-          return generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl);
-        } else {
-          return generateImageWithGemini(enhancedPrompt);
-        }
-      } else {
-        // If we have a reference image, add that context to the prompt
-        if (referenceImageUrl) {
-          return generateImageWithDalle(`Using a reference image as inspiration: ${enhancedPrompt}`);
-        } else {
-          return generateImageWithDalle(enhancedPrompt);
-        }
       }
     }
 
-    throw new Error('Invalid provider specified for cartoon-style image generation');
+    throw new Error(OPENAI_KEY_MISSING_MESSAGE);
   } catch (error) {
     console.error('Error generating cartoon-style image:', error);
     throw error;
@@ -1145,31 +739,18 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
 
     const enhancedPrompt = quickEnhance(`Create an action figure: ${prompt}`, 'action-figure');
 
-    // BYOK-first: when the user has supplied their own provider key, generate
-    // directly so the metered platform edge function is never called.
-    if (getUserProvidedApiKey(provider === 'gemini' || provider === 'gemini-nano' ? 'gemini' : 'openai')) {
-      if (provider === 'gpt-image-1') {
-        return referenceImageUrl
-          ? generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl)
-          : generateImageWithGptImage(enhancedPrompt);
-      }
-      if (provider === 'gemini-nano') {
-        return generateImageWithGeminiNano(enhancedPrompt, { aspectRatio: '1:1', quality: 'standard' });
-      }
-      if (provider === 'gemini') {
-        return referenceImageUrl
-          ? generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl)
-          : generateImageWithGemini(enhancedPrompt);
+    if (getUserProvidedApiKey('openai')) {
+      if (referenceImageUrl) {
+        return generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl);
       }
       return generateImageWithDalle(enhancedPrompt);
     }
 
-    // Platform-funded path: metered by the authenticated edge function.
     if (isSupabaseConfigured()) {
       try {
         const result = await callEdgeFunction('action-figure', {
           prompt: enhancedPrompt,
-          provider,
+          provider: 'openai',
           referenceImageUrl
         });
 
@@ -1178,43 +759,10 @@ export async function generateActionFigure(prompt: string, provider: string = 'o
         }
       } catch (edgeError) {
         console.warn('Edge function failed for action figure generation:', edgeError);
-        // Continue to direct API fallback
       }
     }
 
-    // Fall back to direct API calls
-    if (provider === 'gpt-image-1') {
-      if (referenceImageUrl) {
-        return generateImageWithReferenceGptImage(enhancedPrompt, referenceImageUrl);
-      } else {
-        return generateImageWithGptImage(enhancedPrompt);
-      }
-    } else if (provider === 'gemini-nano') {
-      // Use Gemini Nano for on-device generation
-      return generateImageWithGeminiNano(enhancedPrompt, {
-        aspectRatio: '1:1',
-        quality: 'standard'
-      });
-    } else if (provider === 'gemini' || provider === 'openai') {
-      console.log(`Using ${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API directly for action figure`);
-
-      if (provider === 'gemini') {
-        if (referenceImageUrl) {
-          return generateImageWithReferenceGemini(enhancedPrompt, referenceImageUrl);
-        } else {
-          return generateImageWithGemini(enhancedPrompt);
-        }
-      } else {
-        // If we have a reference image, add that context to the prompt
-        if (referenceImageUrl) {
-          return generateImageWithDalle(`Using a reference image as inspiration: ${enhancedPrompt}`);
-        } else {
-          return generateImageWithDalle(enhancedPrompt);
-        }
-      }
-    }
-
-    throw new Error(`Invalid provider specified for action figure generation: ${provider}. Supported providers are: openai, gemini, gemini-nano, gpt-image-1`);
+    throw new Error(OPENAI_KEY_MISSING_MESSAGE);
   } catch (error) {
     console.error('Error generating action figure:', error);
     throw error;

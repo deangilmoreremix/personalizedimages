@@ -1,10 +1,10 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
-import { generateWithGptImage, generateWithGeminiImage } from "../_shared/imageProviders.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
 interface ImageEnhancementRequest {
   imageUrl: string
   prompt?: string
-  provider: 'openai' | 'gemini'
+  provider?: 'openai'
   enhancementType?: 'upscale' | 'edit' | 'style-transfer' | 'inpaint' | 'variations'
   maskUrl?: string
 }
@@ -37,7 +37,6 @@ Deno.serve(async (req) => {
     const {
       imageUrl,
       prompt,
-      provider,
       enhancementType,
       maskUrl
     }: ImageEnhancementRequest = await req.json()
@@ -58,14 +57,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    if ((!openaiKey || !validateApiKey(openaiKey, 'openai')) &&
-        (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -84,32 +80,10 @@ Deno.serve(async (req) => {
     }
 
     try {
-      if (provider === 'gemini' && geminiKey) {
-        resultImageUrl = await generateWithGeminiImage({ prompt: enhancementPrompt, apiKey: geminiKey, referenceImageUrl: imageUrl })
-      } else if (openaiKey) {
-        resultImageUrl = await generateWithGptImage({ prompt: enhancementPrompt, apiKey: openaiKey, referenceImageUrl: imageUrl })
-      } else if (geminiKey) {
-        resultImageUrl = await generateWithGeminiImage({ prompt: enhancementPrompt, apiKey: geminiKey, referenceImageUrl: imageUrl })
-      } else {
-        return new Response(
-          JSON.stringify({ error: 'API keys not configured' }),
-          { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
-        )
-      }
+      resultImageUrl = await generateWithGptImage({ prompt: enhancementPrompt, apiKey: userApiKey, referenceImageUrl: imageUrl })
     } catch (providerError) {
-      console.error('Primary enhancement provider failed:', providerError)
-      try {
-        if (openaiKey && provider === 'gemini') {
-          resultImageUrl = await generateWithGptImage({ prompt: enhancementPrompt, apiKey: openaiKey, referenceImageUrl: imageUrl })
-        } else if (geminiKey) {
-          resultImageUrl = await generateWithGeminiImage({ prompt: enhancementPrompt, apiKey: geminiKey, referenceImageUrl: imageUrl })
-        } else {
-          throw providerError
-        }
-      } catch (fallbackError) {
-        console.error('Fallback enhancement provider failed:', fallbackError)
-        throw providerError
-      }
+      console.error('Image enhancement failed:', providerError)
+      throw providerError
     }
 
     return new Response(

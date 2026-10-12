@@ -6,14 +6,13 @@
  */
 
 import type { AIProvider } from './api/core/types';
-import { getUserApiKey, validateUserApiKey } from './userApiKeyStorage';
+import { getUserApiKey, validateUserApiKey, type ApiKeyProvider } from './userApiKeyStorage';
 
 // Environment variable schema (browser-safe subset)
 interface BrowserEnvironmentConfig {
   VITE_SUPABASE_URL?: string;
   VITE_SUPABASE_ANON_KEY?: string;
   VITE_OPENAI_ASSISTANT_ID?: string;
-  VITE_STRIPE_PUBLISHABLE_KEY?: string;
   VITE_ENABLE_DEBUG_MODE?: string;
   VITE_ENABLE_ANALYTICS?: string;
 }
@@ -33,19 +32,33 @@ export function getEnvironmentConfig(): BrowserEnvironmentConfig {
     VITE_SUPABASE_URL: getBrowserEnvVar('VITE_SUPABASE_URL'),
     VITE_SUPABASE_ANON_KEY: getBrowserEnvVar('VITE_SUPABASE_ANON_KEY'),
     VITE_OPENAI_ASSISTANT_ID: getBrowserEnvVar('VITE_OPENAI_ASSISTANT_ID'),
-    VITE_STRIPE_PUBLISHABLE_KEY: getBrowserEnvVar('VITE_STRIPE_PUBLISHABLE_KEY'),
     VITE_ENABLE_DEBUG_MODE: getBrowserEnvVar('VITE_ENABLE_DEBUG_MODE'),
     VITE_ENABLE_ANALYTICS: getBrowserEnvVar('VITE_ENABLE_ANALYTICS')
   };
+}
+
+const STORAGE_PROVIDER_BY_IMAGE_PROVIDER: Record<AIProvider, ApiKeyProvider> = {
+  openai: 'openai',
+  gemini: 'openai',
+  'gemini-nano': 'openai',
+  imagen: 'openai',
+  leonardo: 'openai',
+  giphy: 'openai',
+  freepik: 'openai',
+};
+
+function resolveStorageProvider(provider: AIProvider): ApiKeyProvider {
+  return STORAGE_PROVIDER_BY_IMAGE_PROVIDER[provider] || 'openai';
 }
 
 /**
  * Check if a specific API key is available and valid (BYOK only)
  */
 export function hasValidApiKey(provider: AIProvider): boolean {
-  const userKey = getUserApiKey(provider);
+  const storageProvider = resolveStorageProvider(provider);
+  const userKey = getUserApiKey(storageProvider);
   if (userKey) {
-    const validation = validateUserApiKey(provider, userKey);
+    const validation = validateUserApiKey(storageProvider, userKey);
     if (validation.valid) return true;
   }
   return false;
@@ -55,9 +68,10 @@ export function hasValidApiKey(provider: AIProvider): boolean {
  * Get API key for a specific provider with validation (BYOK only)
  */
 export function getApiKey(provider: AIProvider): string | null {
-  const userKey = getUserApiKey(provider);
+  const storageProvider = resolveStorageProvider(provider);
+  const userKey = getUserApiKey(storageProvider);
   if (userKey) {
-    const validation = validateUserApiKey(provider, userKey);
+    const validation = validateUserApiKey(storageProvider, userKey);
     if (validation.valid) return userKey;
   }
   return null;

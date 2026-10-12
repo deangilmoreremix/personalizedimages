@@ -4,11 +4,19 @@
  * The edge functions under supabase/functions/* are Deno modules. This suite
  * imports them directly with Node's TypeScript type stripping, stubbing the
  * `Deno` global (env + serve) and replacing global fetch with a router that
- * emulates Supabase auth / rate limits / credits plus the OpenAI and Gemini
- * upstreams. Each registered handler is then driven with crafted Request
- * objects to assert the documented contract:
+ * emulates Supabase auth / rate limits plus the OpenAI upstream. Each
+ * registered handler is then driven with crafted Request objects to assert
+ * the documented BYOK contract:
  *
  *   node --experimental-strip-types qa/edge-functions.test.mjs
+ *
+ * BYOK contract pinned here:
+ *   - every request must carry the caller's own key in `x-user-api-key`
+ *   - a missing/blank or non-`sk-` key returns HTTP 400 with
+ *     OPENAI_KEY_MISSING_ERROR and never reaches the provider
+ *   - the provider always receives THIS request's user key in the
+ *     Authorization header -- env values are decoys that must never be read
+ *   - no credit checks / no Gemini fallback paths exist any more
  *
  * When this file is collected by vitest instead, it delegates the whole suite
  * to the node runner above, because vitest's module runner cannot resolve the
@@ -103,6 +111,17 @@ if (UNDER_VITEST) {
   const OPENAI_RESPONSES = 'https://api.openai.com/v1/responses';
   const GEMINI = 'https://generativelanguage.googleapis.com';
 
+  // The user's own key, sent per request in `x-user-api-key` (100% BYOK).
+  const USER_API_KEY = 'sk-test-user-openai-key-1234567890';
+
+  // Decoy platform credentials left in the environment. No function may read
+  // them: if any code path fell back to an env key, the provider call below
+  // would carry one of these values and the Authorization assertions fail.
+  const DECOY_OPENAI_KEY = 'sk-DECOY-ENV-OPENAI-KEY-0000000000';
+  const DECOY_GEMINI_KEY = 'AIzaDECOY-ENV-GEMINI-KEY-0000000000';
+
+  const OPENAI_KEY_MISSING_ERROR = 'OpenAI API key not configured. Add your key in Settings → API Keys.';
+
   let fetchCalls = [];
   let mock;
 
@@ -111,7 +130,6 @@ if (UNDER_VITEST) {
     mock = {
       authOk: true,
       rateLimitRow: null, // null => no rate_limits row yet (fresh window)
-      credits: { allowed: true, balance: 42 },
       generations: { status: 200, body: { data: [{ b64_json: 'R0VOQVJBRFM=' }] } },
       edits: { status: 200, body: { data: [{ b64_json: 'RURJVEJBU0U2NA==' }] } },
       responses: {
@@ -121,7 +139,6 @@ if (UNDER_VITEST) {
           output: [{ type: 'message', content: [{ type: 'output_text', text: 'Hello from OpenAI' }] }],
         },
       },
-      gemini: { status: 200, body: { candidates: [{ content: { parts: [{ text: 'Hello from Gemini' }] } }] } },
     };
   }
 
@@ -141,11 +158,12 @@ if (UNDER_VITEST) {
       if (method === 'GET') return jsonResponse(mock.rateLimitRow ? [mock.rateLimitRow] : []);
       return jsonResponse({}, 201); // upsert / patch
     }
-    if (url.includes('/rest/v1/rpc/check_and_deduct_credit')) return jsonResponse(mock.credits);
     if (url.startsWith(OPENAI_GENERATIONS)) return jsonResponse(mock.generations.body, mock.generations.status);
     if (url.startsWith(OPENAI_EDITS)) return jsonResponse(mock.edits.body, mock.edits.status);
     if (url.startsWith(OPENAI_RESPONSES)) return jsonResponse(mock.responses.body, mock.responses.status);
-    if (url.startsWith(GEMINI)) return jsonResponse(mock.gemini.body, mock.gemini.status);
+    // Gemini upstreams are deliberately NOT mocked: the credit/Gemini fallback
+    // paths were deleted, so any Gemini call is an unmocked (loud) failure.
+    // Credit RPCs are not mocked either -- credits are gone entirely.
     throw new Error(`Unmocked fetch: ${method} ${url}`);
   }
 
@@ -157,27 +175,31 @@ if (UNDER_VITEST) {
     return routeFetch(url, method, init);
   };
 
-  const BASE_ENV = {
-    SUPABASE_URL: 'https://qa-test-project.supabase.co',
-    SUPABASE_ANON_KEY: 'qa-anon-key',
-    SUPABASE_SERVICE_ROLE_KEY: 'qa-service-role-key',
-    OPENAI_API_KEY: 'sk-qa-test-openai-key-1234567890',
-    GEMINI_API_KEY: 'AIzaQA-test-gemini-key-1234567890',
-  };
-
   function resetEnv() {
     denoEnv.clear();
-    for (const [key, value] of Object.entries(BASE_ENV)) denoEnv.set(key, value);
+    // Only Supabase config is real configuration. The provider keys are
+    // decoys: under 100% BYOK nothing reads them, and the tests below prove
+    // no provider request ever carries their values.
+    for (const [key, value] of Object.entries({
+      SUPABASE_URL: 'https://qa-test-project.supabase.co',
+      SUPABASE_ANON_KEY: 'qa-anon-key',
+      SUPABASE_SERVICE_ROLE_KEY: 'qa-service-role-key',
+      OPENAI_API_KEY: DECOY_OPENAI_KEY,
+      GEMINI_API_KEY: DECOY_GEMINI_KEY,
+    })) denoEnv.set(key, value);
   }
 
   // ------------------------------------------------------------------ //
   // Request + assertion helpers                                         //
   // ------------------------------------------------------------------ //
 
-  function invoke(handler, { method = 'POST', body, rawBody, auth = true, origin = 'http://localhost:3000' } = {}) {
+  // `apiKey` is the value of the per-request `x-user-api-key` header.
+  // Pass null to omit the header entirely, '' / '   ' to send a blank value.
+  function invoke(handler, { method = 'POST', body, rawBody, auth = true, origin = 'http://localhost:3000', apiKey = USER_API_KEY } = {}) {
     const headers = { 'content-type': 'application/json' };
     if (origin) headers.origin = origin;
     if (auth) headers.Authorization = AUTH_HEADER;
+    if (apiKey !== null) headers['x-user-api-key'] = apiKey;
     const hasBody = rawBody !== undefined || body !== undefined;
     return handler(
       new Request('https://qa-edge.test/functions/v1/test', {
@@ -203,6 +225,47 @@ if (UNDER_VITEST) {
     const call = [...fetchCalls].reverse().find((c) => c.url.includes(needle));
     assert.ok(call, `expected an upstream call to ${needle}`);
     return JSON.parse(call.init.body);
+  }
+
+  function lastUpstreamHeaders(needle) {
+    const call = [...fetchCalls].reverse().find((c) => c.url.includes(needle));
+    assert.ok(call, `expected an upstream call to ${needle}`);
+    return call.init.headers;
+  }
+
+  // No recorded request (URL, header or body) may ever contain a decoy
+  // platform credential.
+  function assertNoDecoyCredentialsLeak() {
+    for (const call of fetchCalls) {
+      const serialized = JSON.stringify({ url: call.url, init: call.init });
+      assert.ok(
+        !serialized.includes(DECOY_OPENAI_KEY),
+        `a request leaked the decoy OPENAI_API_KEY env value: ${call.method} ${call.url}`
+      );
+      assert.ok(
+        !serialized.includes(DECOY_GEMINI_KEY),
+        `a request leaked the decoy GEMINI_API_KEY env value: ${call.method} ${call.url}`
+      );
+    }
+  }
+
+  function assertNoCreditTraffic() {
+    for (const call of fetchCalls) {
+      assert.ok(
+        !call.url.includes('/rest/v1/rpc/'),
+        `no credit RPC may be called (credits were removed): ${call.method} ${call.url}`
+      );
+      assert.ok(
+        !/credit/i.test(call.url),
+        `no credit endpoint may be contacted: ${call.method} ${call.url}`
+      );
+      if (call.init?.body) {
+        assert.ok(
+          !/credit/i.test(call.init.body),
+          `no request body may contain a credit field: ${call.method} ${call.url}`
+        );
+      }
+    }
   }
 
   beforeEach(() => {
@@ -261,15 +324,36 @@ if (UNDER_VITEST) {
     assert.equal((await readJson(res)).error, 'Unsupported provider');
   });
 
-  test('image-generation: every provider the frontend sends returns 200 with the documented shape', async () => {
-    // Providers sent by src/utils/api.ts and src/services/imageGenerationService.ts
-    // plus the remaining values in SUPPORTED_PROVIDERS.
-    const providers = ['openai', 'gpt-image-1', 'gemini-nano', 'imagen-4', 'imagen', 'gpt-5', 'gemini'];
+  test('image-generation: missing x-user-api-key returns 400 with the exact setup message', async () => {
+    for (const apiKey of [null, '', '   ']) {
+      const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' }, apiKey });
+      assert.equal(res.status, 400, `apiKey ${JSON.stringify(apiKey)} must be rejected with 400`);
+      assert.deepEqual(await readJson(res), { error: OPENAI_KEY_MISSING_ERROR });
+    }
+    assert.equal(upstreamCalls(OPENAI_GENERATIONS).length, 0);
+    assertNoDecoyCredentialsLeak();
+  });
+
+  test('image-generation: invalid-format user key returns 400 and never reaches the provider', async () => {
+    for (const apiKey of ['not-a-valid-openai-key', 'sk-short', 'AIza-looking-like-gemini']) {
+      const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' }, apiKey });
+      assert.equal(res.status, 400, `apiKey ${JSON.stringify(apiKey)} must be rejected with 400`);
+      assert.deepEqual(await readJson(res), { error: OPENAI_KEY_MISSING_ERROR });
+    }
+    assert.equal(upstreamCalls(OPENAI_GENERATIONS).length, 0);
+    assertNoDecoyCredentialsLeak();
+  });
+
+  test('image-generation: every supported provider returns 200 with the documented shape and the user key', async () => {
+    const providers = ['openai', 'gpt-5', 'gpt-image-1', 'imagen', 'imagen-4'];
     for (const provider of providers) {
       fetchCalls = [];
       const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat', provider } });
       assert.equal(res.status, 200, `provider ${provider} should be accepted`);
       const body = await readJson(res);
+      assert.deepEqual(Object.keys(body).sort(), [
+        'imageUrl', 'imageUrls', 'prompt', 'provider', 'quality', 'size', 'style',
+      ]);
       assert.equal(body.provider, provider);
       assert.match(body.imageUrl, /^data:image\/png;base64,/);
       assert.deepEqual(body.imageUrls, [body.imageUrl]);
@@ -277,7 +361,8 @@ if (UNDER_VITEST) {
       assert.equal(body.size, '1024x1024');
       assert.equal(body.style, '');
       assert.equal(body.quality, 'standard');
-      assert.equal(body.creditsRemaining, 42);
+      assert.equal(res.headers.get('x-credits-remaining'), null, 'no credit headers remain');
+      assert.equal(lastUpstreamHeaders(OPENAI_GENERATIONS).Authorization, `Bearer ${USER_API_KEY}`);
       const upstream = lastUpstreamBody(OPENAI_GENERATIONS);
       assert.equal(upstream.model, 'gpt-image-2.5-sunburst', `model for provider ${provider}`);
       assert.equal(upstream.n, 1);
@@ -286,6 +371,8 @@ if (UNDER_VITEST) {
       assert.equal(upstream.output_format, 'png');
       assert.equal(upstream.prompt, 'a cat');
     }
+    assertNoDecoyCredentialsLeak();
+    assertNoCreditTraffic();
   });
 
   test('image-generation: size aliases map to supported upstream sizes', async () => {
@@ -377,46 +464,20 @@ if (UNDER_VITEST) {
     assert.equal(lastUpstreamBody(OPENAI_GENERATIONS).model, 'gpt-image-2.5-sunburst');
   });
 
-  test('image-generation: success exposes X-Credits-Remaining header', async () => {
-    const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' } });
-    assert.equal(res.status, 200);
-    assert.equal(res.headers.get('x-credits-remaining'), '42');
-    assert.equal(res.headers.get('content-type'), 'application/json');
-  });
-
-  test('image-generation: exhausted credits return 429 and never call the provider', async () => {
-    mock.credits = { allowed: false, balance: 0 };
-    const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' } });
-    assert.equal(res.status, 429);
-    const body = await readJson(res);
-    assert.equal(body.error, 'Daily credit limit exceeded');
-    assert.equal(body.remainingCredits, 0);
-    assert.ok(body.resetTime, 'resetTime should be present');
-    assert.equal(upstreamCalls(OPENAI_GENERATIONS).length, 0);
-  });
-
-  test('image-generation: rate limit is enforced before credits and the provider', async () => {
+  test('image-generation: rate limit is enforced before the provider (no credit RPC exists)', async () => {
     mock.rateLimitRow = { id: 'rl-1', request_count: 100, window_start: new Date().toISOString() };
     const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' } });
     assert.equal(res.status, 429);
     assert.equal((await readJson(res)).error, 'Rate limit exceeded');
-    assert.equal(upstreamCalls('/rest/v1/rpc/check_and_deduct_credit').length, 0);
     assert.equal(upstreamCalls(OPENAI_GENERATIONS).length, 0);
+    assertNoCreditTraffic();
   });
 
-  test('image-generation: missing OpenAI key returns 503 without calling the provider', async () => {
-    denoEnv.delete('OPENAI_API_KEY');
-    const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' } });
-    assert.equal(res.status, 503);
-    assert.equal((await readJson(res)).error, 'OpenAI API key not configured');
-    assert.equal(upstreamCalls(OPENAI_GENERATIONS).length, 0);
-  });
-
-  test('image-generation: malformed OpenAI key (no sk- prefix) returns 503', async () => {
-    denoEnv.set('OPENAI_API_KEY', 'not-a-valid-openai-key');
-    const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' } });
-    assert.equal(res.status, 503);
-    assert.equal((await readJson(res)).error, 'OpenAI API key not configured');
+  test('image-generation: the rate limit wins over the missing-key error (checked first)', async () => {
+    mock.rateLimitRow = { id: 'rl-2', request_count: 100, window_start: new Date().toISOString() };
+    const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' }, apiKey: null });
+    assert.equal(res.status, 429);
+    assert.equal((await readJson(res)).error, 'Rate limit exceeded');
     assert.equal(upstreamCalls(OPENAI_GENERATIONS).length, 0);
   });
 
@@ -429,6 +490,7 @@ if (UNDER_VITEST) {
       assert.equal(body.error, 'Image provider rejected the request');
       assert.equal(body.providerStatus, status);
     }
+    assertNoDecoyCredentialsLeak();
   });
 
   test('image-generation: provider 200 without an image maps to 502', async () => {
@@ -473,13 +535,36 @@ if (UNDER_VITEST) {
     assert.equal(upstreamCalls(OPENAI_EDITS).length, 0);
   });
 
-  test('image-editing: missing OpenAI key returns 503', async () => {
-    denoEnv.delete('OPENAI_API_KEY');
-    const res = await invoke(imageEditingHandler, {
-      body: { imageUrl: 'https://cdn.example.com/a.png', editOptions: { prompt: 'make it red' } },
-    });
-    assert.equal(res.status, 503);
-    assert.equal((await readJson(res)).error, 'OpenAI is not configured on the server');
+  test('image-editing: missing x-user-api-key returns 400 with the exact setup message', async () => {
+    for (const apiKey of [null, '', '   ']) {
+      const res = await invoke(imageEditingHandler, {
+        body: { imageUrl: 'https://cdn.example.com/a.png', editOptions: { prompt: 'make it red' } },
+        apiKey,
+      });
+      assert.equal(res.status, 400, `apiKey ${JSON.stringify(apiKey)} must be rejected with 400`);
+      assert.deepEqual(await readJson(res), { error: OPENAI_KEY_MISSING_ERROR });
+    }
+    assert.equal(upstreamCalls(OPENAI_EDITS).length, 0);
+    assertNoDecoyCredentialsLeak();
+  });
+
+  test('image-editing: invalid-format user key returns 400 and never reaches the provider', async () => {
+    for (const apiKey of ['not-a-valid-openai-key', 'sk-short']) {
+      const res = await invoke(imageEditingHandler, {
+        body: { imageUrl: 'https://cdn.example.com/a.png', editOptions: { prompt: 'make it red' } },
+        apiKey,
+      });
+      assert.equal(res.status, 400, `apiKey ${JSON.stringify(apiKey)} must be rejected with 400`);
+      assert.deepEqual(await readJson(res), { error: OPENAI_KEY_MISSING_ERROR });
+    }
+    assert.equal(upstreamCalls(OPENAI_EDITS).length, 0);
+    assertNoDecoyCredentialsLeak();
+  });
+
+  test('image-editing: the key check precedes body parsing (missing key + invalid JSON is 400)', async () => {
+    const res = await invoke(imageEditingHandler, { rawBody: '{"imageUrl": ', apiKey: null });
+    assert.equal(res.status, 400);
+    assert.deepEqual(await readJson(res), { error: OPENAI_KEY_MISSING_ERROR });
     assert.equal(upstreamCalls(OPENAI_EDITS).length, 0);
   });
 
@@ -508,7 +593,7 @@ if (UNDER_VITEST) {
     assert.equal((await readJson(res)).error, 'An editing instruction is required');
   });
 
-  test('image-editing: data URL input succeeds and is forwarded upstream', async () => {
+  test('image-editing: data URL input succeeds and is forwarded upstream with the user key', async () => {
     const dataUrl = 'data:image/png;base64,QUJDREVG';
     const res = await invoke(imageEditingHandler, {
       body: { imageUrl: dataUrl, editOptions: { prompt: 'make it red' } },
@@ -517,12 +602,14 @@ if (UNDER_VITEST) {
     const body = await readJson(res);
     assert.equal(body.imageUrl, 'data:image/png;base64,RURJVEJBU0U2NA==');
     assert.equal(body.model, 'gpt-image-2.5-sunburst');
+    assert.equal(lastUpstreamHeaders(OPENAI_EDITS).Authorization, `Bearer ${USER_API_KEY}`);
     const upstream = lastUpstreamBody(OPENAI_EDITS);
     assert.equal(upstream.model, 'gpt-image-2.5-sunburst');
     assert.deepEqual(upstream.images, [{ image_url: dataUrl }]);
     assert.equal(upstream.prompt, 'make it red');
     assert.equal(upstream.n, 1);
     assert.equal(upstream.output_format, 'png');
+    assertNoDecoyCredentialsLeak();
   });
 
   test('image-editing: https URL input succeeds and is forwarded upstream', async () => {
@@ -625,10 +712,37 @@ if (UNDER_VITEST) {
     assert.equal(upstreamCalls(OPENAI_RESPONSES).length, 0);
   });
 
-  test('assistant-stream: empty messages array returns 400', async () => {
-    const res = await invoke(assistantStreamHandler, { body: { messages: [] } });
+  test('assistant-stream: empty messages array returns 400 (checked before the key)', async () => {
+    const res = await invoke(assistantStreamHandler, { body: { messages: [] }, apiKey: null });
     assert.equal(res.status, 400);
     assert.equal((await readJson(res)).error, 'Messages array is required');
+    assert.equal(upstreamCalls(OPENAI_RESPONSES).length, 0);
+  });
+
+  test('assistant-stream: missing x-user-api-key returns 400 with the exact setup message', async () => {
+    for (const apiKey of [null, '', '   ']) {
+      const res = await invoke(assistantStreamHandler, {
+        body: { messages: [{ role: 'user', content: 'hi' }], provider: 'openai' },
+        apiKey,
+      });
+      assert.equal(res.status, 400, `apiKey ${JSON.stringify(apiKey)} must be rejected with 400`);
+      assert.deepEqual(await readJson(res), { error: OPENAI_KEY_MISSING_ERROR });
+    }
+    assert.equal(upstreamCalls(OPENAI_RESPONSES).length, 0);
+    assert.equal(upstreamCalls(GEMINI).length, 0, 'no Gemini fallback may exist');
+    assertNoDecoyCredentialsLeak();
+  });
+
+  test('assistant-stream: invalid-format user key returns 400 with no provider and no fallback', async () => {
+    const res = await invoke(assistantStreamHandler, {
+      body: { messages: [{ role: 'user', content: 'hi' }], provider: 'openai' },
+      apiKey: 'not-a-valid-openai-key',
+    });
+    assert.equal(res.status, 400);
+    assert.deepEqual(await readJson(res), { error: OPENAI_KEY_MISSING_ERROR });
+    assert.equal(upstreamCalls(OPENAI_RESPONSES).length, 0);
+    assert.equal(upstreamCalls(GEMINI).length, 0, 'an invalid key must not trigger a Gemini fallback');
+    assertNoDecoyCredentialsLeak();
   });
 
   test('assistant-stream: openai provider returns {text, model, message} and forwards user/assistant turns only', async () => {
@@ -648,6 +762,8 @@ if (UNDER_VITEST) {
     assert.equal(body.text, 'Hello from OpenAI');
     assert.equal(body.model, 'gpt-5-mini');
     assert.equal(body.message, 'Hello from OpenAI');
+    assert.ok(!JSON.stringify(body).includes(USER_API_KEY), 'the response must not echo the API key');
+    assert.equal(lastUpstreamHeaders(OPENAI_RESPONSES).Authorization, `Bearer ${USER_API_KEY}`);
     const upstream = lastUpstreamBody(OPENAI_RESPONSES);
     assert.equal(upstream.model, 'gpt-5-mini');
     assert.equal(upstream.max_output_tokens, 1000);
@@ -657,6 +773,8 @@ if (UNDER_VITEST) {
     ]);
     assert.match(upstream.instructions, /Ada/);
     assert.equal(upstreamCalls(GEMINI).length, 0);
+    assertNoDecoyCredentialsLeak();
+    assertNoCreditTraffic();
   });
 
   test('assistant-stream: OPENAI_RESPONSES_MODEL override is used', async () => {
@@ -668,53 +786,6 @@ if (UNDER_VITEST) {
     assert.equal(lastUpstreamBody(OPENAI_RESPONSES).model, 'qa-override-model');
   });
 
-  test('assistant-stream: gemini provider returns {text, model, message}', async () => {
-    const res = await invoke(assistantStreamHandler, {
-      body: { messages: [{ role: 'user', content: 'hi' }], provider: 'gemini' },
-    });
-    assert.equal(res.status, 200);
-    const body = await readJson(res);
-    assert.equal(body.text, 'Hello from Gemini');
-    assert.equal(body.model, 'gemini-2.5-flash');
-    assert.equal(body.message, 'Hello from Gemini');
-    const calls = upstreamCalls(GEMINI);
-    assert.ok(calls.length > 0, 'gemini upstream should be called');
-    assert.match(calls[calls.length - 1].url, /gemini-2\.5-flash:generateContent/);
-    assert.match(calls[calls.length - 1].url, /key=AIza/);
-    assert.equal(upstreamCalls(OPENAI_RESPONSES).length, 0);
-  });
-
-  test('assistant-stream: falls back to gemini when the openai key is absent', async () => {
-    denoEnv.delete('OPENAI_API_KEY');
-    const res = await invoke(assistantStreamHandler, {
-      body: { messages: [{ role: 'user', content: 'hi' }], provider: 'openai' },
-    });
-    assert.equal(res.status, 200);
-    assert.equal((await readJson(res)).model, 'gemini-2.5-flash');
-    assert.ok(upstreamCalls(GEMINI).length > 0);
-    assert.equal(upstreamCalls(OPENAI_RESPONSES).length, 0);
-  });
-
-  test('assistant-stream: falls back to openai when the gemini key is absent', async () => {
-    denoEnv.delete('GEMINI_API_KEY');
-    const res = await invoke(assistantStreamHandler, {
-      body: { messages: [{ role: 'user', content: 'hi' }], provider: 'gemini' },
-    });
-    assert.equal(res.status, 200);
-    assert.equal((await readJson(res)).model, 'gpt-5-mini');
-    assert.ok(upstreamCalls(OPENAI_RESPONSES).length > 0);
-  });
-
-  test('assistant-stream: no API keys configured returns 500', async () => {
-    denoEnv.delete('OPENAI_API_KEY');
-    denoEnv.delete('GEMINI_API_KEY');
-    const res = await invoke(assistantStreamHandler, {
-      body: { messages: [{ role: 'user', content: 'hi' }] },
-    });
-    assert.equal(res.status, 500);
-    assert.equal((await readJson(res)).error, 'No API keys configured');
-  });
-
   test('assistant-stream: openai upstream failure maps to 502 with providerStatus', async () => {
     mock.responses = { status: 429, body: { error: { code: 'rate_limit_exceeded' } } };
     const res = await invoke(assistantStreamHandler, {
@@ -724,6 +795,7 @@ if (UNDER_VITEST) {
     const body = await readJson(res);
     assert.equal(body.error, 'OpenAI Responses request failed');
     assert.equal(body.providerStatus, 429);
+    assert.ok(!JSON.stringify(body).includes(USER_API_KEY));
   });
 
   test('assistant-stream: incomplete model response maps to 502', async () => {
@@ -738,15 +810,6 @@ if (UNDER_VITEST) {
     assert.equal((await readJson(res)).error, 'Model response was incomplete');
   });
 
-  test('assistant-stream: gemini upstream failure surfaces as 500 with the upstream status', async () => {
-    mock.gemini = { status: 500, body: { error: 'boom' } };
-    const res = await invoke(assistantStreamHandler, {
-      body: { messages: [{ role: 'user', content: 'hi' }], provider: 'gemini' },
-    });
-    assert.equal(res.status, 500);
-    assert.match((await readJson(res)).error, /Gemini API error: 500/);
-  });
-
   test('assistant-stream: rate limit exceeded returns 429', async () => {
     mock.rateLimitRow = { id: 'rl-2', request_count: 100, window_start: new Date().toISOString() };
     const res = await invoke(assistantStreamHandler, {
@@ -754,6 +817,7 @@ if (UNDER_VITEST) {
     });
     assert.equal(res.status, 429);
     assert.equal((await readJson(res)).error, 'Rate limit exceeded');
+    assert.equal(upstreamCalls(OPENAI_RESPONSES).length, 0);
   });
 
   test('assistant-stream: invalid JSON body returns 500 via the catch-all', async () => {

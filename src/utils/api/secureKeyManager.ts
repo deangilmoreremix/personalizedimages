@@ -71,15 +71,8 @@ export class SecureApiKeyManager {
     switch (provider) {
       case 'openai':
         return key.startsWith('sk-') && key.length > 20;
-      case 'gemini':
-      case 'gemini-nano':
-        return key.startsWith('AIza');
-      case 'leonardo':
-        return key.length > 10;
-      case 'giphy':
-        return key.length > 10;
-      case 'freepik':
-        return /^[A-Za-z0-9]{20,}$/.test(key);
+      case 'muapi':
+        return key.trim().length > 0;
       default:
         return false;
     }
@@ -115,7 +108,7 @@ export class SecureApiKeyManager {
    * Get key status information
    */
   getKeyStatus(): Record<string, boolean> {
-    const providers = ['openai', 'gemini', 'gemini-nano', 'leonardo', 'giphy', 'freepik'];
+    const providers = ['openai', 'muapi'];
     const status: Record<string, boolean> = {};
 
     providers.forEach(provider => {

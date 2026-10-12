@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts";
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR } from "../_shared/cors.ts";
 import { generateWithGptImage } from "../_shared/imageProviders.ts";
 
 const MAX_PROMPT_LENGTH = 2000;
@@ -89,9 +89,9 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ error: "Rate limit exceeded. Please wait before trying again." }, 429);
     }
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openaiKey) {
-      return jsonRes({ error: "OpenAI API key not configured" }, 503);
+    const userApiKey = getUserApiKey(req, "openai");
+    if (!userApiKey || !validateApiKey(userApiKey, "openai")) {
+      return jsonRes({ error: OPENAI_KEY_MISSING_ERROR }, 400);
     }
 
     const body = await req.json().catch(() => null);
@@ -125,7 +125,7 @@ Deno.serve(async (req: Request) => {
     let generated: string[];
     try {
       generated = await Promise.all(
-        Array.from({ length: count }, () => generateWithGptImage({ prompt, apiKey: openaiKey, size }))
+        Array.from({ length: count }, () => generateWithGptImage({ prompt, apiKey: userApiKey, size }))
       );
     } catch (providerError) {
       console.error("OpenAI image generation failed", providerError instanceof Error ? providerError.message : "unknown");

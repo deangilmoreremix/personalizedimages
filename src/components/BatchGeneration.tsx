@@ -23,7 +23,9 @@ import {
   RotateCcw,
   Layers
 } from 'lucide-react';
-import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
+import { generateImage, GenerationError } from '../services/imageGenerationService';
+import { isApiKeyMissingError } from '../utils/apiKeyMissing';
+import ApiKeyMissingNotice from './ApiKeyMissingNotice';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface BatchItem {
@@ -45,6 +47,7 @@ interface BatchGenerationProps {
 const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState(-1);
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [imageStyle, setImageStyle] = useState('photography');
@@ -161,9 +164,10 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
       };
     } catch (error) {
       let errorMsg = 'Generation failed';
-      if (error instanceof InsufficientCreditsError) {
-        errorMsg = 'Insufficient credits';
-      } else if (error instanceof GenerationError) {
+      if (isApiKeyMissingError(error)) {
+        setApiKeyMissing(true);
+      }
+      if (error instanceof GenerationError) {
         errorMsg = error.message;
       } else if (error instanceof Error) {
         errorMsg = error.message;
@@ -180,6 +184,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   const processBatch = async () => {
     if (batchItems.length === 0) return;
 
+    setApiKeyMissing(false);
     setIsProcessing(true);
     setCurrentProcessingIndex(0);
     cancelledRef.current = false;
@@ -197,7 +202,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
         const result = await generateImageForItem(item);
         updateItem(item.id, result);
 
-        if (result.status === 'failed' && result.error === 'Insufficient credits') {
+        if (isApiKeyMissingError(result.error)) {
           cancelledRef.current = true;
           break;
         }
@@ -437,6 +442,10 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
                 <Download className="w-4 h-4 mr-2" />
                 Download Results CSV
               </button>
+            )}
+
+            {apiKeyMissing && (
+              <ApiKeyMissingNotice />
             )}
 
             {stats.failed > 0 && !isProcessing && (

@@ -6,6 +6,7 @@
  */
 
 import { getUserProvidedApiKey as getApiKey } from '../../apiUtils';
+import { normalizeProvider } from './providers';
 import type { AIProvider } from './types';
 
 export const OPENAI_IMAGE_MODEL = 'gpt-image-2.5-sunburst';
@@ -91,17 +92,7 @@ export class ApiClient {
    * Freepik-routed generation is served by OpenAI GPT Image 2.5.
    */
   private resolveProvider(provider: AIProvider): AIProvider | null {
-    switch (provider) {
-      case 'freepik':
-        return 'openai';
-      case 'openai':
-      case 'gemini':
-      case 'gemini-nano':
-      case 'imagen':
-        return provider;
-      default:
-        return null;
-    }
+    return normalizeProvider(provider);
   }
 
   /**
@@ -135,18 +126,7 @@ export class ApiClient {
       throw new Error(`Unsupported provider: ${request.provider}`);
     }
 
-    switch (provider) {
-      case 'openai':
-        return this.executeOpenAIRequest(prompt, options);
-      case 'gemini':
-        return this.executeGeminiRequest(prompt, options);
-      case 'gemini-nano':
-        return this.executeGeminiNanoRequest(prompt, options);
-      case 'imagen':
-        return this.executeImagenRequest(prompt, options);
-      default:
-        throw new Error(`Unsupported provider: ${request.provider}`);
-    }
+    return this.executeOpenAIRequest(prompt, options);
   }
 
   /**
@@ -188,126 +168,6 @@ export class ApiClient {
     }
 
     throw new Error('No image URL in OpenAI response');
-  }
-
-  /**
-   * Execute Gemini API request
-   */
-  private async executeGeminiRequest(prompt: string, options: any): Promise<any> {
-    const apiKey = getApiKey('gemini');
-    if (!apiKey) throw new Error('Gemini API key not available');
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
-          ...(options.aspectRatio && {
-            imageConfig: { aspectRatio: options.aspectRatio }
-          })
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    // Extract image from response
-    for (const candidate of data.candidates || []) {
-      for (const part of candidate.content?.parts || []) {
-        if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-      }
-    }
-
-    throw new Error('No image found in Gemini response');
-  }
-
-  /**
-   * Execute Gemini Nano API request
-   */
-  private async executeGeminiNanoRequest(prompt: string, options: any): Promise<any> {
-    // Gemini Nano uses the same API as regular Gemini but with different model
-    const apiKey = getApiKey('gemini-nano') || getApiKey('gemini');
-    if (!apiKey) throw new Error('Gemini Nano API key not available');
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
-          temperature: 0.7, // More creative for Nano
-          ...(options.aspectRatio && {
-            imageConfig: { aspectRatio: options.aspectRatio }
-          })
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini Nano API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    // Extract image from response
-    for (const candidate of data.candidates || []) {
-      for (const part of candidate.content?.parts || []) {
-        if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-      }
-    }
-
-    throw new Error('No image found in Gemini Nano response');
-  }
-
-  /**
-   * Execute Imagen API request
-   */
-  private async executeImagenRequest(prompt: string, options: any): Promise<any> {
-    const apiKey = getApiKey('gemini'); // Imagen uses Gemini API
-    if (!apiKey) throw new Error('Imagen API key not available');
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        instances: [{
-          prompt
-        }],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: options.aspectRatio || '1:1',
-          ...(options.quality === 'high' && { imageSize: '2K' }),
-          negativePrompt: options.negativePrompt || undefined,
-          personGeneration: 'allow_adult'
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      throw new Error(`Imagen API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
-      return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
-    }
-
-    throw new Error('No image found in Imagen response');
   }
 
   /**

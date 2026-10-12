@@ -80,6 +80,11 @@ if (UNDER_VITEST) {
   const SRC_FILES = walkSourceFiles(join(REPO_ROOT, 'src'));
   assert.ok(SRC_FILES.length > 0, 'expected to find source files under src/');
 
+  // Test files may legitimately name retired endpoints/key names in negative
+  // assertions; only shipped code must be free of them.
+  const isTestFile = (file) => /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file) || file.includes('__tests__');
+  const SHIPPED_SRC_FILES = SRC_FILES.filter((file) => !isTestFile(file));
+
   // ------------------------------------------------------------------ //
   // Minimal TypeScript-aware scanning helpers                            //
   // ------------------------------------------------------------------ //
@@ -235,52 +240,17 @@ if (UNDER_VITEST) {
     );
   });
 
-  test('videoApi.createPaymentIntent sends the exact payload create-payment-intent reads', () => {
-    const call = extractEdgeCall(VIDEO_API, 'create-payment-intent');
-    const keys = topLevelKeys(call);
-
-    for (const required of ['amount', 'currency', 'description', 'metadata']) {
-      assert.ok(
-        keys.includes(required),
-        `create-payment-intent call must include a top-level '${required}' key\n` +
-          `(the function reads { amount, currency = 'usd', description, metadata }).\n` +
-          `call site: src/utils/videoApi.ts\n${call}`
-      );
-    }
-
+  test('videoApi has no Stripe payment-intent call (100% BYOK: no subscription/credit gate)', () => {
+    // Billing was removed: every AI call is BYOK, so the video flow must not
+    // route through create-payment-intent or any Stripe dependency.
     assert.ok(
-      /currency\s*:\s*['"][a-z]{3}['"]/.test(call),
-      `create-payment-intent call must send a lowercase 3-letter currency literal.\n` +
-        `call site: src/utils/videoApi.ts\n${call}`
+      !VIDEO_API.includes("create-payment-intent"),
+      `the video flow must not call create-payment-intent (the app is 100% BYOK):\n` +
+        `src/utils/videoApi.ts`
     );
     assert.ok(
-      /metadata\s*:\s*\{[^}]*\bvideoId\b[^}]*\}/.test(call),
-      `create-payment-intent call must send metadata containing videoId (the function never\n` +
-        `reads a top-level videoId, so it has to travel inside metadata).\n` +
-        `call site: src/utils/videoApi.ts\n${call}`
-    );
-  });
-
-  test('videoApi.createPaymentIntent amount is a plain dollar amount, not cents', () => {
-    const call = extractEdgeCall(VIDEO_API, 'create-payment-intent');
-    const match = /amount\s*:\s*(-?\d+(?:\.\d+)?)/.exec(call);
-    assert.ok(match, `create-payment-intent call must send a numeric amount literal.\n${call}`);
-    const amount = Number(match[1]);
-
-    assert.ok(
-      amount > 0,
-      `amount must be greater than 0 (create-payment-intent rejects amount <= 0 with 400).\n${call}`
-    );
-    assert.ok(
-      amount < 100,
-      `amount ${amount} is not a plausible dollar price: create-payment-intent multiplies the\n` +
-        `value by 100 for Stripe (Math.round(amount * 100)), so it must be sent in DOLLARS.\n` +
-        `An amount of 100 charges $1000.00. call site: src/utils/videoApi.ts\n${call}`
-    );
-    assert.ok(
-      match[1] !== '100',
-      `regression: amount must not be the cents-scale value 100 (create-payment-intent\n` +
-        `multiplies by 100, so an amount of 100 charges $1000.00).\n${call}`
+      !/stripe/i.test(VIDEO_API),
+      `the video flow must not reference Stripe: src/utils/videoApi.ts`
     );
   });
 
@@ -374,11 +344,6 @@ if (UNDER_VITEST) {
         where: 'src/utils/videoApi.ts (convertImageToVideo)',
       },
       {
-        fn: 'create-payment-intent',
-        sent: () => topLevelKeys(extractEdgeCall(VIDEO_API, 'create-payment-intent')),
-        where: 'src/utils/videoApi.ts (createPaymentIntent)',
-      },
-      {
         fn: 'cartoon-style',
         sent: () => topLevelKeys(extractEdgeCall(cartoonFn, 'cartoon-style')),
         where: 'src/utils/api.ts (generateCartoonImage)',
@@ -407,7 +372,15 @@ if (UNDER_VITEST) {
           `{ ${show(missing)} }. The value is silently ignored / defaults apply.`
       );
 
-      const extra = sentKeys.filter((key) => !readKeys.includes(key));
+      // Keys the frontend may keep sending that the function no longer reads
+      // (BYOK removed provider selection from these OpenAI-only functions).
+      const deadKeys = new Map([
+        ['cartoon-style', ['provider']],
+        ['ghibli-image', ['provider']],
+      ]);
+      const ignorable = deadKeys.get(fn) ?? [];
+
+      const extra = sentKeys.filter((key) => !readKeys.includes(key) && !ignorable.includes(key));
       assert.deepEqual(
         extra,
         [],
@@ -434,9 +407,9 @@ if (UNDER_VITEST) {
     ['VITE_FREEPIK_API_KEY', 'a shared Freepik credential exposed to the browser bundle'],
   ];
 
-  test('no file under src/ references a retired Freepik/Magnific provider endpoint or key header', () => {
+  test('no shipped file under src/ references a retired Freepik/Magnific provider endpoint or key header', () => {
     const offenders = [];
-    for (const file of SRC_FILES) {
+    for (const file of SHIPPED_SRC_FILES) {
       const source = readFileSync(file, 'utf8');
       for (const [needle, why] of FORBIDDEN_PROVIDER_STRINGS) {
         if (source.includes(needle)) offenders.push(`${relative(REPO_ROOT, file)}: '${needle}' (${why})`);
@@ -445,9 +418,9 @@ if (UNDER_VITEST) {
     assert.deepEqual(offenders, [], `retired provider references must not ship in the frontend:\n${offenders.join('\n')}`);
   });
 
-  test('no file under src/ embeds a shared VITE_* AI provider credential', () => {
+  test('no shipped file under src/ embeds a shared VITE_* AI provider credential', () => {
     const offenders = [];
-    for (const file of SRC_FILES) {
+    for (const file of SHIPPED_SRC_FILES) {
       const source = readFileSync(file, 'utf8');
       for (const [needle, why] of FORBIDDEN_CREDENTIAL_STRINGS) {
         if (source.includes(needle)) offenders.push(`${relative(REPO_ROOT, file)}: '${needle}' (${why})`);
@@ -523,18 +496,21 @@ if (UNDER_VITEST) {
     assertByokFirst(body, "callEdgeFunction('cartoon-style'", 'generateCartoonImage');
   });
 
-  test('imageGenerationService.generateImage gates credits only for platform-funded runs', () => {
+  test('imageGenerationService.generateImage performs no credit checks or deductions', () => {
+    // 100% BYOK: there is no platform-funded path left, so the service must
+    // not reference credits at all -- the provider bills the user directly.
     const service = read('src/services/imageGenerationService.ts');
     const body = extractFunction(service, 'export async function generateImage');
-    const guardAt = body.indexOf(BYOK_GUARD);
-    const creditAt = body.indexOf('checkCredits()');
-    const edgeAt = body.indexOf("callEdgeFunction('image-generation'");
-    assert.ok(guardAt !== -1, 'generateImage: must gate on the user\'s own key');
-    assert.ok(creditAt !== -1, 'generateImage: must still check credits for the platform path');
-    assert.ok(edgeAt !== -1, 'generateImage: must still call the edge function for the platform path');
+    assert.ok(!body.includes('checkCredits'), 'generateImage must not check credits (credits were removed)');
+    assert.ok(!body.includes('check_and_deduct'), 'generateImage must not deduct credits');
+    assert.ok(!/InsufficientCredits/.test(body), 'generateImage must not gate on InsufficientCredits');
     assert.ok(
-      guardAt < creditAt && guardAt < edgeAt,
-      'generateImage: the user-key guard must precede the credit check and the metered edge call'
+      body.indexOf(BYOK_GUARD) !== -1,
+      'generateImage must still gate on the user\'s own key'
+    );
+    assert.ok(
+      body.indexOf(BYOK_GUARD) < body.indexOf("callEdgeFunction('image-generation'"),
+      'generateImage: the user-key guard must precede the metered edge call'
     );
   });
 

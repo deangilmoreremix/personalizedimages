@@ -1,18 +1,11 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
-import { generateWithGeminiImage, generateWithGptImage } from "../_shared/imageProviders.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR } from "../_shared/cors.ts"
+import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
-
-const VARIATION_PROMPTS = [
-  "Create a creative variation of this image with different colors and lighting.",
-  "Create a variation of this image with a different artistic style.",
-  "Create a variation of this image from a different perspective or angle.",
-  "Create a variation of this image with a different mood or atmosphere.",
-];
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin');
@@ -50,47 +43,27 @@ Deno.serve(async (req: Request) => {
 
     const variationCount = Math.min(Math.max(1, Number(count) || 2), 4);
 
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-
-    if (!geminiKey && !openaiKey) {
+    const userApiKey = getUserApiKey(req, 'openai');
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'API keys not configured' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
 
     const variations: string[] = [];
 
-    if (geminiKey) {
-      for (let i = 0; i < variationCount; i++) {
-        const prompt = VARIATION_PROMPTS[i % VARIATION_PROMPTS.length];
-        try {
-          const imageResult = await generateWithGeminiImage({
-            prompt,
-            apiKey: geminiKey,
-            referenceImageUrl: imageUrl,
-          });
-          variations.push(imageResult);
-        } catch (geminiError) {
-          console.error('Gemini variation failed', geminiError instanceof Error ? geminiError.message : 'unknown');
-        }
-      }
-    }
-
-    if (variations.length === 0 && openaiKey) {
-      for (let i = 0; i < variationCount; i++) {
-        try {
-          const imageResult = await generateWithGptImage({
-            prompt: `Create a creative variation of the provided image. Variation ${i + 1} of ${variationCount}: change the colors, lighting and composition while keeping the main subject recognizable.`,
-            apiKey: openaiKey,
-            referenceImageUrl: imageUrl,
-            size: '1024x1024',
-          });
-          variations.push(imageResult);
-        } catch (openaiError) {
-          console.error('OpenAI variation failed', openaiError instanceof Error ? openaiError.message : 'unknown');
-        }
+    for (let i = 0; i < variationCount; i++) {
+      try {
+        const imageResult = await generateWithGptImage({
+          prompt: `Create a creative variation of the provided image. Variation ${i + 1} of ${variationCount}: change the colors, lighting and composition while keeping the main subject recognizable.`,
+          apiKey: userApiKey,
+          referenceImageUrl: imageUrl,
+          size: '1024x1024',
+        });
+        variations.push(imageResult);
+      } catch (openaiError) {
+        console.error('OpenAI variation failed', openaiError instanceof Error ? openaiError.message : 'unknown');
       }
     }
 

@@ -1,153 +1,114 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Key,
-  Eye,
-  EyeOff,
   Save,
   Trash2,
   Shield,
   ShieldCheck,
-  ShieldOff,
   CheckCircle,
   XCircle,
   AlertCircle,
   RefreshCw,
   Sparkles,
-  Zap,
-  Image,
   Film,
-  Hash,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { useUserApiKeys } from '../contexts/UserApiKeyContext';
-import { getUserApiKey } from '../utils/userApiKeyStorage';
-import { useAuth } from '../auth/AuthContext';
-import { userProfileService } from '../services/supabaseService';
-import { Loader2 } from 'lucide-react';
+import type { ApiKeyProvider } from '../utils/userApiKeyStorage';
 
 interface ProviderConfig {
   provider: ApiKeyProvider;
   label: string;
   description: string;
   icon: React.ReactNode;
-  tiers: string[];
+  keyPrefix: string;
+  placeholder: string;
   hint: string;
+  docsUrl: string;
 }
 
 const PROVIDERS: ProviderConfig[] = [
   {
     provider: 'openai',
-    label: 'OpenAI',
-    description: 'GPT-4o, DALL-E 3, Whisper',
+    label: 'OpenAI API Key',
+    description: 'Responses API and GPT Image 2.5 - images, editing, assistant',
     icon: <Sparkles className="w-5 h-5" />,
-    tiers: ['Pro'],
-    hint: 'Enter your OpenAI API key to unlock GPT and DALL-E features.',
+    keyPrefix: 'sk-',
+    placeholder: 'sk-...',
+    hint: 'Create a key at platform.openai.com/api-keys. Used for image generation, editing, descriptions and the AI assistant.',
+    docsUrl: 'https://platform.openai.com/api-keys',
   },
   {
-    provider: 'gemini',
-    label: 'Google Gemini',
-    description: 'Image generation and description',
-    icon: <Zap className="w-5 h-5" />,
-    tiers: ['Free', 'Pro'],
-    hint: 'Enter your Google AI Studio API key to use Gemini models.',
-  },
-  {
-    provider: 'gemini-nano',
-    label: 'Gemini Nano',
-    description: 'On-device personalization studio',
-    icon: <Image className="w-5 h-5" />,
-    tiers: ['Free', 'Pro'],
-    hint: 'Reuses your Gemini key by default.',
-  },
-  {
-    provider: 'leonardo',
-    label: 'Leonardo AI',
-    description: 'Photorealistic image models',
+    provider: 'muapi',
+    label: 'MuAPI API Key',
+    description: 'Image-to-video generation',
     icon: <Film className="w-5 h-5" />,
-    tiers: ['Pro'],
-    hint: 'Enter your Leonardo API key for premium image generation.',
-  },
-  {
-    provider: 'giphy',
-    label: 'GIPHY',
-    description: 'GIFs and sticker search',
-    icon: <Hash className="w-5 h-5" />,
-    tiers: ['Free'],
-    hint: 'Enter your GIPHY API key to enable GIF search.',
-  },
-  {
-    provider: 'freepik',
-    label: 'Freepik',
-    description: 'Stock images and vectors',
-    icon: <Image className="w-5 h-5" />,
-    tiers: ['Free', 'Pro'],
-    hint: 'Enter your Freepik API key to access stock media.',
+    keyPrefix: '',
+    placeholder: 'Enter your MuAPI API key',
+    hint: 'Create a key in your MuAPI dashboard. Used only for image-to-video conversion.',
+    docsUrl: 'https://muapi.ai/dashboard',
   },
 ];
 
+function maskKey(value: string): string {
+  if (!value) return '';
+  if (value.length <= 8) return '•'.repeat(value.length);
+  return `${value.slice(0, 6)}…${value.slice(-4)}`;
+}
+
 const UserApiKeysPage: React.FC = () => {
   const { keys, setKey, removeKey, clearAll, isSaving, saveError, refresh } = useUserApiKeys();
-  const { user } = useAuth();
-  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
-  const [profile, setProfile] = useState<any>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [inputErrors, setInputErrors] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<Record<string, 'idle' | 'saved' | 'removed' | 'invalid'>>({});
 
   useEffect(() => {
     const values: Record<string, string> = {};
     (Object.keys(keys) as ApiKeyProvider[]).forEach(provider => {
-      const value = getUserApiKey(provider);
-      if (value) values[provider] = value;
+      if (keys[provider]) values[provider] = '';
     });
     setLocalValues(values);
   }, [keys]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    setLoadingProfile(true);
-    userProfileService.getProfile(user.id).then(p => {
-      setProfile(p);
-      setLoadingProfile(false);
-    }).catch(() => setLoadingProfile(false));
-  }, [user?.id]);
-
-  const toggleVisibility = (provider: string) => {
-    setVisibleKeys(prev => ({ ...prev, [provider]: !prev[provider] }));
-  };
-
   const handleInputChange = (provider: string, value: string) => {
     setLocalValues(prev => ({ ...prev, [provider]: value }));
-    if (inputErrors[provider]) {
-      setInputErrors(prev => ({ ...prev, [provider]: '' }));
-    }
+    setStatus(prev => ({ ...prev, [provider]: 'idle' }));
   };
 
-  const handleSave = async (provider: string) => {
-    const value = localValues[provider] || '';
-    if (!value.trim()) {
-      await removeKey(provider as ApiKeyProvider);
+  const handleSave = async (config: ProviderConfig) => {
+    const value = (localValues[config.provider] || '').trim();
+
+    if (!value) {
+      await handleRemove(config);
       return;
     }
-    await setKey(provider as ApiKeyProvider, value);
+
+    if (config.keyPrefix && !value.startsWith(config.keyPrefix)) {
+      setStatus(prev => ({ ...prev, [config.provider]: 'invalid' }));
+      return;
+    }
+
+    await setKey(config.provider, value);
+    setLocalValues(prev => ({ ...prev, [config.provider]: '' }));
+    setStatus(prev => ({ ...prev, [config.provider]: 'saved' }));
   };
 
-  const handleRemove = async (provider: string) => {
-    setLocalValues(prev => ({ ...prev, [provider]: '' }));
-    await removeKey(provider as ApiKeyProvider);
+  const handleRemove = async (config: ProviderConfig) => {
+    await removeKey(config.provider);
+    setLocalValues(prev => ({ ...prev, [config.provider]: '' }));
+    setStatus(prev => ({ ...prev, [config.provider]: 'removed' }));
   };
 
   const handleClearAll = async () => {
-    if (window.confirm('Remove all your saved API keys? This cannot be undone.')) {
+    if (window.confirm('Remove both saved API keys? This cannot be undone.')) {
       const empty: Record<string, string> = {};
       PROVIDERS.forEach(p => { empty[p.provider] = ''; });
       setLocalValues(empty);
       await clearAll();
+      setStatus({});
     }
   };
-
-  const userTier = profile?.tier || 'free';
-  const isPro = userTier === 'pro' || userTier === 'premium';
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-12">
@@ -161,7 +122,8 @@ const UserApiKeysPage: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">API Keys</h1>
               <p className="text-gray-600">
-                Enter your own API keys to use AI features. Keys are stored securely in your account and used in preference to any pre-configured keys.
+                PersonalizedImages is bring-your-own-key. Add your own OpenAI and MuAPI keys below - every
+                generation runs on the provider account you connect and is billed by that provider.
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -194,34 +156,12 @@ const UserApiKeysPage: React.FC = () => {
           </motion.div>
         )}
 
-        <div className="mb-6 flex items-center space-x-4">
-          <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${
-            isPro ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'
-          }`}>
-            {isPro ? (
-              <ShieldCheck className="w-5 h-5 text-purple-600" />
-            ) : (
-              <ShieldOff className="w-5 h-5 text-gray-400" />
-            )}
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                {isPro ? 'Pro Plan' : 'Free Plan'}
-              </p>
-              <p className="text-xs text-gray-500">
-                {isPro ? 'All features unlocked' : 'Basic features only'}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {PROVIDERS.map(({ provider, label, description, icon, tiers, hint }) => {
-            const isVisible = visibleKeys[provider];
+          {PROVIDERS.map(({ provider, label, description, icon, keyPrefix, placeholder, hint, docsUrl }) => {
             const localValue = localValues[provider] || '';
-            const storedValue = keys[provider];
-            const isSet = !!storedValue;
-            const isFree = tiers.includes('Free');
-            const isLocked = !isFree && !isPro;
+            const storedKey = keys[provider];
+            const isSet = !!storedKey;
+            const providerStatus = status[provider] || 'idle';
 
             return (
               <motion.div
@@ -230,17 +170,9 @@ const UserApiKeysPage: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className={`relative bg-white rounded-xl border p-6 shadow-sm transition-all ${
-                  isLocked ? 'opacity-75' : ''
-                } ${isSet ? 'border-green-200 ring-1 ring-green-100' : 'border-gray-200'}`}
+                  isSet ? 'border-green-200 ring-1 ring-green-100' : 'border-gray-200'
+                }`}
               >
-                {isLocked && (
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-700">
-                      Pro
-                    </span>
-                  </div>
-                )}
-
                 <div className="flex items-start space-x-4">
                   <div className={`p-3 rounded-lg ${
                     isSet ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
@@ -250,60 +182,53 @@ const UserApiKeysPage: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
                       <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
-                      {isSet && (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      )}
+                      {isSet && <CheckCircle className="w-4 h-4 text-green-500" />}
                     </div>
                     <p className="text-sm text-gray-500 mt-1">{description}</p>
-                    <p className="text-xs text-gray-400 mt-1">{hint}</p>
+                    <div className="flex items-center space-x-1 mt-1 text-xs text-gray-400">
+                      {icon}
+                      <span>{hint}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="mt-4 space-y-3">
+                  {isSet && (
+                    <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-gray-50 border border-gray-200">
+                      <span className="text-xs font-medium text-gray-500">Saved key</span>
+                      <code className="text-sm text-gray-700 tracking-wide">{maskKey(storedKey as string)}</code>
+                    </div>
+                  )}
+
                   <div className="relative">
                     <input
-                      type={isVisible ? 'text' : 'password'}
+                      type="password"
                       value={localValue}
                       onChange={e => handleInputChange(provider, e.target.value)}
-                      placeholder="Enter your API key..."
-                      disabled={isLocked}
-                      className={`w-full pr-20 pl-4 py-3 rounded-lg border text-sm transition-colors ${
-                        isLocked
-                          ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                          : isSet
+                      placeholder={isSet ? 'Enter a new key to replace...' : placeholder}
+                      className={`w-full pr-10 pl-4 py-3 rounded-lg border text-sm transition-colors ${
+                        isSet
                           ? 'border-green-300 bg-green-50/50 focus:ring-2 focus:ring-green-500/20 focus:border-green-500'
                           : 'border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
                       }`}
                     />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
-                      {isSet && (
-                        <button
-                          onClick={() => handleRemove(provider)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
-                          title="Remove key"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      )}
-                      {!isLocked && (
-                        <button
-                          onClick={() => toggleVisibility(provider)}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
-                          title={isVisible ? 'Hide key' : 'Show key'}
-                        >
-                          {isVisible ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    {isSet && (
+                      <button
+                        onClick={() => handleRemove({ provider, label, description, icon, keyPrefix, placeholder, hint, docsUrl })}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
+                        title="Remove key"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
-                  {isLocked && (
-                    <p className="text-xs text-purple-600 font-medium">
-                      Available on Pro plan
+                  {providerStatus === 'invalid' && (
+                    <p className="text-xs text-red-600 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {keyPrefix
+                        ? `A valid ${label.replace(' API Key', '')} key starts with "${keyPrefix}".`
+                        : 'A valid key is required.'}
                     </p>
                   )}
 
@@ -312,19 +237,33 @@ const UserApiKeysPage: React.FC = () => {
                       {isSet ? (
                         <span className="inline-flex items-center text-xs text-green-600 font-medium">
                           <CheckCircle className="w-3 h-3 mr-1" />
-                          Key configured
+                          Configured
+                        </span>
+                      ) : providerStatus === 'removed' ? (
+                        <span className="inline-flex items-center text-xs text-gray-500 font-medium">
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Removed
                         </span>
                       ) : (
-                        <span className="inline-flex items-center text-xs text-gray-400 font-medium">
+                        <span className="inline-flex items-center text-xs text-amber-600 font-medium">
                           <AlertCircle className="w-3 h-3 mr-1" />
-                          Not configured
+                          Missing
                         </span>
                       )}
                     </div>
-                    {!isLocked && (
+                    <div className="flex items-center space-x-2">
+                      <a
+                        href={docsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-1 px-3 py-1.5 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <span>Get key</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
                       <button
-                        onClick={() => handleSave(provider)}
-                        disabled={isSaving}
+                        onClick={() => handleSave({ provider, label, description, icon, keyPrefix, placeholder, hint, docsUrl })}
+                        disabled={isSaving || !localValue.trim()}
                         className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {isSaving ? (
@@ -332,25 +271,11 @@ const UserApiKeysPage: React.FC = () => {
                         ) : (
                           <Save className="w-3.5 h-3.5" />
                         )}
-                        <span>{isSaving ? 'Saving...' : 'Save'}</span>
+                        <span>{isSaving ? 'Saving...' : isSet ? 'Replace' : 'Save'}</span>
                       </button>
-                    )}
+                    </div>
                   </div>
                 </div>
-
-                <AnimatePresence>
-                  {inputErrors[provider] && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      className="mt-2 text-xs text-red-600 flex items-center"
-                    >
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      {inputErrors[provider]}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
               </motion.div>
             );
           })}
@@ -369,10 +294,11 @@ const UserApiKeysPage: React.FC = () => {
                 About Your API Keys
               </h3>
               <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-                <li>Keys you enter here are stored in your account and take priority over environment keys.</li>
-                <li>Keys are sent directly from your browser to the AI provider - we never receive your raw keys.</li>
-                <li>You are responsible for any costs incurred through your API keys.</li>
-                <li>Sign out or remove a key to stop using it.</li>
+                <li>Your keys are scoped to your account and are never shared with other users.</li>
+                <li>Keys are sent only to the provider that needs them - we never receive your raw keys.</li>
+                <li>Each provider bills you directly for what you use. There are no app credits or subscriptions.</li>
+                <li>Saved keys are shown masked; the full value is never displayed.</li>
+                <li>Remove a key at any time to stop using it.</li>
               </ul>
             </div>
           </div>

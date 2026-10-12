@@ -1,4 +1,4 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput } from "../_shared/cors.ts";
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput } from "../_shared/cors.ts";
 
 const IMAGE_MODEL = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-2.5-sunburst";
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -15,8 +15,10 @@ Deno.serve(async (req: Request) => {
     const limit = await checkRateLimit(user.id, true);
     if (!limit.allowed) return json({ error: "Rate limit exceeded" }, 429, headers);
 
-    const key = Deno.env.get("OPENAI_API_KEY");
-    if (!key) return json({ error: "OpenAI is not configured on the server" }, 503, headers);
+    const userApiKey = getUserApiKey(req, "openai");
+    if (!userApiKey || !validateApiKey(userApiKey, "openai")) {
+      return json({ error: OPENAI_KEY_MISSING_ERROR }, 400, headers);
+    }
     const { imageUrl, editOptions } = await req.json();
     if (typeof imageUrl !== "string" || !imageUrl ||
         !(imageUrl.startsWith("data:image/") || imageUrl.startsWith("https://"))) {
@@ -30,7 +32,7 @@ Deno.serve(async (req: Request) => {
     if (imageUrl.length > MAX_BYTES) return json({ error: "Image reference too large" }, 413, headers);
     const upstream = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${userApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: IMAGE_MODEL,
         images: [{ image_url: imageUrl }],

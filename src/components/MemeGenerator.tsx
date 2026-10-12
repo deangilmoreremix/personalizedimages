@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes, PaintBucket, Search } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
-import { generateMemeWithReference, generateImageWithGeminiNano } from '../utils/api';
+import { generateMemeWithReference } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { FontSelector } from './ui/FontSelector';

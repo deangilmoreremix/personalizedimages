@@ -156,64 +156,36 @@ describe('ApiClient', () => {
       expect(body.quality).toBe('high'); // 'hd' is mapped to 'high'
     });
 
-    it('should call the Gemini generateContent endpoint and parse inlineData', async () => {
-      setUserApiKey('gemini', GEMINI_KEY);
-      global.fetch = vi.fn().mockResolvedValue(
-        okJson({
-          candidates: [
-            { content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'BBBB' } }] } },
-          ],
-        }),
-      );
-
-      const result = await apiClient.executeRequest({ prompt: 'test', provider: 'gemini' });
-
-      expect(result.success).toBe(true);
-      expect(result.data).toBe('data:image/png;base64,BBBB');
-      const url = vi.mocked(global.fetch).mock.calls[0][0] as string;
-      expect(url.startsWith(`${GEMINI_ENDPOINT}?key=`)).toBe(true);
-      expect(url).toContain(`key=${GEMINI_KEY}`);
-    });
-
-    it('should route Gemini Nano through the flash-image generateContent endpoint', async () => {
-      setUserApiKey('gemini', GEMINI_KEY); // Nano reuses the Gemini key
-      global.fetch = vi.fn().mockResolvedValue(
-        okJson({
-          candidates: [
-            { content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'CCCC' } }] } },
-          ],
-        }),
-      );
-
-      const result = await apiClient.executeRequest({ prompt: 'test', provider: 'gemini-nano' });
-
-      expect(result.success).toBe(true);
-      const url = vi.mocked(global.fetch).mock.calls[0][0] as string;
-      expect(url.startsWith(`${GEMINI_ENDPOINT}?key=`)).toBe(true);
-    });
-
-    it('should call the Imagen predict endpoint and parse bytesBase64Encoded', async () => {
-      setUserApiKey('gemini', GEMINI_KEY); // Imagen reuses the Gemini key
-      global.fetch = vi.fn().mockResolvedValue(
-        okJson({ predictions: [{ bytesBase64Encoded: 'DDDD' }] }),
-      );
-
-      const result = await apiClient.executeRequest({ prompt: 'test', provider: 'imagen' });
-
-      expect(result.success).toBe(true);
-      expect(result.data).toBe('data:image/png;base64,DDDD');
-      const url = vi.mocked(global.fetch).mock.calls[0][0] as string;
-      expect(url.startsWith(`${IMAGEN_ENDPOINT}?key=`)).toBe(true);
-    });
-
-    it('should resolve the freepik provider through OpenAI GPT Image 2.5', async () => {
+    it('should route every legacy provider id through OpenAI GPT Image 2.5 with the user key', async () => {
+      // Gemini, Nano Banana, Imagen and Freepik were removed as active
+      // providers; each id now resolves to the OpenAI BYOK path.
       setUserApiKey('openai', OPENAI_KEY);
-      global.fetch = vi.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'EEEE' }] }));
+      for (const legacyProvider of ['gemini', 'gemini-nano', 'imagen', 'freepik'] as const) {
+        vi.mocked(global.fetch).mockClear();
+        global.fetch = vi.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'BBBB' }] }));
 
-      const result = await apiClient.executeRequest({ prompt: 'test', provider: 'freepik' });
+        const result = await apiClient.executeRequest({ prompt: 'test', provider: legacyProvider });
 
-      expect(result.success).toBe(true);
-      expect(vi.mocked(global.fetch).mock.calls[0][0]).toBe(OPENAI_ENDPOINT);
+        expect(result.success).toBe(true);
+        expect(result.data).toBe('data:image/png;base64,BBBB');
+        expect(vi.mocked(global.fetch).mock.calls[0][0]).toBe(OPENAI_ENDPOINT);
+        const init = vi.mocked(global.fetch).mock.calls[0][1] as RequestInit;
+        expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${OPENAI_KEY}`);
+      }
+    });
+
+    it('should never call a removed provider endpoint', async () => {
+      setUserApiKey('openai', OPENAI_KEY);
+      const removedEndpoints = ['generativelanguage.googleapis.com', 'api.freepik.com', 'api.magnific.com'];
+      for (const legacyProvider of ['gemini', 'gemini-nano', 'imagen', 'freepik'] as const) {
+        global.fetch = vi.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'BBBB' }] }));
+        await apiClient.executeRequest({ prompt: 'test', provider: legacyProvider });
+        for (const call of vi.mocked(global.fetch).mock.calls) {
+          for (const endpoint of removedEndpoints) {
+            expect((call[0] as string).includes(endpoint)).toBe(false);
+          }
+        }
+      }
     });
   });
 

@@ -37,6 +37,7 @@ if (UNDER_VITEST) {
 
 
 
+
 const denoEnv = new Map();
 const servedHandlers = [];
 
@@ -65,6 +66,15 @@ const AUTH_HEADER = 'Bearer qa-test-token';
 const SUPABASE = 'https://qa-test-project.supabase.co';
 const MUAPI_SUBMIT = 'https://api.muapi.ai/api/v1/kling-master';
 const MUAPI_RESULT = 'https://api.muapi.ai/api/v1/predictions/muapi-task-1/result';
+
+// The caller's own MuAPI key (100% BYOK) -- sent per request and forwarded
+// to the provider as `x-api-key`.
+const USER_MUAPI_KEY = 'muapi-user-key-alpha-1234567890';
+// Decoy platform credential: the removed MUAPI_API_KEY env path must never
+// be used, so this value must never appear in any provider request.
+const DECOY_MUAPI_ENV_KEY = 'muapi-DECOY-ENV-KEY-0000000000';
+
+const MUAPI_KEY_MISSING_ERROR = 'MuAPI API key not configured. Add your key in Settings → API Keys.';
 
 let fetchCalls = [];
 let mock;
@@ -136,24 +146,26 @@ globalThis.fetch = async (input, init = {}) => {
   return routeFetch(url, method, init);
 };
 
-const BASE_ENV = {
-  SUPABASE_URL: SUPABASE,
-  SUPABASE_ANON_KEY: 'qa-anon-key',
-  SUPABASE_SERVICE_ROLE_KEY: 'qa-service-role-key',
-  MUAPI_API_KEY: 'muapi-test-key',
-};
-
 function resetEnv() {
   denoEnv.clear();
-  for (const [k, v] of Object.entries(BASE_ENV)) denoEnv.set(k, v);
+  for (const [k, v] of Object.entries({
+    SUPABASE_URL: SUPABASE,
+    SUPABASE_ANON_KEY: 'qa-anon-key',
+    SUPABASE_SERVICE_ROLE_KEY: 'qa-service-role-key',
+    // Decoy only: the MUAPI_API_KEY env path was deleted, nothing may read it.
+    MUAPI_API_KEY: DECOY_MUAPI_ENV_KEY,
+  })) denoEnv.set(k, v);
 }
 
 resetEnv();
 
-function invoke(handler, { method = 'POST', body, rawBody, auth = true, origin = 'http://localhost:3000' } = {}) {
+// `apiKey` is the per-request `x-user-api-key` header value. Pass null to
+// omit the header entirely, '' / '   ' for blank values.
+function invoke(handler, { method = 'POST', body, rawBody, auth = true, origin = 'http://localhost:3000', apiKey = USER_MUAPI_KEY } = {}) {
   const headers = { 'content-type': 'application/json' };
   if (origin) headers.origin = origin;
   if (auth) headers.Authorization = AUTH_HEADER;
+  if (apiKey !== null) headers['x-user-api-key'] = apiKey;
   const hasBody = rawBody !== undefined || body !== undefined;
   return handler(
     new Request('https://qa-edge.test/functions/v1/test', {
@@ -174,10 +186,27 @@ const muapiResultCall = () => fetchCalls.find((c) => c.url === MUAPI_RESULT);
 const patchesTo = (suffix) => mock.patches.filter((p) => p && Object.keys(p).length > 0);
 const lastPatch = () => mock.patches[mock.patches.length - 1];
 
+// Every MuAPI request must carry the user's key as x-api-key and must never
+// carry the decoy env value anywhere (headers, URL or body).
+function assertMuapiCallsUseUserKeyOnly() {
+  for (const call of fetchCalls) {
+    if (!call.url.startsWith('https://api.muapi.ai/')) continue;
+    assert.equal(
+      call.init.headers['x-api-key'],
+      USER_MUAPI_KEY,
+      `MuAPI call must forward the requesting user's key: ${call.url}`
+    );
+    assert.ok(
+      !JSON.stringify(call.init).includes(DECOY_MUAPI_ENV_KEY) && !call.url.includes(DECOY_MUAPI_ENV_KEY),
+      `a MuAPI request leaked the decoy env key: ${call.url}`
+    );
+  }
+}
+
 
 test.beforeEach(() => { resetMocks(); resetEnv(); });
 
-test('image-to-video: submits to MuAPI kling-master with x-api-key and tracks the task', async () => {
+test('image-to-video: submits to MuAPI kling-master with the user x-api-key and tracks the task', async () => {
   resetMocks();
   const res = await invoke(imageToVideoHandler, {
     body: { imageUrl: 'https://cdn.example.com/a.png', duration: 5, prompt: 'animate this' },
@@ -195,7 +224,7 @@ test('image-to-video: submits to MuAPI kling-master with x-api-key and tracks th
   const submit = muapiSubmitCall();
   assert.ok(submit, 'expected a MuAPI submit call');
   assert.equal(submit.url, MUAPI_SUBMIT);
-  assert.equal(submit.init.headers['x-api-key'], 'muapi-test-key');
+  assert.equal(submit.init.headers['x-api-key'], USER_MUAPI_KEY);
   assert.deepEqual(JSON.parse(submit.init.body), {
     prompt: 'animate this',
     image_url: 'https://cdn.example.com/a.png',
@@ -209,6 +238,11 @@ test('image-to-video: submits to MuAPI kling-master with x-api-key and tracks th
   assert.equal(mock.insert.duration, 5);
   assert.equal(mock.insert.metadata.sourceImageUrl, 'https://cdn.example.com/a.png');
   assert.equal(lastPatch().metadata.providerTaskId, 'muapi-task-1');
+  assert.ok(
+    !JSON.stringify(mock.insert).includes(USER_MUAPI_KEY),
+    'the user key must never be written to the generated_videos row'
+  );
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('image-to-video: data URL is resolved to a public URL before submitting', async () => {
@@ -220,6 +254,7 @@ test('image-to-video: data URL is resolved to a public URL before submitting', a
   assert.match(uploaded, /^https:\/\/qa-test-project\.supabase\.co\/storage\/v1\/object\/public\/temp-uploads\/video-tmp\/.+\.png$/);
   assert.equal(mock.insert.duration, 5);
   assert.equal(JSON.parse(submit.init.body).duration, 5);
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('image-to-video: duration clamped to 5 or 10', async () => {
@@ -229,6 +264,7 @@ test('image-to-video: duration clamped to 5 or 10', async () => {
     assert.equal(res.status, 200);
     assert.equal((await readJson(res)).duration, expected);
     assert.equal(JSON.parse(muapiSubmitCall().init.body).duration, expected);
+    assertMuapiCallsUseUserKeyOnly();
   }
 });
 
@@ -239,19 +275,20 @@ test('image-to-video: MUAPI_VIDEO_MODEL overrides the model slug and provider la
   assert.equal(res.status, 200);
   assert.equal(muapiSubmitCall().url, 'https://api.muapi.ai/api/v1/veo3');
   assert.equal(mock.insert.provider, 'veo3');
+  assertMuapiCallsUseUserKeyOnly();
   denoEnv.delete('MUAPI_VIDEO_MODEL');
 });
 
-test('image-to-video: missing MUAPI_API_KEY marks the row failed and returns 503', async () => {
-  resetMocks();
-  denoEnv.delete('MUAPI_API_KEY');
-  const res = await invoke(imageToVideoHandler, { body: { imageUrl: 'https://cdn.example.com/a.png' } });
-  assert.equal(res.status, 503);
-  const body = await readJson(res);
-  assert.match(body.error, /MuAPI/);
-  assert.equal(muapiSubmitCall(), undefined);
-  assert.equal(lastPatch().status, 'failed');
-  assert.match(lastPatch().error_message, /MuAPI/);
+test('image-to-video: missing x-user-api-key returns 400 with the setup message, no provider call and no DB insert', async () => {
+  for (const apiKey of [null, '', '   ']) {
+    resetMocks();
+    const res = await invoke(imageToVideoHandler, { body: { imageUrl: 'https://cdn.example.com/a.png' }, apiKey });
+    assert.equal(res.status, 400, `apiKey ${JSON.stringify(apiKey)} must be rejected with 400`);
+    assert.deepEqual(await readJson(res), { error: MUAPI_KEY_MISSING_ERROR });
+  }
+  assert.equal(muapiSubmitCall(), undefined, 'the provider must never be called without the user key');
+  assert.equal(mock.insert, null, 'no generated_videos row may be created without the user key');
+  assert.equal(mock.patches.length, 0, 'no row may be patched without the user key');
 });
 
 test('image-to-video: provider error maps to 502 with providerStatus and failed row', async () => {
@@ -267,6 +304,7 @@ test('image-to-video: provider error maps to 502 with providerStatus and failed 
     assert.equal(lastPatch().status, 'failed');
     assert.equal(lastPatch().error_message, message);
   }
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('image-to-video: provider 200 without request_id maps to 502', async () => {
@@ -312,13 +350,14 @@ test('video-status: polls MuAPI on a processing row and returns the updated stat
 
   const poll = muapiResultCall();
   assert.ok(poll, 'expected a MuAPI result poll');
-  assert.equal(poll.init.headers['x-api-key'], 'muapi-test-key');
+  assert.equal(poll.init.headers['x-api-key'], USER_MUAPI_KEY);
 
   const patch = lastPatch();
   assert.equal(patch.status, 'completed');
   assert.equal(patch.progress, 100);
   assert.equal(patch.video_url, 'https://cdn.muapi.ai/out.mp4');
   assert.ok(patch.updated_at);
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('video-status: DB pending without a provider task maps to queued', async () => {
@@ -331,14 +370,20 @@ test('video-status: DB pending without a provider task maps to queued', async ()
   assert.equal(muapiResultCall(), undefined);
 });
 
-test('video-status: DB pending maps to queued when MUAPI_API_KEY is missing', async () => {
-  resetMocks();
-  mock.dbRow = { ...mock.dbRow, status: 'pending' };
-  denoEnv.delete('MUAPI_API_KEY');
-  const res = await invoke(videoStatusHandler, { body: { videoId: 'video-1' } });
-  assert.equal(res.status, 200);
-  assert.equal((await readJson(res)).status, 'queued');
-  assert.equal(muapiResultCall(), undefined);
+test('video-status: polling without x-user-api-key returns the stored state plus the setup message', async () => {
+  for (const apiKey of [null, '', '   ']) {
+    resetMocks();
+    mock.dbRow = { ...mock.dbRow, status: 'pending' };
+    const res = await invoke(videoStatusHandler, { body: { videoId: 'video-1' }, apiKey });
+    assert.equal(res.status, 200, `apiKey ${JSON.stringify(apiKey)} must not hard-fail polling`);
+    const body = await readJson(res);
+    assert.equal(body.status, 'queued');
+    assert.equal(
+      body.message,
+      'Live status polling requires your MuAPI API key. Add it in Settings → API Keys.'
+    );
+    assert.equal(muapiResultCall(), undefined, 'the provider must never be polled without the user key');
+  }
 });
 
 test('video-status: provider failed/cancelled marks the row failed', async () => {
@@ -357,6 +402,7 @@ test('video-status: provider failed/cancelled marks the row failed', async () =>
     assert.equal(patch.status, 'failed');
     assert.equal(patch.error_message, body.error);
   }
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('video-status: queued/pending/processing provider states become processing/50', async () => {
@@ -372,6 +418,7 @@ test('video-status: queued/pending/processing provider states become processing/
     assert.equal(patch.status, 'processing');
     assert.equal(patch.progress, 50);
   }
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('video-status: completed without outputs marks the row failed', async () => {
@@ -430,8 +477,10 @@ test('video-result: polls MuAPI and returns the full completed shape', async () 
   assert.deepEqual(body.metadata, { providerTaskId: 'muapi-task-1', sourceImageUrl: 'https://cdn.example.com/a.png' });
 
   assert.ok(muapiResultCall(), 'expected a MuAPI result poll');
+  assert.equal(muapiResultCall().init.headers['x-api-key'], USER_MUAPI_KEY);
   assert.equal(lastPatch().status, 'completed');
   assert.equal(lastPatch().video_url, 'https://cdn.muapi.ai/out.mp4');
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('video-result: still-processing row returns the partial shape after polling', async () => {
@@ -444,6 +493,7 @@ test('video-result: still-processing row returns the partial shape after polling
   assert.equal(body.progress, 50);
   assert.equal(body.error, null);
   assert.equal(lastPatch().progress, 50);
+  assertMuapiCallsUseUserKeyOnly();
 });
 
 test('video-result: pending row without a provider task returns processing (frontend union)', async () => {
@@ -488,5 +538,43 @@ test('video-result: guards still apply', async () => {
   assert.equal(res.status, 400);
   res = await invoke(videoResultHandler, { method: 'OPTIONS' });
   assert.equal(res.status, 200);
+});
+
+test('decoy MUAPI_API_KEY env value is never used: every MuAPI call carries only the user key', async () => {
+  // The env var is present (see resetEnv) and is a plausible-looking key, so
+  // any reintroduced env fallback would show up as x-api-key here.
+  assert.equal(denoEnv.get('MUAPI_API_KEY'), DECOY_MUAPI_ENV_KEY, 'decoy must be present for this test to mean anything');
+
+  const seenMuapiCalls = [];
+  const recordMuapiCalls = () => {
+    for (const call of fetchCalls) {
+      if (call.url.startsWith('https://api.muapi.ai/')) seenMuapiCalls.push(call);
+    }
+  };
+
+  // submit
+  resetMocks();
+  await invoke(imageToVideoHandler, { body: { imageUrl: 'https://cdn.example.com/a.png' } });
+  assertMuapiCallsUseUserKeyOnly();
+  recordMuapiCalls();
+
+  // poll via video-status
+  resetMocks();
+  await invoke(videoStatusHandler, { body: { videoId: 'video-1' } });
+  assertMuapiCallsUseUserKeyOnly();
+  recordMuapiCalls();
+
+  // poll via video-result
+  resetMocks();
+  await invoke(videoResultHandler, { body: { videoId: 'video-1' } });
+  assertMuapiCallsUseUserKeyOnly();
+  recordMuapiCalls();
+
+  assert.ok(seenMuapiCalls.length >= 3, 'expected submit + two polls in this run');
+  assert.equal(
+    seenMuapiCalls.every((c) => c.init.headers['x-api-key'] === USER_MUAPI_KEY),
+    true,
+    'all MuAPI calls must use the per-request user key'
+  );
 });
 }

@@ -1,4 +1,4 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput, isValidUrl, getUserApiKey, MUAPI_KEY_MISSING_ERROR } from "../_shared/cors.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.78.0"
 
 const MUAPI_BASE = "https://api.muapi.ai/api/v1"
@@ -73,6 +73,14 @@ Deno.serve(async (req) => {
 
     const model = Deno.env.get('MUAPI_VIDEO_MODEL') || DEFAULT_MUAPI_MODEL
 
+    const muapiKey = getUserApiKey(req, 'muapi')
+    if (!muapiKey) {
+      return new Response(
+        JSON.stringify({ error: MUAPI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!supabaseUrl || !serviceKey) {
@@ -127,27 +135,6 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Failed to start video generation' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const muapiKey = Deno.env.get('MUAPI_API_KEY')
-    if (!muapiKey) {
-      await fetch(`${supabaseUrl}/rest/v1/generated_videos?id=eq.${videoRow.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': serviceKey,
-          'Authorization': `Bearer ${serviceKey}`
-        },
-        body: JSON.stringify({
-          status: 'failed',
-          error_message: 'MuAPI is not configured on the server',
-          updated_at: new Date().toISOString()
-        })
-      })
-      return new Response(
-        JSON.stringify({ error: 'MuAPI is not configured on the server' }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 

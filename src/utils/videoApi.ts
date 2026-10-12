@@ -102,40 +102,6 @@ export async function getVideoConversionResult(videoId: string): Promise<VideoCo
 }
 
 /**
- * Create a payment intent for video download
- */
-export async function createPaymentIntent(videoId: string): Promise<{ clientSecret: string }> {
-  try {
-    console.log('💰 Creating payment intent for video', { videoId });
-    
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase not properly configured for payment processing');
-    }
-    
-    try {
-      const result = await callEdgeFunction('create-payment-intent', {
-        amount: 1,
-        currency: 'usd',
-        description: 'VideoRemix video download',
-        metadata: { videoId }
-      });
-      
-      if (result && result.clientSecret) {
-        return result;
-      }
-    } catch (edgeError) {
-      console.warn('Edge function failed for payment intent creation:', edgeError);
-      throw new Error('Failed to create payment intent: Edge function error');
-    }
-    
-    throw new Error('Payment intent creation failed');
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    throw error;
-  }
-}
-
-/**
  * Get video presets for quick selection
  */
 export function getVideoPresets() {

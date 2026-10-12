@@ -1,4 +1,4 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput } from "../_shared/cors.ts"
 
 interface AppliedToken {
   id: string;
@@ -19,14 +19,14 @@ interface AppliedToken {
 
 interface ImageGenerationRequest {
   prompt: string
-  provider?: 'gpt-5' | 'gemini' | 'openai' | 'gemini-nano' | 'gpt-image-1' | 'imagen' | 'imagen-4'
+  provider?: 'gpt-5' | 'openai' | 'gpt-image-1' | 'imagen' | 'imagen-4'
   size?: string
   style?: string
   quality?: 'standard' | 'hd'
   appliedTokens?: AppliedToken[]
 }
 
-const SUPPORTED_PROVIDERS = ['openai', 'gpt-5', 'gemini', 'gemini-nano', 'gpt-image-1', 'imagen', 'imagen-4']
+const SUPPORTED_PROVIDERS = ['openai', 'gpt-5', 'gpt-image-1', 'imagen', 'imagen-4']
 
 const SIZE_MAP: Record<string, string> = {
   '1024x1024': '1024x1024',
@@ -165,48 +165,17 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check user credits
-    const creditCheck = await checkCredits(user.id)
-    if (!creditCheck.allowed) {
-      return new Response(
-        JSON.stringify({
-          error: 'Daily credit limit exceeded',
-          remainingCredits: creditCheck.remainingCredits,
-          resetTime: new Date(creditCheck.resetTime).toISOString()
-        }),
-        {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'X-Credits-Remaining': creditCheck.remainingCredits.toString(),
-            'X-Credits-Reset': creditCheck.resetTime.toString()
-          }
-        }
-      )
-    }
-
-    // Get and validate API keys
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    console.log('API Keys check:', {
-      hasOpenAI: !!openaiKey,
-      openAIValid: openaiKey ? validateApiKey(openaiKey, 'openai') : false,
-      hasGemini: !!geminiKey,
-      geminiValid: geminiKey ? validateApiKey(geminiKey, 'gemini') : false,
-    })
-
-    if (!openaiKey || !validateApiKey(openaiKey, 'openai')) {
-      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
-        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    // Require the user's own OpenAI key (BYOK)
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
+      return new Response(JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    // Existing Gemini option retains compatibility but uses the configured OpenAI image backend.
     const imageModel = Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2.5-sunburst';
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userApiKey}` },
       body: JSON.stringify({
         model: imageModel,
         prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
@@ -239,14 +208,12 @@ Deno.serve(async (req) => {
         provider,
         size: imageSize,
         style: sanitizedStyle,
-        quality,
-        creditsRemaining: creditCheck.remainingCredits
+        quality
       }),
       {
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json',
-          'X-Credits-Remaining': creditCheck.remainingCredits.toString()
+          'Content-Type': 'application/json'
         }
       }
     )

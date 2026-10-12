@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Package, X, Shapes, PaintBucket } from 'lucide-react';
-import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
+import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { actionFigureTemplates, generateActionFigurePrompt, getRandomAccessories, getCompanyColors } from '../data/actionFigureTemplates';

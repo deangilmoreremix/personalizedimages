@@ -170,49 +170,6 @@ export async function checkRateLimit(
   }
 }
 
-export async function checkCredits(
-  userId: string
-): Promise<{ allowed: boolean; remainingCredits: number; resetTime: number }> {
-  const config = getSupabaseServiceClient();
-  const now = Date.now();
-
-  if (!config) {
-    return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
-  }
-
-  try {
-    // NOTE: the edge function already authenticated the caller via
-    // authenticateUser() before this point, so the service-role variant of
-    // the RPC (check_and_deduct_credit_service) is used here. The plain
-    // check_and_deduct_credit() validates auth.uid() = p_user_id, which is
-    // always NULL for service-role tokens and would deny every request.
-    const rpcRes = await fetch(`${config.url}/rest/v1/rpc/check_and_deduct_credit_service`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.serviceKey,
-        'Authorization': `Bearer ${config.serviceKey}`,
-      },
-      body: JSON.stringify({ p_user_id: userId, p_reason: 'edge_function_generation' }),
-    });
-
-    if (!rpcRes.ok) {
-      return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
-    }
-
-    const result = await rpcRes.json();
-    const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-
-    return {
-      allowed: !!parsed?.allowed,
-      remainingCredits: parsed?.balance ?? 0,
-      resetTime: now + 86400000,
-    };
-  } catch {
-    return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
-  }
-}
-
 // Helper function to authenticate user
 export async function authenticateUser(req: Request): Promise<{ user: any; error: string | null }> {
   const authHeader = req.headers.get('Authorization');
@@ -246,3 +203,11 @@ export async function authenticateUser(req: Request): Promise<{ user: any; error
     return { user: null, error: 'Authentication failed' };
   }
 }
+
+export function getUserApiKey(req: Request, provider: 'openai' | 'muapi' = 'openai'): string | null {
+  const key = req.headers.get('x-user-api-key');
+  if (!key || key.trim().length === 0) return null;
+  return key.trim();
+}
+export const OPENAI_KEY_MISSING_ERROR = 'OpenAI API key not configured. Add your key in Settings → API Keys.';
+export const MUAPI_KEY_MISSING_ERROR = 'MuAPI API key not configured. Add your key in Settings → API Keys.';

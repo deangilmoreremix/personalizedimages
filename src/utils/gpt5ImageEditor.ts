@@ -3,7 +3,8 @@
  * Advanced image editing using GPT-5 mini analysis and GPT Image 2.5 editing
  */
 
-import { getOpenAIApiKey, hasApiKey } from './apiUtils';
+import { getUserApiKey } from './userApiKeyStorage';
+import { hasApiKey } from './apiUtils';
 
 export interface GPT5EditOptions {
   mode: 'enhance' | 'adjust' | 'transform' | 'effects' | 'custom';
@@ -32,7 +33,7 @@ export class GPT5ImageEditorService {
   private baseUrl = 'https://api.openai.com/v1';
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || getOpenAIApiKey() || null;
+    this.apiKey = apiKey || getUserApiKey('openai');
   }
 
   isAvailable(): boolean {

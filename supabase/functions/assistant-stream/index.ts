@@ -1,11 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR } from "../_shared/cors.ts"
 
 interface AssistantStreamRequest {
   messages: Array<{ role: string; content: string }>;
   userContext?: Record<string, any>;
   temperature?: number;
-  provider?: 'openai' | 'gemini';
+  provider?: 'openai';
 }
 
 Deno.serve(async (req: Request) => {
@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { messages, userContext = {}, temperature = 0.7, provider = 'openai' }: AssistantStreamRequest = await req.json();
+    const { messages, userContext = {}, temperature = 0.7 }: AssistantStreamRequest = await req.json();
 
     if (!messages || messages.length === 0) {
       return new Response(
@@ -42,23 +42,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-
-    if (provider === 'gemini' && geminiApiKey) {
-      return await streamWithGemini(messages, userContext, temperature, geminiApiKey, headers);
-    } else if (provider === 'openai' && openaiApiKey) {
-      return await streamWithOpenAI(messages, userContext, temperature, openaiApiKey, headers);
-    } else if (geminiApiKey) {
-      return await streamWithGemini(messages, userContext, temperature, geminiApiKey, headers);
-    } else if (openaiApiKey) {
-      return await streamWithOpenAI(messages, userContext, temperature, openaiApiKey, headers);
-    } else {
+    const userApiKey = getUserApiKey(req, 'openai');
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'No API keys configured' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
+
+    return await streamWithOpenAI(messages, userContext, temperature, userApiKey, headers);
   } catch (error) {
     console.error('Assistant stream error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
@@ -68,69 +60,6 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
-
-async function streamWithGemini(
-  messages: Array<{ role: string; content: string }>,
-  userContext: Record<string, any>,
-  temperature: number,
-  apiKey: string,
-  corsHeaders: Record<string, string>
-): Promise<Response> {
-  const systemMessage = `You are an AI assistant for a creative tool called VideoRemix that helps users create personalized images, action figures, Ghibli-style images, cartoon-style images, memes, and other visual content using AI.
-
-First name: ${userContext['FIRSTNAME'] || 'User'}
-Last name: ${userContext['LASTNAME'] || 'Unknown'}
-Company: ${userContext['COMPANY'] || 'Unknown'}
-
-The available features are:
-- AI Image Generator (image): Create custom images from text descriptions
-- Action Figure Generator (action-figure): Create personalized action figures
-- Studio Ghibli Style (ghibli): Create images in the style of Studio Ghibli
-- Cartoon Style (cartoon): Transform images into cartoon styles
-- Meme Generator (meme): Create personalized memes
-- Crazy Image Generator (crazy): Create wild, surreal images
-- GIF Editor (gif): Create animated GIFs with personalization
-- Email-Ready Image Editor (email): Design images optimized for email
-
-When suggesting features, include the feature ID in brackets like [image] at the end of your response.
-Keep responses concise (max 3-4 sentences).
-At the end of your response include a marker with feature IDs like this: FEATURES:["image","action-figure"]`;
-
-  const formattedMessages = [
-    { role: 'user', parts: [{ text: systemMessage }] },
-    ...messages.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }))
-  ];
-
-  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: formattedMessages,
-      generationConfig: {
-        temperature,
-        topP: 0.8,
-        topK: 40
-      }
-    })
-  });
-
-  if (!response.ok) {
-    console.error('Gemini API error:', response.status);
-    throw new Error(`Gemini API error: ${response.status}`);
-  }
-
-  const result = await response.json().catch(() => ({}));
-  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  return new Response(JSON.stringify({ text, model: 'gemini-2.5-flash', message: text }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
-}
 
 async function streamWithOpenAI(
   messages: Array<{ role: string; content: string }>,

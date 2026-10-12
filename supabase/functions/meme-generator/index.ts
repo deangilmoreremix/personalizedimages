@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
-import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
-import { generateWithGptImage, generateWithGeminiImage } from "../_shared/imageProviders.ts"
+import { corsHeaders, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
 console.log("Meme Generator Edge Function loaded")
 
@@ -9,7 +9,7 @@ interface MemeGeneratorRequest {
   bottomText: string
   referenceImageUrl: string
   additionalStyle?: string
-  provider?: 'openai' | 'gemini' | 'gpt-image-1'
+  provider?: 'openai' | 'gpt-image-1'
 }
 
 serve(async (req) => {
@@ -40,15 +40,11 @@ serve(async (req) => {
       )
     }
 
-    // Get and validate API keys
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    if ((!openaiKey || !validateApiKey(openaiKey, 'openai')) &&
-        (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -57,22 +53,7 @@ serve(async (req) => {
     const memePrompt = `Create a humorous meme based on this reference image. Add "${sanitizedTopText}" as the top text in large, bold, white letters with black outline. Add "${sanitizedBottomText}" as the bottom text in large, bold, white letters with black outline. ${sanitizedStyle ? `Style: ${sanitizedStyle}. ` : ''}Make it look like a classic meme format with the text clearly readable and well-positioned. Keep the original image's essence but make it funny and shareable.`
 
     try {
-      if (openaiKey) {
-        try {
-          imageUrl = await generateWithGptImage({ prompt: memePrompt, apiKey: openaiKey, referenceImageUrl })
-        } catch (openaiError) {
-          console.error('OpenAI meme generation failed:', openaiError)
-          if (!geminiKey) throw openaiError
-          imageUrl = await generateWithGeminiImage({ prompt: memePrompt, apiKey: geminiKey, referenceImageUrl })
-        }
-      } else if (geminiKey) {
-        imageUrl = await generateWithGeminiImage({ prompt: memePrompt, apiKey: geminiKey, referenceImageUrl })
-      } else {
-        return new Response(
-          JSON.stringify({ error: 'API keys not configured' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      imageUrl = await generateWithGptImage({ prompt: memePrompt, apiKey: userApiKey, referenceImageUrl })
     } catch (error) {
       console.error('Meme generation failed:', error)
       return new Response(

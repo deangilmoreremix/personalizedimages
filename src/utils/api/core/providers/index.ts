@@ -4,13 +4,9 @@
  * Central export point for all AI provider implementations.
  */
 
-export { OpenAIProvider, type OpenAIOptions } from './OpenAIProvider';
-export { GeminiProvider, type GeminiOptions } from './GeminiProvider';
+import { OpenAIProvider, type OpenAIOptions } from './OpenAIProvider';
 
-// Future providers can be added here:
-// export { ImagenProvider, type ImagenOptions } from './ImagenProvider';
-// export { LeonardoProvider, type LeonardoOptions } from './LeonardoProvider';
-// export { MidjourneyProvider, type MidjourneyOptions } from './MidjourneyProvider';
+export { OpenAIProvider, type OpenAIOptions };
 
 // Import types from core types
 import type { AIProvider } from '../types';
@@ -27,61 +23,12 @@ export interface ProviderCapabilities {
   videoGeneration: boolean;
 }
 
-// Provider capability matrix
-export const PROVIDER_CAPABILITIES: Record<AIProvider, ProviderCapabilities> = {
+export const PROVIDER_CAPABILITIES: Partial<Record<AIProvider, ProviderCapabilities>> = {
   openai: {
     imageGeneration: true,
     imageEditing: true,
     imageAnalysis: true,
     imageVariations: true,
-    streaming: false,
-    videoGeneration: false
-  },
-  gemini: {
-    imageGeneration: true,
-    imageEditing: true,
-    imageAnalysis: true,
-    imageVariations: true,
-    streaming: true,
-    videoGeneration: false
-  },
-  'gemini-nano': {
-    imageGeneration: true,
-    imageEditing: true,
-    imageAnalysis: true,
-    imageVariations: true,
-    streaming: true,
-    videoGeneration: false
-  },
-  imagen: {
-    imageGeneration: true,
-    imageEditing: false,
-    imageAnalysis: false,
-    imageVariations: false,
-    streaming: false,
-    videoGeneration: false
-  },
-  leonardo: {
-    imageGeneration: true,
-    imageEditing: false,
-    imageAnalysis: false,
-    imageVariations: true,
-    streaming: false,
-    videoGeneration: false
-  },
-  giphy: {
-    imageGeneration: false,
-    imageEditing: false,
-    imageAnalysis: false,
-    imageVariations: false,
-    streaming: false,
-    videoGeneration: false
-  },
-  freepik: {
-    imageGeneration: true,
-    imageEditing: false,
-    imageAnalysis: false,
-    imageVariations: false,
     streaming: false,
     videoGeneration: false
   }
@@ -91,16 +38,25 @@ export const PROVIDER_CAPABILITIES: Record<AIProvider, ProviderCapabilities> = {
  * Get provider instance based on provider type
  */
 export function createProvider(provider: AIProvider) {
-  switch (provider) {
-    case 'freepik':
+  switch (normalizeProvider(provider)) {
     case 'openai':
-      const { OpenAIProvider } = require('./OpenAIProvider');
       return new OpenAIProvider();
-    case 'gemini':
-      const { GeminiProvider } = require('./GeminiProvider');
-      return new GeminiProvider();
     default:
       throw new Error(`Provider ${provider} not implemented yet`);
+  }
+}
+
+export function normalizeProvider(provider: AIProvider): AIProvider {
+  switch (provider) {
+    case 'gemini':
+    case 'gemini-nano':
+    case 'imagen':
+    case 'leonardo':
+    case 'giphy':
+    case 'freepik':
+      return 'openai';
+    default:
+      return provider;
   }
 }
 

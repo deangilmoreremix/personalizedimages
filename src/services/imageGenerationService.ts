@@ -12,16 +12,6 @@ export interface GenerationOptions {
 export interface GenerationResult {
   imageUrl: string;
   provider: string;
-  creditsRemaining?: number;
-}
-
-export class InsufficientCreditsError extends Error {
-  remainingCredits: number;
-  constructor(remaining: number) {
-    super('Insufficient credits. Please purchase more credits to continue generating.');
-    this.name = 'InsufficientCreditsError';
-    this.remainingCredits = remaining;
-  }
 }
 
 export class GenerationError extends Error {
@@ -43,36 +33,6 @@ async function getUserId(): Promise<string | null> {
   } catch {
     return null;
   }
-}
-
-export async function checkCredits(): Promise<{ allowed: boolean; balance: number }> {
-  const userId = await getUserId();
-  if (!userId || !supabase) return { allowed: true, balance: -1 };
-
-  const { data, error } = await (supabase as any)
-    .from('user_credits')
-    .select('balance')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error || !data) return { allowed: true, balance: -1 };
-  return { allowed: data.balance > 0, balance: data.balance };
-}
-
-async function logGenerationUsage(prompt: string, provider: string, imageUrl: string): Promise<void> {
-  const userId = await getUserId();
-  if (!userId || !supabase) return;
-
-  const sb = supabase as any;
-
-  await sb.from('usage_logs').insert({
-    user_id: userId,
-    provider,
-    operation: 'image_generation',
-    credits_used: 1,
-    request_metadata: { prompt: prompt.substring(0, 500) },
-    response_metadata: { image_url: imageUrl }
-  });
 }
 
 export async function saveGeneratedImage(
@@ -116,8 +76,6 @@ export async function generateImage(
 
   const { size = '1024x1024', quality = 'standard', style, category = 'ai-image' } = options;
 
-  // BYOK-first: when the user has supplied their own OpenAI key, generate with
-  // it directly and never meter platform credits (the provider bills the user).
   if (getUserProvidedApiKey('openai')) {
     const imageUrl = await generateImageWithGptImage(prompt, { size, quality, style });
     await saveGeneratedImage(prompt, imageUrl, 'openai', category);
@@ -125,12 +83,6 @@ export async function generateImage(
       imageUrl,
       provider: 'openai',
     };
-  }
-
-  // Platform-funded path: gated and metered by the server-side edge function.
-  const creditCheck = await checkCredits();
-  if (creditCheck.balance >= 0 && !creditCheck.allowed) {
-    throw new InsufficientCreditsError(creditCheck.balance);
   }
 
   if (isSupabaseConfigured()) {
@@ -144,14 +96,10 @@ export async function generateImage(
       });
 
       if (result?.imageUrl) {
-        // The edge function already deducts the credit atomically server-side
-        // via check_and_deduct_credit_service; recording usage locally only.
-        await logGenerationUsage(prompt, 'openai', result.imageUrl);
         await saveGeneratedImage(prompt, result.imageUrl, 'openai', category);
         return {
           imageUrl: result.imageUrl,
           provider: 'openai',
-          creditsRemaining: result.creditsRemaining
         };
       }
     } catch (edgeError: any) {

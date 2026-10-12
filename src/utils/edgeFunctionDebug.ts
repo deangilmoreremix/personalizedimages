@@ -229,7 +229,7 @@ export function logEdgeFunctionDebugInfo() {
   // Log API keys
   console.log('🔑 API Keys:');
   console.log(`   OpenAI API key configured: ${!!getUserApiKey('openai')}`);
-  console.log(`   Gemini API key configured: ${!!getUserApiKey('gemini')}`);
+  console.log(`   MuAPI API key configured: ${!!getUserApiKey('muapi')}`);
   
   // Log environment info
   console.log('🌐 Environment:');

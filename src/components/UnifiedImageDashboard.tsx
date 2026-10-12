@@ -919,7 +919,7 @@ const UnifiedImageDashboard: React.FC = () => {
                 </div>
 
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Using Gemini AI • Free credits remaining: 50
+                  Using OpenAI GPT Image 2.5
                 </div>
               </div>
             </div>

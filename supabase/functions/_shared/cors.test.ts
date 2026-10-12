@@ -2,7 +2,7 @@
 // Run with: deno test --allow-env cors.test.ts
 
 import { assertEquals, assert } from "https://deno.land/std@0.224.0/testing/asserts.ts"
-import { validateApiKey, sanitizeInput, isValidUrl, checkRateLimit, checkCredits } from "./cors.ts"
+import { validateApiKey, sanitizeInput, isValidUrl, checkRateLimit } from "./cors.ts"
 
 Deno.test("API Key Validation", () => {
   // Test OpenAI key validation
@@ -54,30 +54,6 @@ Deno.test("Rate Limiting", async () => {
   }
 })
 
-Deno.test("Credit System", async () => {
-  const userId = "test-user-credits"
 
-  // Without Supabase configuration the check fails closed.
-  const result1 = await checkCredits(userId)
-  if (!Deno.env.get("SUPABASE_URL") || !Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-    assert(!result1.allowed, "Should fail closed without Supabase configuration")
-    assertEquals(result1.remainingCredits, 0, "Should have 0 credits remaining")
-    return
-  }
-
-  // First request should be allowed
-  assert(result1.allowed, "First credit check should be allowed")
-  assertEquals(result1.remainingCredits, 49, "Should have 49 credits remaining")
-
-  // Subsequent requests should deduct credits
-  for (let i = 0; i < 10; i++) {
-    const result = await checkCredits(userId)
-    assert(result.allowed, `Credit check ${i} should be allowed`)
-  }
-
-  // Check remaining credits
-  const finalCheck = await checkCredits(userId)
-  assertEquals(finalCheck.remainingCredits, 39, "Should have 39 credits remaining")
-})
 
 console.log("✅ All tests passed!")

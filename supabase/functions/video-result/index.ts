@@ -1,12 +1,11 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, getUserApiKey } from "../_shared/cors.ts"
 
 const MUAPI_BASE = "https://api.muapi.ai/api/v1"
 
 async function pollMuApiTask(
-  requestId: string
+  requestId: string,
+  muapiKey: string
 ): Promise<{ status: string; outputs: string[]; error: string | null } | null> {
-  const muapiKey = Deno.env.get('MUAPI_API_KEY')
-  if (!muapiKey) return null
   const res = await fetch(`${MUAPI_BASE}/predictions/${encodeURIComponent(requestId)}/result`, {
     headers: { 'x-api-key': muapiKey }
   })
@@ -97,9 +96,16 @@ Deno.serve(async (req: Request) => {
     let videoUrl = video.video_url || null;
     const metadata = video.metadata || {};
     const providerTaskId = metadata.providerTaskId;
+    const needsProviderPoll = (status === 'pending' || status === 'processing') && providerTaskId;
+    let muapiKeyMissing = false;
 
-    if ((status === 'pending' || status === 'processing') && providerTaskId) {
-      const provider = await pollMuApiTask(providerTaskId).catch(() => null);
+    if (needsProviderPoll) {
+      const muapiKey = getUserApiKey(req, 'muapi');
+
+      if (!muapiKey) {
+        muapiKeyMissing = true;
+      } else {
+        const provider = await pollMuApiTask(providerTaskId, muapiKey).catch(() => null);
 
       if (provider) {
         const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -141,6 +147,7 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify(patch)
         }).catch(() => null);
       }
+      }
     }
 
     if (status !== 'completed') {
@@ -151,6 +158,9 @@ Deno.serve(async (req: Request) => {
           progress,
           videoUrl,
           error: errorMessage,
+          ...(muapiKeyMissing
+            ? { message: 'Live status polling requires your MuAPI API key. Add it in Settings → API Keys.' }
+            : {}),
         }),
         { headers: { ...headers, 'Content-Type': 'application/json' } }
       );

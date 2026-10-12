@@ -1,9 +1,9 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
-import { generateWithGptImage, generateWithGeminiImage } from "../_shared/imageProviders.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
 interface CartoonStyleRequest {
   prompt: string
-  provider: 'openai' | 'gemini'
+  provider?: 'openai'
   style?: string
   referenceImageUrl?: string
 }
@@ -33,15 +33,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const credits = await checkCredits(user.id)
-    if (!credits.allowed) {
-      return new Response(
-        JSON.stringify({ error: 'Insufficient credits', remainingCredits: credits.remainingCredits }),
-        { status: 402, headers: { ...headers, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const { prompt, provider, style, referenceImageUrl }: CartoonStyleRequest = await req.json()
+    const { prompt, style, referenceImageUrl }: CartoonStyleRequest = await req.json()
 
     if (!prompt || typeof prompt !== 'string') {
       return new Response(
@@ -59,14 +51,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    if ((!openaiKey || !validateApiKey(openaiKey, 'openai')) &&
-        (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -75,35 +64,11 @@ Deno.serve(async (req) => {
 
     let imageUrl = ''
 
-    const preferGemini = (provider === 'gemini' || provider === 'gemini2flash') && !!geminiKey
-
     try {
-      if (preferGemini && geminiKey) {
-        imageUrl = await generateWithGeminiImage({ prompt: enhancedPrompt, apiKey: geminiKey, referenceImageUrl })
-      } else if (openaiKey) {
-        imageUrl = await generateWithGptImage({ prompt: enhancedPrompt, apiKey: openaiKey, referenceImageUrl })
-      } else if (geminiKey) {
-        imageUrl = await generateWithGeminiImage({ prompt: enhancedPrompt, apiKey: geminiKey, referenceImageUrl })
-      } else {
-        return new Response(
-          JSON.stringify({ error: 'API keys not configured' }),
-          { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
-        )
-      }
+      imageUrl = await generateWithGptImage({ prompt: enhancedPrompt, apiKey: userApiKey, referenceImageUrl })
     } catch (providerError) {
-      console.error('Primary image provider failed:', providerError)
-      try {
-        if (!preferGemini && geminiKey) {
-          imageUrl = await generateWithGeminiImage({ prompt: enhancedPrompt, apiKey: geminiKey, referenceImageUrl })
-        } else if (openaiKey) {
-          imageUrl = await generateWithGptImage({ prompt: enhancedPrompt, apiKey: openaiKey, referenceImageUrl })
-        } else {
-          throw providerError
-        }
-      } catch (fallbackError) {
-        console.error('Fallback image provider failed:', fallbackError)
-        throw providerError
-      }
+      console.error('Cartoon style image generation failed:', providerError)
+      throw providerError
     }
 
     return new Response(

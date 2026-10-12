@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Sparkles, Download, Image as ImageIcon, RefreshCw, Shapes, Search } from 'lucide-react';
-import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
+import { generateImage, GenerationError } from '../services/imageGenerationService';
+import { isApiKeyMissingError } from '../utils/apiKeyMissing';
+import ApiKeyMissingNotice from './ApiKeyMissingNotice';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
@@ -21,6 +23,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [referenceImage, setReferenceImage] = useState<StockResource | null>(null);
 
   // Personalization panel state - now uses preferences
@@ -45,6 +48,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
     }
 
     setError(null);
+    setApiKeyMissing(false);
     setIsGenerating(true);
 
     try {
@@ -57,9 +61,8 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
       setGeneratedImage(result.imageUrl);
       onImageGenerated(result.imageUrl);
     } catch (err) {
-      if (err instanceof InsufficientCreditsError) {
-        setError(`Insufficient credits (${err.remainingCredits} remaining). Purchase more to continue.`);
-      } else if (err instanceof GenerationError) {
+      setApiKeyMissing(isApiKeyMissingError(err));
+      if (err instanceof GenerationError) {
         setError(err.message);
       } else {
         setError(err instanceof Error ? err.message : 'Generation failed');
@@ -143,6 +146,8 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
               {error}
             </div>
           )}
+
+          {apiKeyMissing && <ApiKeyMissingNotice className="mt-3" />}
 
           <div className="flex gap-2">
             <button

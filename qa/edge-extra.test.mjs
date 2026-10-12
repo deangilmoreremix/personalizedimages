@@ -12,6 +12,11 @@
  *
  *   node --experimental-strip-types qa/edge-extra.test.mjs
  *
+ * Every OpenAI call must carry the per-request user key from
+ * `x-user-api-key` as `Authorization: Bearer <user key>`, every MuAPI call
+ * must carry it as `x-api-key`, and the decoy env credentials set in the
+ * Deno environment must never appear in any provider request.
+ *
  * When this file is collected by vitest instead, it delegates the whole
  * suite to the node runner above, because vitest's module runner cannot
  * resolve the Deno-only `jsr:` type imports inside these functions.
@@ -110,6 +115,15 @@ if (UNDER_VITEST) {
   const OPENAI = 'https://api.openai.com';
   const MUAPI_SUBMIT = 'https://api.muapi.ai/api/v1/kling-master';
 
+  // The caller's own keys, sent per request in `x-user-api-key` (100% BYOK).
+  // Both providers read the same header; OpenAI validates the `sk-` format.
+  const USER_API_KEY = 'sk-test-user-openai-key-1234567890';
+
+  // Decoy platform credentials: no function may read them, so they must never
+  // appear in any provider request (OpenAI Authorization / MuAPI x-api-key).
+  const DECOY_OPENAI_KEY = 'sk-DECOY-ENV-OPENAI-KEY-0000000000';
+  const DECOY_MUAPI_KEY = 'muapi-DECOY-ENV-KEY-0000000000';
+
   let openaiCalls = [];
   let muapiCalls = [];
   let mock;
@@ -183,24 +197,25 @@ if (UNDER_VITEST) {
     return routeFetch(url, method, init);
   };
 
-  const BASE_ENV = {
-    SUPABASE_URL: SUPABASE,
-    SUPABASE_ANON_KEY: 'qa-anon-key',
-    SUPABASE_SERVICE_ROLE_KEY: 'qa-service-role-key',
-    OPENAI_API_KEY: 'sk-qa-test-openai-key-1234567890',
-    MUAPI_API_KEY: 'muapi-test-key',
-    // OPENAI_IMAGE_MODEL / OPENAI_RESPONSES_MODEL are deliberately left unset
-    // so these tests pin the built-in defaults of each function.
-  };
-
   function resetEnv() {
     denoEnv.clear();
-    for (const [key, value] of Object.entries(BASE_ENV)) denoEnv.set(key, value);
+    for (const [key, value] of Object.entries({
+      SUPABASE_URL: SUPABASE,
+      SUPABASE_ANON_KEY: 'qa-anon-key',
+      SUPABASE_SERVICE_ROLE_KEY: 'qa-service-role-key',
+      OPENAI_API_KEY: DECOY_OPENAI_KEY,
+      MUAPI_API_KEY: DECOY_MUAPI_KEY,
+      // OPENAI_IMAGE_MODEL / OPENAI_RESPONSES_MODEL are deliberately left unset
+      // so these tests pin the built-in defaults of each function.
+    })) denoEnv.set(key, value);
   }
 
-  const invoke = (handler, { body, auth = true, method = 'POST', origin = 'http://localhost:3000' } = {}) => {
+  // `apiKey` is the per-request `x-user-api-key` header value. Pass null to
+  // omit the header entirely, '' for a blank value.
+  const invoke = (handler, { body, auth = true, method = 'POST', origin = 'http://localhost:3000', apiKey = USER_API_KEY } = {}) => {
     const headers = { 'content-type': 'application/json', origin };
     if (auth) headers.Authorization = AUTH_HEADER;
+    if (apiKey !== null) headers['x-user-api-key'] = apiKey;
     return handler(
       new Request('https://edge.example.com/fn', {
         method,
@@ -219,6 +234,29 @@ if (UNDER_VITEST) {
     return JSON.parse(call.init.body);
   };
   const lastPatch = () => mock.patches[mock.patches.length - 1];
+
+  // Every provider request must carry the user key and no decoy env value.
+  function assertNoDecoyCredentialsLeak() {
+    for (const call of [...openaiCalls, ...muapiCalls]) {
+      const serialized = JSON.stringify({ url: call.url, init: call.init });
+      assert.ok(!serialized.includes(DECOY_OPENAI_KEY), `a request leaked the decoy OPENAI_API_KEY: ${call.url}`);
+      assert.ok(!serialized.includes(DECOY_MUAPI_KEY), `a request leaked the decoy MUAPI_API_KEY: ${call.url}`);
+    }
+    for (const call of openaiCalls) {
+      assert.equal(
+        call.init.headers.Authorization,
+        `Bearer ${USER_API_KEY}`,
+        `every OpenAI call must carry the requesting user's key: ${call.url}`
+      );
+    }
+    for (const call of muapiCalls) {
+      assert.equal(
+        call.init.headers['x-api-key'],
+        USER_API_KEY,
+        `every MuAPI call must carry the requesting user's key: ${call.url}`
+      );
+    }
+  }
 
   beforeEach(() => {
     resetMocks();
@@ -241,8 +279,9 @@ if (UNDER_VITEST) {
     const payload = JSON.parse(call.init.body);
     assert.equal(payload.model, 'gpt-image-2.5-sunburst');
     assert.equal(payload.prompt, 'a futuristic city');
-    assert.equal(call.init.headers.Authorization, `Bearer ${BASE_ENV.OPENAI_API_KEY}`);
+    assert.equal(call.init.headers.Authorization, `Bearer ${USER_API_KEY}`);
     assert.equal(openaiCall('/v1/images/edits'), undefined, 'text-to-image must not call the edits endpoint');
+    assertNoDecoyCredentialsLeak();
   });
 
   test('freepik-ai-image: missing auth returns 401 without calling the provider', async () => {
@@ -275,6 +314,8 @@ if (UNDER_VITEST) {
     assert.deepEqual(payload.images, [{ image_url: 'https://cdn.example.com/photo.png' }]);
     assert.equal(payload.model, 'gpt-image-2.5-sunburst');
     assert.equal(payload.background, 'transparent');
+    assert.equal(openaiCall('/v1/images/edits').init.headers.Authorization, `Bearer ${USER_API_KEY}`);
+    assertNoDecoyCredentialsLeak();
   });
 
   test('freepik-remove-bg: missing imageUrl returns 400', async () => {
@@ -299,6 +340,8 @@ if (UNDER_VITEST) {
     assert.deepEqual(payload.images, [{ image_url: 'https://cdn.example.com/photo.png' }]);
     assert.match(payload.prompt, /upscale/i);
     assert.equal(payload.size, '2048x2048');
+    assert.equal(openaiCall('/v1/images/edits').init.headers.Authorization, `Bearer ${USER_API_KEY}`);
+    assertNoDecoyCredentialsLeak();
   });
 
   // ------------------------------------------------------------------ //
@@ -316,6 +359,8 @@ if (UNDER_VITEST) {
     const payload = openaiBody('/v1/images/edits');
     assert.match(payload.prompt, /main light coming from the left/i);
     assert.deepEqual(payload.images, [{ image_url: 'https://cdn.example.com/photo.png' }]);
+    assert.equal(openaiCall('/v1/images/edits').init.headers.Authorization, `Bearer ${USER_API_KEY}`);
+    assertNoDecoyCredentialsLeak();
   });
 
   // ------------------------------------------------------------------ //
@@ -341,6 +386,8 @@ if (UNDER_VITEST) {
       { image_url: 'https://cdn.example.com/style.png' },
     ]);
     assert.match(payload.prompt, /watercolor/i);
+    assert.equal(openaiCall('/v1/images/edits').init.headers.Authorization, `Bearer ${USER_API_KEY}`);
+    assertNoDecoyCredentialsLeak();
   });
 
   // ------------------------------------------------------------------ //
@@ -360,6 +407,8 @@ if (UNDER_VITEST) {
     const payload = JSON.parse(call.init.body);
     assert.equal(payload.model, 'gpt-5-mini');
     assert.equal(payload.input[0].content[0].text, 'a cat');
+    assert.equal(call.init.headers.Authorization, `Bearer ${USER_API_KEY}`);
+    assertNoDecoyCredentialsLeak();
   });
 
   test('freepik-improve-prompt: empty prompt returns 400', async () => {
@@ -388,7 +437,7 @@ if (UNDER_VITEST) {
     assert.equal(muapiCalls.length, 1, 'expected exactly one MuAPI submit');
     const submit = muapiCalls[0];
     assert.equal(submit.url, MUAPI_SUBMIT);
-    assert.equal(submit.init.headers['x-api-key'], 'muapi-test-key');
+    assert.equal(submit.init.headers['x-api-key'], USER_API_KEY);
     assert.deepEqual(JSON.parse(submit.init.body), {
       prompt: 'animate this',
       image_url: 'https://cdn.example.com/a.png',
@@ -401,17 +450,25 @@ if (UNDER_VITEST) {
     assert.equal(mock.insert.prompt, 'animate this');
     assert.equal(mock.insert.metadata.sourceImageUrl, 'https://cdn.example.com/a.png');
     assert.equal(lastPatch().metadata.providerTaskId, 'muapi-task-1');
+    assert.ok(
+      !JSON.stringify(mock.insert).includes(USER_API_KEY),
+      'the user key must never be written to the generated_videos row'
+    );
+    assertNoDecoyCredentialsLeak();
   });
 
-  test('image-to-video: missing MUAPI_API_KEY marks the row failed and returns 503', async () => {
-    denoEnv.delete('MUAPI_API_KEY');
-    const res = await invoke(imageToVideoHandler, { body: { imageUrl: 'https://cdn.example.com/a.png' } });
-    const { status, body } = await readJson(res);
-    assert.equal(status, 503);
-    assert.match(body.error, /MuAPI/);
-    assert.equal(muapiCalls.length, 0);
-    assert.equal(lastPatch().status, 'failed');
-    assert.match(lastPatch().error_message, /MuAPI/);
+  test('image-to-video: missing x-user-api-key returns 400 with the setup message and no submit', async () => {
+    for (const apiKey of [null, '', '   ']) {
+      const res = await invoke(imageToVideoHandler, {
+        body: { imageUrl: 'https://cdn.example.com/a.png' },
+        apiKey,
+      });
+      assert.equal(res.status, 400, `apiKey ${JSON.stringify(apiKey)} must be rejected with 400`);
+      const { body } = await readJson(res);
+      assert.equal(body.error, 'MuAPI API key not configured. Add your key in Settings → API Keys.');
+    }
+    assert.equal(muapiCalls.length, 0, 'the provider must never be called without the user key');
+    assert.equal(mock.insert, null, 'no generated_videos row may be created without the user key');
   });
 
   test('image-to-video: invalid imageUrl returns 400 without submitting', async () => {
@@ -435,5 +492,18 @@ if (UNDER_VITEST) {
       assert.equal(res.status, 200);
       assert.equal(res.headers.get('access-control-allow-origin'), 'http://localhost:3000');
     }
+  });
+
+  test('decoy env credentials are never used: providers receive only the user key', async () => {
+    // OpenAI side
+    await invoke(aiImageHandler, { body: { action: 'generate', prompt: 'x' } });
+    await invoke(removeBgHandler, { body: { action: 'remove', imageUrl: 'https://cdn.example.com/photo.png' } });
+    await invoke(improvePromptHandler, { body: { prompt: 'x' } });
+    // MuAPI side
+    await invoke(imageToVideoHandler, { body: { imageUrl: 'https://cdn.example.com/a.png' } });
+
+    assert.ok(openaiCalls.length >= 3, 'expected the OpenAI calls to have happened');
+    assert.equal(muapiCalls.length, 1, 'expected exactly one MuAPI call');
+    assertNoDecoyCredentialsLeak();
   });
 }

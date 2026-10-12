@@ -13,35 +13,35 @@ interface AIModelSelectorProps {
 const AI_MODELS = [
   {
     id: 'openai' as AIModel,
-    name: 'DALL-E 3',
+    name: 'GPT Image 2.5',
     icon: Sparkles,
-    description: 'Best for detailed images with text',
+    description: 'Balanced quality and speed',
     color: 'indigo'
   },
   {
     id: 'imagen' as AIModel,
-    name: 'Imagen 3',
+    name: 'GPT Image 2.5 HD',
     icon: Camera,
-    description: 'Excellent photorealism',
+    description: 'Highest detail for photorealistic output',
     color: 'blue'
   },
   {
     id: 'gemini' as AIModel,
-    name: 'Gemini',
+    name: 'GPT Image 2.5 Natural',
     icon: Cpu,
     description: 'Great for complex scenes',
     color: 'purple'
   },
   {
     id: 'gemini2flash' as AIModel,
-    name: 'Gemini Flash',
+    name: 'GPT Image 2.5 Fast',
     icon: Zap,
     description: 'Ultra-fast generation',
     color: 'yellow'
   },
   {
     id: 'gpt-image-1' as AIModel,
-    name: 'GPT-4 Vision',
+    name: 'GPT Image 2.5 Pro',
     icon: Brain,
     description: 'Advanced understanding',
     color: 'green'

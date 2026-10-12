@@ -27,7 +27,7 @@ export interface ImageEditingRequest {
   imageUrl: string;
   editPrompt: string;
   maskUrl?: string; // For mask-based editing
-  provider?: 'openai' | 'gemini';
+  provider?: 'openai';
   strength?: number; // 0-1, how strongly to apply edits
 }
 
@@ -35,7 +35,7 @@ export interface ImageEditingRequest {
 export interface ImageAnalysisRequest {
   imageUrl: string;
   analysisType: 'description' | 'tags' | 'objects' | 'colors' | 'sentiment';
-  provider?: 'openai' | 'gemini';
+  provider?: 'openai';
   customPrompt?: string;
 }
 
@@ -44,7 +44,7 @@ export interface VideoGenerationRequest {
   imageUrl: string;
   duration?: number; // seconds, 1-10
   prompt?: string;
-  provider?: 'gemini-veo' | 'nano-banana';
+  provider?: 'muapi';
   style?: 'smooth' | 'cinematic' | 'animated';
 }
 

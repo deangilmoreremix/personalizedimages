@@ -10,7 +10,6 @@ import {
   RotateCcw,
   BarChart3,
   TrendingUp,
-  DollarSign,
   Clock,
   CheckCircle,
   XCircle,
@@ -58,38 +57,33 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
 
   const modelConfig = {
     openai: {
-      name: 'DALL-E 3',
+      name: 'GPT Image 2.5',
       icon: <Zap className="w-5 h-5 text-blue-500" />,
       color: 'bg-blue-50 border-blue-200',
-      cost: 0.04,
       description: 'High-quality, detailed images with excellent text rendering'
     },
     gemini: {
-      name: 'Gemini',
+      name: 'GPT Image 2.5 Natural',
       icon: <Cpu className="w-5 h-5 text-green-500" />,
       color: 'bg-green-50 border-green-200',
-      cost: 0.0025,
       description: 'Fast generation with good context understanding'
     },
     imagen: {
-      name: 'Imagen 3',
+      name: 'GPT Image 2.5 HD',
       icon: <Camera className="w-5 h-5 text-purple-500" />,
       color: 'bg-purple-50 border-purple-200',
-      cost: 0.04,
       description: 'Excellent style control and composition'
     },
     gemini2flash: {
-      name: 'Gemini Flash',
+      name: 'GPT Image 2.5 Fast',
       icon: <Sparkles className="w-5 h-5 text-orange-500" />,
       color: 'bg-orange-50 border-orange-200',
-      cost: 0.001,
       description: 'Ultra-fast generation, 2-4x faster than others'
     },
     'gpt-image-1': {
-      name: 'GPT-4 Vision',
+      name: 'GPT Image 2.5 Pro',
       icon: <Star className="w-5 h-5 text-indigo-500" />,
       color: 'bg-indigo-50 border-indigo-200',
-      cost: 0.04,
       description: 'Advanced understanding with exceptional detail'
     }
   };
@@ -133,14 +127,12 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
       }
 
       const generationTime = Date.now() - startTime;
-      const cost = modelConfig[modelId as keyof typeof modelConfig].cost;
 
       return {
         model: modelId,
         imageUrl,
         status: 'completed',
         generationTime,
-        cost,
         quality: Math.floor(Math.random() * 20) + 80 // Mock quality score
       };
     } catch (error) {
@@ -223,12 +215,6 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
     return completed.reduce((sum, m) => sum + (m.generationTime || 0), 0) / completed.length;
   };
 
-  const getTotalCost = () => {
-    return models
-      .filter(m => m.status === 'completed')
-      .reduce((sum, m) => sum + (m.cost || 0), 0);
-  };
-
   const getBestModel = () => {
     const completed = getCompletedModels();
     if (completed.length === 0) return null;
@@ -283,9 +269,6 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
                       <div className="font-medium text-sm">{config.name}</div>
                       <div className="text-xs text-gray-500">{config.description}</div>
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    ${config.cost}/img
                   </div>
                 </label>
               ))}
@@ -453,16 +436,6 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
                       </div>
                     )}
 
-                    {modelResult.cost && (
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500 flex items-center">
-                          <DollarSign className="w-3 h-3 mr-1" />
-                          Cost
-                        </span>
-                        <span className="font-medium">${modelResult.cost.toFixed(4)}</span>
-                      </div>
-                    )}
-
                     {modelResult.quality && (
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-gray-500 flex items-center">
@@ -512,13 +485,6 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
                     {(getAverageGenerationTime() / 1000).toFixed(1)}s
                   </div>
                   <div className="text-sm text-gray-600">Avg Generation Time</div>
-                </div>
-
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    ${getTotalCost().toFixed(4)}
-                  </div>
-                  <div className="text-sm text-gray-600">Total Cost</div>
                 </div>
 
                 <div className="text-center">

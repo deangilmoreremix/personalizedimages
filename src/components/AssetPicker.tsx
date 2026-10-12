@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Filter, Grid, List, Heart, Download, Loader2 } from 'lucide-react';
 import { useAssetContext } from '../contexts/AssetContext';
 import { Asset } from '../contexts/AssetContext';
+import { STOCK_IMAGE_SEARCH_AVAILABLE, STOCK_SEARCH_UNAVAILABLE_MESSAGE } from '../services/stockImageService';
 
 interface AssetPickerProps {
   isOpen: boolean;
@@ -213,7 +214,11 @@ const AssetPicker: React.FC<AssetPickerProps> = ({
           ) : currentAssets.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No assets found. Try adjusting your search criteria.</p>
+              {activeTab === 'browse' && !STOCK_IMAGE_SEARCH_AVAILABLE ? (
+                <p>{STOCK_SEARCH_UNAVAILABLE_MESSAGE} Assets you upload or generate still appear in your library.</p>
+              ) : (
+                <p>No assets found. Try adjusting your search criteria.</p>
+              )}
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">

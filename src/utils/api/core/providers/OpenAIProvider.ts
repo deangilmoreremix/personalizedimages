@@ -1,22 +1,23 @@
 /**
  * OpenAI Provider Implementation
  *
- * Handles all OpenAI API interactions including DALL-E 3, GPT-4 Vision, and future models.
+ * Handles all OpenAI API interactions including GPT Image 2.5 image
+ * generation/editing and the Responses API for vision analysis.
  */
 
 import { getApiKey } from '../../../env';
 
 export interface OpenAIOptions {
-  model?: 'dall-e-3' | 'dall-e-2' | 'gpt-4-vision-preview';
-  size?: '1024x1024' | '1792x1024' | '1024x1792' | '512x512' | '256x256';
-  quality?: 'standard' | 'hd';
-  style?: 'natural' | 'vivid';
-  response_format?: 'url' | 'b64_json';
+  model?: 'gpt-image-2.5-sunburst' | 'gpt-image-2.5-flare';
+  size?: '1024x1024' | '1536x1024' | '1024x1536' | '2048x2048' | '3840x2160' | 'auto' | '512x512' | '256x256';
+  quality?: 'low' | 'medium' | 'high' | 'standard' | 'hd';
   n?: number; // Number of images to generate (for variations)
   timeout?: number; // Request timeout in milliseconds (default: 60000)
 }
 
 const DEFAULT_TIMEOUT = 60000; // 60 seconds
+const DEFAULT_TEXT_MODEL = 'gpt-5-mini';
+export const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2.5-sunburst';
 
 export class OpenAIProvider {
   private apiKey: string;
@@ -57,17 +58,19 @@ export class OpenAIProvider {
   }
 
   /**
-   * Generate image using DALL-E
+   * Generate image using GPT Image 2.5
    */
   async generateImage(prompt: string, options: OpenAIOptions = {}): Promise<string> {
     const {
-      model = 'dall-e-3',
+      model = DEFAULT_OPENAI_IMAGE_MODEL,
       size = '1024x1024',
-      quality = 'standard',
-      style = 'natural',
-      response_format = 'url',
       timeout = DEFAULT_TIMEOUT
     } = options;
+    const quality = options.quality === 'hd'
+      ? 'high'
+      : options.quality === 'standard'
+        ? 'medium'
+        : options.quality || 'medium';
 
     const response = await this.fetchWithTimeout(`${this.baseUrl}/images/generations`, {
       method: 'POST',
@@ -81,142 +84,164 @@ export class OpenAIProvider {
         n: 1,
         size,
         quality,
-        style,
-        response_format
+        output_format: 'png'
       })
-    });
+    }, timeout);
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+      throw new Error(`OpenAI API error: ${error.error?.message || error.error || 'Unknown error'}`);
     }
 
     const data = await response.json();
+    const image = data?.data?.[0];
 
-    if (response_format === 'b64_json') {
-      return `data:image/png;base64,${data.data[0].b64_json}`;
+    if (image?.b64_json) {
+      return `data:image/png;base64,${image.b64_json}`;
     }
 
-    return data.data[0].url;
+    throw new Error('No image data in OpenAI response');
   }
 
   /**
-   * Edit image using DALL-E (mask-based editing)
+   * Edit image using GPT Image 2.5 (mask-based editing)
    */
   async editImage(image: string, mask: string, prompt: string, options: OpenAIOptions = {}): Promise<string> {
-    const { size = '1024x1024', response_format = 'url' } = options;
+    const { size = '1024x1024', timeout = DEFAULT_TIMEOUT } = options;
 
-    // Convert base64 to blob for FormData
-    const imageBlob = await this.base64ToBlob(image);
-    const maskBlob = await this.base64ToBlob(mask);
+    const requestBody: Record<string, any> = {
+      model: DEFAULT_OPENAI_IMAGE_MODEL,
+      images: [{ image_url: this.toImageUrl(image) }],
+      prompt,
+      n: 1,
+      size,
+      output_format: 'png'
+    };
 
-    const formData = new FormData();
-    formData.append('image', imageBlob);
-    formData.append('mask', maskBlob);
-    formData.append('prompt', prompt);
-    formData.append('n', '1');
-    formData.append('size', size);
-    formData.append('response_format', response_format);
+    if (mask) {
+      requestBody.mask = this.toImageUrl(mask);
+    }
 
     const response = await this.fetchWithTimeout(`${this.baseUrl}/images/edits`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`
       },
-      body: formData
-    });
+      body: JSON.stringify(requestBody)
+    }, timeout);
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`OpenAI Edit API error: ${error.error?.message || 'Unknown error'}`);
+      throw new Error(`OpenAI Edit API error: ${error.error?.message || error.error || 'Unknown error'}`);
     }
 
     const data = await response.json();
+    const edited = data?.data?.[0];
 
-    if (response_format === 'b64_json') {
-      return `data:image/png;base64,${data.data[0].b64_json}`;
+    if (edited?.b64_json) {
+      return `data:image/png;base64,${edited.b64_json}`;
     }
 
-    return data.data[0].url;
+    throw new Error('No image data in OpenAI edit response');
   }
 
   /**
    * Generate variations of an image
    */
   async generateVariations(image: string, options: OpenAIOptions = {}): Promise<string[]> {
-    const { n = 1, size = '1024x1024', response_format = 'url' } = options;
+    const { n = 1, size = '1024x1024', timeout = DEFAULT_TIMEOUT } = options;
 
-    const imageBlob = await this.base64ToBlob(image);
-
-    const formData = new FormData();
-    formData.append('image', imageBlob);
-    formData.append('n', n.toString());
-    formData.append('size', size);
-    formData.append('response_format', response_format);
-
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/variations`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI Variations API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    return data.data.map((item: any) => {
-      if (response_format === 'b64_json') {
-        return `data:image/png;base64,${item.b64_json}`;
-      }
-      return item.url;
-    });
-  }
-
-  /**
-   * Analyze image using GPT-4 Vision
-   */
-  async analyzeImage(imageUrl: string, prompt: string = 'Describe this image in detail'): Promise<string> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/edits`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
-        messages: [
+        model: DEFAULT_OPENAI_IMAGE_MODEL,
+        images: [{ image_url: this.toImageUrl(image) }],
+        prompt: 'Create a creative variation of this image. Keep the same style and main subject while exploring a fresh composition.',
+        n,
+        size,
+        output_format: 'png'
+      })
+    }, timeout);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`OpenAI Variations API error: ${error.error?.message || error.error || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+
+    return (data.data || []).map((item: any) => {
+      if (item?.b64_json) {
+        return `data:image/png;base64,${item.b64_json}`;
+      }
+      throw new Error('No image data in OpenAI variations response');
+    });
+  }
+
+  /**
+   * Analyze image using GPT-5 mini via the Responses API
+   */
+  async analyzeImage(imageUrl: string, prompt: string = 'Describe this image in detail'): Promise<string> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: DEFAULT_TEXT_MODEL,
+        input: [
           {
             role: 'user',
             content: [
-              { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: imageUrl } }
+              { type: 'input_text', text: prompt },
+              { type: 'input_image', image_url: imageUrl }
             ]
           }
         ],
-        max_tokens: 500
+        max_output_tokens: 500
       })
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`OpenAI Vision API error: ${error.error?.message || 'Unknown error'}`);
+      throw new Error(`OpenAI Vision API error: ${error.error?.message || error.error || 'Unknown error'}`);
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || 'No description available';
+    return this.extractTextFromResponse(data);
   }
 
   /**
-   * Convert base64 string to Blob
+   * Extract text from a Responses API payload
    */
-  private async base64ToBlob(base64: string): Promise<Blob> {
-    const response = await fetch(base64);
-    return response.blob();
+  private extractTextFromResponse(data: any): string {
+    for (const item of data?.output || []) {
+      if (item?.type === 'output_text' && item.text) {
+        return item.text;
+      }
+      for (const part of item?.content || []) {
+        if (part?.type === 'output_text' && part.text) {
+          return part.text;
+        }
+      }
+    }
+    return 'No description available';
+  }
+
+  /**
+   * Normalize an image reference to a URL or base64 data URL
+   */
+  private toImageUrl(image: string): string {
+    if (image.startsWith('data:') || image.startsWith('http://') || image.startsWith('https://')) {
+      return image;
+    }
+    return `data:image/png;base64,${image}`;
   }
 
   /**

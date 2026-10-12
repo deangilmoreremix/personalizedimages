@@ -45,7 +45,7 @@ export const generateImageWithDalle = async (prompt: string, options?: any) => {
 export const generateImageWithGemini = async (prompt: string, aspectRatio?: string, style?: string) => {
   console.warn('generateImageWithGemini is deprecated. Use generateImage instead.');
   const { generateImage } = await import('./image/generation');
-  return generateImage(prompt, { aspectRatio, style, provider: 'gemini' });
+  return generateImage(prompt, { aspectRatio, style, provider: 'openai' });
 };
 
 /**
@@ -54,7 +54,7 @@ export const generateImageWithGemini = async (prompt: string, aspectRatio?: stri
 export const generateImageWithGemini2Flash = async (prompt: string) => {
   console.warn('generateImageWithGemini2Flash is deprecated. Use generateImage instead.');
   const { generateImage } = await import('./image/generation');
-  return generateImage(prompt, { provider: 'gemini', model: 'gemini-2.0-flash-exp' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.5-sunburst' });
 };
 
 /**
@@ -63,7 +63,7 @@ export const generateImageWithGemini2Flash = async (prompt: string) => {
 export const generateImageWithImagen = async (prompt: string, aspectRatio?: string) => {
   console.warn('generateImageWithImagen is deprecated. Use generateImage instead.');
   const { generateImage } = await import('./image/generation');
-  return generateImage(prompt, { aspectRatio, provider: 'imagen' });
+  return generateImage(prompt, { aspectRatio, provider: 'openai' });
 };
 
 /**
@@ -72,7 +72,7 @@ export const generateImageWithImagen = async (prompt: string, aspectRatio?: stri
 export const generateImageWithGptImage = async (prompt: string) => {
   console.warn('generateImageWithGptImage is deprecated. Use generateImage instead.');
   const { generateImage } = await import('./image/generation');
-  return generateImage(prompt, { provider: 'openai', model: 'gpt-4-vision-preview' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.5-sunburst' });
 };
 
 // Re-export utility functions for convenience
@@ -101,10 +101,6 @@ export { streamImageGeneration, streamAIReasoning } from '../streamingApi';
 
 // Re-export API utilities
 export {
-  getGiphyApiKey,
-  getOpenAIApiKey,
-  getGeminiApiKey,
-  getGeminiNanoApiKey,
   hasApiKey,
   blobToBase64
 } from '../apiUtils';

@@ -32,6 +32,7 @@ const GenerationControls: React.FC<GenerationControlsProps> = ({
 }) => {
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -56,6 +57,7 @@ const GenerationControls: React.FC<GenerationControlsProps> = ({
     onGenerate();
     setIsProcessing(true);
     setProgress(0);
+    setErrorMessage(null);
     setStatusMessage('Starting generation...');
 
     try {
@@ -104,7 +106,9 @@ const GenerationControls: React.FC<GenerationControlsProps> = ({
 
     } catch (error) {
       console.error('Generation error:', error);
-      setStatusMessage('Generation failed. Please try again.');
+      const message = error instanceof Error ? error.message : 'Generation failed. Please try again.';
+      setErrorMessage(message);
+      setStatusMessage('');
       setIsProcessing(false);
       onGenerationComplete();
     }
@@ -113,6 +117,7 @@ const GenerationControls: React.FC<GenerationControlsProps> = ({
   const handleCancel = () => {
     setIsProcessing(false);
     onGenerationComplete();
+    setErrorMessage(null);
     setProgress(0);
     setStatusMessage('');
   };
@@ -147,6 +152,13 @@ const GenerationControls: React.FC<GenerationControlsProps> = ({
             />
           </div>
         </motion.div>
+      )}
+
+      {/* Generation Error */}
+      {errorMessage && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700" role="alert">
+          {errorMessage}
+        </div>
       )}
 
       {/* Main Generate Button */}

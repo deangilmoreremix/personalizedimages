@@ -1,4 +1,5 @@
-import { getCorsHeaders, authenticateUser, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
 const RATE_LIMIT_WINDOW = 60_000;
 const RATE_LIMIT_MAX = 10;
@@ -18,7 +19,7 @@ function checkLocalRateLimit(clientIp: string): boolean {
 
 interface GhibliImageRequest {
   prompt: string
-  provider: 'openai' | 'gemini' | 'gemini2flash'
+  provider?: 'openai'
   referenceImageUrl?: string
 }
 
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { prompt, provider, referenceImageUrl }: GhibliImageRequest = await req.json()
+    const { prompt, referenceImageUrl }: GhibliImageRequest = await req.json()
 
     if (!prompt?.trim()) {
       return new Response(
@@ -66,14 +67,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get API keys
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    if (!openaiKey && !geminiKey) {
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'API keys not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -81,93 +79,11 @@ Deno.serve(async (req) => {
 
     let imageUrl = ''
 
-    if (provider === 'openai' && openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: enhancedPrompt,
-          n: 1,
-          size: "1024x1024"
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-      }
-
-      const data = await response.json()
-      imageUrl = data.data[0].url
-
-    } else if ((provider === 'gemini' || provider === 'gemini2flash') && geminiKey) {
-      // Use Gemini
-      const model = provider === 'gemini2flash' ? 'gemini-2.5-flash' : 'gemini-1.5-flash'
-
-      let requestBody: any = {
-        contents: [{ parts: [{ text: enhancedPrompt }] }],
-        generationConfig: {
-          responseMediaType: "IMAGE"
-        }
-      }
-
-      // Add reference image if provided
-      if (referenceImageUrl) {
-        try {
-          const imageResponse = await fetch(referenceImageUrl)
-          if (imageResponse.ok) {
-            const imageBlob = await imageResponse.blob()
-            const base64Data = await blobToBase64(imageBlob)
-
-            requestBody.contents[0].parts.push({
-              inline_data: {
-                mime_type: imageBlob.type,
-                data: base64Data
-              }
-            })
-          }
-        } catch (error) {
-          console.warn('Failed to fetch reference image:', error)
-        }
-      }
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${geminiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`)
-      }
-
-      const data = await response.json()
-
-      // Extract image from Gemini response
-      for (const candidate of data.candidates || []) {
-        for (const part of candidate.content?.parts || []) {
-          if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-            imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-            break
-          }
-        }
-        if (imageUrl) break
-      }
-
-      if (!imageUrl) {
-        throw new Error('No image found in Gemini response')
-      }
-
-    } else {
-      return new Response(
-        JSON.stringify({ error: `Provider ${provider} not available` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    try {
+      imageUrl = await generateWithGptImage({ prompt: enhancedPrompt, apiKey: userApiKey, referenceImageUrl })
+    } catch (providerError) {
+      console.error('Ghibli image generation failed:', providerError)
+      throw providerError
     }
 
     return new Response(

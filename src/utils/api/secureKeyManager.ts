@@ -9,7 +9,6 @@
  * as a defense-in-depth measure but should be replaced with server-side API proxying.
  */
 
-import { getEnvironmentConfig } from '../env';
 import { getUserApiKey } from '../../userApiKeyStorage';
 import { secureEncryption } from '../secureEncryption';
 
@@ -49,31 +48,8 @@ export class SecureApiKeyManager {
       return userKey;
     }
 
-    const config = getEnvironmentConfig();
     let rawKey: string | undefined;
-
-    switch (provider) {
-      case 'openai':
-        rawKey = config.VITE_OPENAI_API_KEY;
-        break;
-      case 'gemini':
-        rawKey = config.VITE_GEMINI_API_KEY;
-        break;
-      case 'gemini-nano':
-        rawKey = config.VITE_GEMINI_NANO_API_KEY;
-        break;
-      case 'leonardo':
-        rawKey = config.VITE_LEONARDO_API_KEY;
-        break;
-      case 'giphy':
-        rawKey = config.VITE_GIPHY_API_KEY;
-        break;
-      case 'freepik':
-        rawKey = config.VITE_FREEPIK_API_KEY;
-        break;
-      default:
-        return null;
-    }
+    // BYOK only - no environment fallbacks for direct provider access
 
     if (!rawKey) {
       return null;
@@ -95,15 +71,8 @@ export class SecureApiKeyManager {
     switch (provider) {
       case 'openai':
         return key.startsWith('sk-') && key.length > 20;
-      case 'gemini':
-      case 'gemini-nano':
-        return key.startsWith('AIza');
-      case 'leonardo':
-        return key.length > 10;
-      case 'giphy':
-        return key.length > 10;
-      case 'freepik':
-        return /^[A-Za-z0-9]{20,}$/.test(key);
+      case 'muapi':
+        return key.trim().length > 0;
       default:
         return false;
     }
@@ -139,7 +108,7 @@ export class SecureApiKeyManager {
    * Get key status information
    */
   getKeyStatus(): Record<string, boolean> {
-    const providers = ['openai', 'gemini', 'gemini-nano', 'leonardo', 'giphy', 'freepik'];
+    const providers = ['openai', 'muapi'];
     const status: Record<string, boolean> = {};
 
     providers.forEach(provider => {

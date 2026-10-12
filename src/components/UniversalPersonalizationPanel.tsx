@@ -239,46 +239,8 @@ const Label: React.FC<{
   </label>
 );
 
-const Select: React.FC<{
-  children: React.ReactNode;
-  value: string;
-  onValueChange: (value: string) => void;
-}> = ({ children, value, onValueChange }) => (
-  <div className="relative">
-    {children}
-  </div>
-);
-
-const SelectTrigger: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <button
-    type="button"
-    className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-  >
-    {children}
-    <span className="ml-2">▼</span>
-  </button>
-);
-
-const SelectValue: React.FC = () => null;
-
-const SelectContent: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-    {children}
-  </div>
-);
-
-const SelectItem: React.FC<{
-  children: React.ReactNode;
-  value: string;
-  onClick?: () => void;
-}> = ({ children, value, onClick }) => (
-  <div
-    className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100"
-    onClick={onClick}
-  >
-    {children}
-  </div>
-);
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 const Textarea: React.FC<{
   id?: string;
@@ -316,43 +278,6 @@ const Badge: React.FC<{
     </span>
   );
 };
-
-const Tabs: React.FC<{
-  children: React.ReactNode;
-  defaultValue: string;
-  className?: string;
-}> = ({ children, className = '' }) => (
-  <div className={className}>{children}</div>
-);
-
-const TabsList: React.FC<{
-  children: React.ReactNode;
-  className?: string;
-}> = ({ children, className = '' }) => (
-  <div className={`inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 ${className}`}>
-    {children}
-  </div>
-);
-
-const TabsTrigger: React.FC<{
-  children: React.ReactNode;
-  value: string;
-  className?: string;
-}> = ({ children, value, className = '' }) => (
-  <button
-    className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-gray-950 data-[state=active]:shadow-sm ${className}`}
-  >
-    {children}
-  </button>
-);
-
-const TabsContent: React.FC<{
-  children: React.ReactNode;
-  value: string;
-  className?: string;
-}> = ({ children, value, className = '' }) => (
-  <div className={`mt-6 ${className}`}>{children}</div>
-);
 
 export const UniversalPersonalizationPanel: React.FC<UniversalPersonalizationPanelProps> = ({
   onContentGenerated,

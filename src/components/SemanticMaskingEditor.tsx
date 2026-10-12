@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Brush, Eraser, Undo, Redo, Download, Wand2, RefreshCw, Save, X } from 'lucide-react';
-import { maskAndEditImage } from '../utils/geminiNanoApi';
+import { editImageWithDalle } from '../utils/api';
 
 interface SemanticMaskingEditorProps {
   imageUrl: string;
@@ -159,12 +159,11 @@ const SemanticMaskingEditor: React.FC<SemanticMaskingEditorProps> = ({
       const maskBase64 = maskDataUrl.split(',')[1];
 
       // Apply semantic masking
-      const editedImageUrl = await maskAndEditImage({
+      const editedImageUrl = await editImageWithDalle(
         imageUrl,
-        maskData: maskBase64,
-        editPrompt,
-        preserveUnmasked: true
-      });
+        `data:image/png;base64,${maskBase64}`,
+        editPrompt
+      );
 
       onEditComplete(editedImageUrl);
     } catch (err) {

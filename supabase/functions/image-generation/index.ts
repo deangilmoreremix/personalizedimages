@@ -1,4 +1,4 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput } from "../_shared/cors.ts"
 
 interface AppliedToken {
   id: string;
@@ -19,11 +19,21 @@ interface AppliedToken {
 
 interface ImageGenerationRequest {
   prompt: string
-  provider?: 'gpt-5' | 'gemini' | 'openai'
-  size?: '1024x1024' | '1024x1792' | '1792x1024'
+  provider?: 'gpt-5' | 'openai' | 'gpt-image-1' | 'imagen' | 'imagen-4'
+  size?: string
   style?: string
   quality?: 'standard' | 'hd'
   appliedTokens?: AppliedToken[]
+}
+
+const SUPPORTED_PROVIDERS = ['openai', 'gpt-5', 'gpt-image-1', 'imagen', 'imagen-4']
+
+const SIZE_MAP: Record<string, string> = {
+  '1024x1024': '1024x1024',
+  '1536x1024': '1536x1024',
+  '1024x1536': '1024x1536',
+  '1792x1024': '1536x1024',
+  '1024x1792': '1024x1536'
 }
 
 // Process applied tokens to enhance the prompt
@@ -83,6 +93,58 @@ Deno.serve(async (req) => {
       )
     }
 
+    let requestBody: ImageGenerationRequest
+    try {
+      requestBody = await req.json()
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { prompt, provider = 'gpt-5', size = '1024x1024', style, quality = 'standard', appliedTokens } = requestBody
+
+    // Validate and sanitize inputs
+    if (!prompt || typeof prompt !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Valid prompt is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!SUPPORTED_PROVIDERS.includes(provider)) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported provider' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const imageSize = SIZE_MAP[size]
+    if (!imageSize) {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported size. Valid sizes are 1024x1024, 1536x1024, 1024x1536, 1792x1024, 1024x1792' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const sanitizedPrompt = sanitizeInput(prompt)
+    const sanitizedStyle = style ? sanitizeInput(style) : ''
+
+    if (!sanitizedPrompt) {
+      return new Response(
+        JSON.stringify({ error: 'Valid prompt is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Process applied tokens to enhance the prompt
+    let enhancedPrompt = sanitizedPrompt
+    if (appliedTokens && appliedTokens.length > 0) {
+      console.log(`🎨 Processing ${appliedTokens.length} applied tokens`)
+      enhancedPrompt = processAppliedTokens(sanitizedPrompt, appliedTokens)
+    }
+
     // Check rate limit
     const rateLimit = await checkRateLimit(user.id, true)
     if (!rateLimit.allowed) {
@@ -103,186 +165,55 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check user credits
-    const creditCheck = await checkCredits(user.id)
-    if (!creditCheck.allowed) {
-      return new Response(
-        JSON.stringify({
-          error: 'Daily credit limit exceeded',
-          remainingCredits: creditCheck.remainingCredits,
-          resetTime: new Date(creditCheck.resetTime).toISOString()
-        }),
-        {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'X-Credits-Remaining': creditCheck.remainingCredits.toString(),
-            'X-Credits-Reset': creditCheck.resetTime.toString()
-          }
-        }
-      )
+    // Require the user's own OpenAI key (BYOK)
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
+      return new Response(JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
-    const { prompt, provider = 'gpt-5', size = '1024x1024', style, quality = 'standard', appliedTokens }: ImageGenerationRequest = await req.json()
-
-    // Validate and sanitize inputs
-    if (!prompt || typeof prompt !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Valid prompt is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    const imageModel = Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2.5-sunburst';
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userApiKey}` },
+      body: JSON.stringify({
+        model: imageModel,
+        prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
+        n: 1,
+        size: imageSize,
+        quality: quality === 'hd' ? 'high' : 'medium',
+        output_format: 'png'
+      })
+    });
+    const generated = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('OpenAI image generation rejected', { status: response.status, code: generated?.error?.code });
+      return new Response(JSON.stringify({ error: 'Image provider rejected the request', providerStatus: response.status }), {
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
-
-    const sanitizedPrompt = sanitizeInput(prompt)
-    const sanitizedStyle = style ? sanitizeInput(style) : ''
-
-    // Process applied tokens to enhance the prompt
-    let enhancedPrompt = sanitizedPrompt
-    if (appliedTokens && appliedTokens.length > 0) {
-      console.log(`🎨 Processing ${appliedTokens.length} applied tokens`)
-      enhancedPrompt = processAppliedTokens(sanitizedPrompt, appliedTokens)
-    }
-
-    // Get and validate API keys
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    console.log('API Keys check:', {
-      hasOpenAI: !!openaiKey,
-      openAIValid: openaiKey ? validateApiKey(openaiKey, 'openai') : false,
-      hasGemini: !!geminiKey,
-      geminiValid: geminiKey ? validateApiKey(geminiKey, 'gemini') : false,
-    })
-
-    let imageUrl: string = ''
-
-    if (provider === 'gpt-5' && openaiKey && validateApiKey(openaiKey, 'openai')) {
-      // Use GPT-5 (likely referring to GPT-4o or future GPT-5) for image generation
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3", // Using DALL-E 3 as GPT-5 image generation capability
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`GPT-5/OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
-
-      } catch (error) {
-        console.error('GPT-5 image generation failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        throw new Error(`Image generation failed: ${errorMessage}`)
-      }
-
-    } else if (provider === 'gemini') {
-      // Gemini doesn't support native image generation, fall back to OpenAI
-      console.warn('Gemini does not support image generation, falling back to OpenAI DALL-E')
-
-      if (!openaiKey || !validateApiKey(openaiKey, 'openai')) {
-        return new Response(
-          JSON.stringify({ error: 'OpenAI API key required for image generation (Gemini fallback)' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
-
-      } catch (error) {
-        console.error('OpenAI fallback image generation failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        throw new Error(`Image generation failed: ${errorMessage}`)
-      }
-
-    } else if (provider === 'openai' && openaiKey && validateApiKey(openaiKey, 'openai')) {
-      // Fallback to standard OpenAI DALL-E
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
-
-      } catch (error) {
-        console.error('OpenAI image generation failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        throw new Error(`Image generation failed: ${errorMessage}`)
-      }
-
-    } else {
-      return new Response(
-        JSON.stringify({ error: `Provider ${provider} not available or API key missing/invalid` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    const data = generated.data?.[0];
+    const imageUrl = data?.b64_json ? `data:image/png;base64,${data.b64_json}` : data?.url;
+    if (!imageUrl) {
+      return new Response(JSON.stringify({ error: 'Image provider returned no image' }), {
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     return new Response(
       JSON.stringify({
         imageUrl,
+        imageUrls: [imageUrl],
         prompt: sanitizedPrompt,
         provider,
-        size,
+        size: imageSize,
         style: sanitizedStyle,
-        quality,
-        creditsRemaining: creditCheck.remainingCredits
+        quality
       }),
       {
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json',
-          'X-Credits-Remaining': creditCheck.remainingCredits.toString()
+          'Content-Type': 'application/json'
         }
       }
     )

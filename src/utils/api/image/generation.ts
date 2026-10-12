@@ -15,7 +15,7 @@ import type {
 } from '../core/types';
 
 // Provider priority for automatic selection
-const PROVIDER_PRIORITY: AIProvider[] = ['gemini', 'openai', 'imagen', 'leonardo'];
+const PROVIDER_PRIORITY: AIProvider[] = ['openai'];
 
 /**
  * Generate image with automatic provider selection and fallbacks
@@ -60,7 +60,7 @@ export async function generateImage(
       requestId: response.requestId,
       metadata: {
         generationTime: Date.now() - startTime,
-        model: getModelForProvider(provider, options)
+        model: getModelForProvider()
       }
     };
 
@@ -68,7 +68,7 @@ export async function generateImage(
     console.error('Image generation failed:', error);
 
     // Try fallback provider if available
-    const fallbackProvider = selectFallbackProvider(provider, options);
+    const fallbackProvider = selectFallbackProvider(provider);
     if (fallbackProvider) {
       try {
         streamingOptions?.onStatusUpdate?.(`Retrying with ${fallbackProvider}...`);
@@ -83,7 +83,7 @@ export async function generateImage(
           requestId: fallbackResponse.requestId,
           metadata: {
             generationTime: Date.now() - startTime,
-            model: getModelForProvider(fallbackProvider, options),
+            model: getModelForProvider(),
             fallbackUsed: true
           }
         };
@@ -140,14 +140,13 @@ export async function generateImageBatch(
 export async function generateVariations(
   imageUrl: string,
   count: number = 3,
-  options: Partial<ImageGenerationRequest> = {},
+  _options: Partial<ImageGenerationRequest> = {},
   streamingOptions?: StreamingOptions
 ): Promise<ImageGenerationResponse[]> {
   const variations: ImageGenerationResponse[] = [];
   const startTime = Date.now();
 
-  // Use Gemini for variations (most reliable)
-  const provider: AIProvider = 'gemini';
+  const provider: AIProvider = 'openai';
 
   if (!hasValidApiKey(provider)) {
     return [{
@@ -164,10 +163,7 @@ export async function generateVariations(
     streamingOptions?.onStatusUpdate?.(`Generating ${count} variations...`);
 
     // Generate variations
-    const urls = await providerInstance.generateVariations(imageUrl, count, {
-      model: 'gemini-1.5-flash',
-      temperature: 0.8
-    });
+    const urls = await providerInstance.generateVariations(imageUrl, { n: count });
 
     urls.forEach((url: string, index: number) => {
       variations.push({
@@ -177,7 +173,7 @@ export async function generateVariations(
         requestId: generateRequestId(),
         metadata: {
           generationTime: Date.now() - startTime,
-          model: 'gemini-1.5-flash',
+          model: 'gpt-image-2.5-sunburst',
           variationIndex: index + 1,
           totalVariations: count
         }
@@ -216,7 +212,7 @@ function selectBestProvider(options: Partial<ImageGenerationRequest>): AIProvide
   return null;
 }
 
-function selectFallbackProvider(currentProvider: AIProvider, options: Partial<ImageGenerationRequest>): AIProvider | null {
+function selectFallbackProvider(currentProvider: AIProvider): AIProvider | null {
   for (const provider of PROVIDER_PRIORITY) {
     if (provider !== currentProvider && hasValidApiKey(provider)) {
       return provider;
@@ -225,7 +221,11 @@ function selectFallbackProvider(currentProvider: AIProvider, options: Partial<Im
   return null;
 }
 
-function createProviderRequest(prompt: string, provider: AIProvider, options: Partial<ImageGenerationRequest>) {
+function createProviderRequest(prompt: string, provider: AIProvider, options: Partial<ImageGenerationRequest>): {
+  prompt: string;
+  provider: AIProvider;
+  options: Record<string, any>;
+} {
   const baseRequest: { prompt: string; provider: AIProvider; options: Record<string, any> } = {
     prompt,
     provider,
@@ -236,27 +236,10 @@ function createProviderRequest(prompt: string, provider: AIProvider, options: Pa
     case 'openai':
       baseRequest.options = {
         size: options.size || '1024x1024',
-        quality: options.quality || 'standard',
-        style: options.quality === 'hd' ? 'natural' : 'vivid',
-        response_format: options.outputFormat || 'url'
+        quality: options.quality || 'standard'
       };
       break;
 
-    case 'gemini':
-      baseRequest.options = {
-        model: getModelForProvider(provider, options),
-        temperature: options.style === 'surreal' ? 0.8 : 0.7,
-        aspectRatio: options.aspectRatio,
-        referenceImages: options.referenceImages
-      };
-      break;
-
-    case 'imagen':
-      baseRequest.options = {
-        aspectRatio: options.aspectRatio || '1:1',
-        negativePrompt: options.negativePrompt
-      };
-      break;
   }
 
   if (options.appliedTokens?.length) {
@@ -266,17 +249,8 @@ function createProviderRequest(prompt: string, provider: AIProvider, options: Pa
   return baseRequest;
 }
 
-function getModelForProvider(provider: AIProvider, options: Partial<ImageGenerationRequest>): string {
-  switch (provider) {
-    case 'openai':
-      return options.quality === 'hd' ? 'dall-e-3' : 'dall-e-3';
-    case 'gemini':
-      return options.style === 'ghibli' ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
-    case 'imagen':
-      return 'imagen-3.0-generate-001';
-    default:
-      return 'default';
-  }
+function getModelForProvider(): string {
+  return 'gpt-image-2.5-sunburst';
 }
 
 function generateRequestId(): string {
@@ -294,21 +268,21 @@ export const generateImageWithGemini = async (prompt: string, aspectRatio?: stri
   return generateImage(prompt, {
     aspectRatio: aspectRatio as any,
     style: style as any,
-    provider: 'gemini'
+    provider: 'openai'
   });
 };
 
 export const generateImageWithGemini2Flash = async (prompt: string) => {
   console.warn('generateImageWithGemini2Flash is deprecated. Use generateImage instead.');
-  return generateImage(prompt, { provider: 'gemini', model: 'gemini-2.0-flash-exp' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.5-sunburst' });
 };
 
 export const generateImageWithImagen = async (prompt: string, aspectRatio?: string) => {
   console.warn('generateImageWithImagen is deprecated. Use generateImage instead.');
-  return generateImage(prompt, { aspectRatio: aspectRatio as any, provider: 'imagen' });
+  return generateImage(prompt, { aspectRatio: aspectRatio as any, provider: 'openai' });
 };
 
 export const generateImageWithGptImage = async (prompt: string) => {
   console.warn('generateImageWithGptImage is deprecated. Use generateImage instead.');
-  return generateImage(prompt, { provider: 'openai', model: 'gpt-4-vision-preview' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.5-sunburst' });
 };

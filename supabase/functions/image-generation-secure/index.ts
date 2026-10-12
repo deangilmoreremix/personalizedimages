@@ -1,54 +1,62 @@
 import { createEdgeFunction, createSecureResponse, SecurityError } from '../_shared/middleware.ts';
-import { validateApiKey } from '../_shared/cors.ts';
+import { validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, getCorsHeaders } from '../_shared/cors.ts';
 
 interface ImageGenerationRequest {
   prompt: string;
-  provider?: 'gpt-5' | 'gemini' | 'openai';
+  provider?: 'gpt-5' | 'openai';
   size?: '1024x1024' | '1024x1792' | '1792x1024';
   style?: string;
   quality?: 'standard' | 'hd';
 }
 
-async function generateImage(prompt: string, provider: string, size: string, quality: string, style?: string): Promise<string> {
-  const openaiKey = Deno.env.get('OPENAI_API_KEY');
-
-  if (!openaiKey || !validateApiKey(openaiKey, 'openai')) {
-    throw new SecurityError('OpenAI API key not configured', 500, 'API_KEY_ERROR');
-  }
-
+async function generateImage(prompt: string, apiKey: string, size: string, quality: string, style?: string): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openaiKey}`
+      'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: "dall-e-3",
+      model: Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2.5-sunburst',
       prompt: prompt + (style ? ` Style: ${style}` : ''),
       n: 1,
       size,
-      quality
+      quality: quality === 'hd' ? 'high' : 'medium',
+      output_format: 'png'
     })
   });
 
   if (!response.ok) {
     const error = await response.json();
+    // Map provider statuses to client-safe codes: upstream auth failures must
+    // not surface as 401/403 (which implies the caller's own session is bad),
+    // and provider rate limits must not surface as 429 for our own limits.
+    const clientStatus = response.status === 429 ? 429 : 502;
     throw new SecurityError(
       `Image generation failed: ${error.error?.message || 'Unknown error'}`,
-      response.status,
+      clientStatus,
       'GENERATION_ERROR'
     );
   }
 
   const data = await response.json();
-  return data.data[0].url;
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new SecurityError('Image generation returned no image data', 502, 'GENERATION_ERROR');
+  }
+  return `data:image/png;base64,${b64}`;
 }
 
 export default createEdgeFunction(
   async (req, context) => {
     const { prompt, provider = 'openai', size = '1024x1024', style, quality = 'standard' } = context.body as ImageGenerationRequest;
 
-    const imageUrl = await generateImage(prompt, provider, size, quality, style);
+    const userApiKey = getUserApiKey(req, 'openai');
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
+      return createSecureResponse({ error: OPENAI_KEY_MISSING_ERROR }, 400, getCorsHeaders(req.headers.get('origin')));
+    }
+
+    const imageUrl = await generateImage(prompt, userApiKey, size, quality, style);
 
     return createSecureResponse({
       imageUrl,

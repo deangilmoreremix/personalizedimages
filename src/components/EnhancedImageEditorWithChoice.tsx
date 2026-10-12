@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Wand2, CreditCard as Edit3, Sparkles, RefreshCw, Download, Layers, Palette, Zap } from 'lucide-react';
-import { editImageWithGeminiNano, generateVariationsWithGeminiNano } from '../utils/geminiNanoApi';
+import { editImageWithDalle, generateImageVariations } from '../utils/api';
 import { editImageWithGPT5, createVariationsWithGPT5 } from '../utils/gpt5ImageEditor';
 
 interface EnhancedImageEditorWithChoiceProps {
@@ -9,7 +9,7 @@ interface EnhancedImageEditorWithChoiceProps {
   tokens?: Record<string, string>;
 }
 
-type EditorMode = 'gemini-nano' | 'gpt5';
+type EditorMode = 'openai' | 'gpt5';
 type EditMode = 'enhance' | 'colorize' | 'stylize' | 'remove_background' | 'blur_background' | 'restore' | 'custom' | 'text_render' | 'compose' | 'style_transfer';
 
 const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps> = ({
@@ -17,7 +17,7 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
   onImageUpdated,
   tokens = {}
 }) => {
-  const [editorMode, setEditorMode] = useState<EditorMode>('gemini-nano');
+  const [editorMode, setEditorMode] = useState<EditorMode>('openai');
   const [editMode, setEditMode] = useState<EditMode>('enhance');
   const [customPrompt, setCustomPrompt] = useState('');
   const [textToRender, setTextToRender] = useState('');
@@ -38,24 +38,19 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
   const [blur, setBlur] = useState(0);
   const [rotation, setRotation] = useState(0);
 
-  const handleGeminiNanoEdit = async () => {
+  const handleOpenAIEdit = async () => {
     try {
       setIsEditing(true);
       setError(null);
 
       const currentImage = editHistory[historyIndex];
-      const editedImageUrl = await editImageWithGeminiNano(
+      const editedImageUrl = await editImageWithDalle(
         currentImage,
-        {
-          mode: editMode,
-          intensity,
-          customPrompt: editMode === 'custom' ? customPrompt : undefined,
-          textToRender: editMode === 'text_render' ? textToRender : undefined,
-          fontStyle: editMode === 'text_render' ? fontStyle : undefined,
-          secondaryImages: (editMode === 'compose' || editMode === 'style_transfer') ? secondaryImages : undefined,
-          aspectRatio,
-          responseModalities
-        }
+        '',
+        editMode === 'custom'
+          ? customPrompt
+          : `${editMode.replace(/_/g, ' ')} edit of this image${editMode === 'text_render' && textToRender ? ` with the text "${textToRender}"` : ''}`,
+        { size: '1024x1024' }
       );
 
       // Add to history
@@ -78,7 +73,7 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
       setError(null);
 
       const currentImage = editHistory[historyIndex];
-      const variations = await generateVariationsWithGeminiNano(currentImage, 3);
+      const variations = await generateImageVariations(currentImage, { n: 3 });
 
       if (variations.length > 0) {
         // Use the first variation
@@ -174,9 +169,9 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
         <h3 className="text-xl font-bold text-gray-900">Image Editor</h3>
         <div className="flex bg-gray-100 rounded-lg p-1">
           <button
-            onClick={() => setEditorMode('gemini-nano')}
+            onClick={() => setEditorMode('openai')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              editorMode === 'gemini-nano'
+              editorMode === 'openai'
                 ? 'bg-white shadow-sm text-indigo-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
@@ -201,9 +196,9 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Controls */}
         <div className="space-y-4">
-          {editorMode === 'gemini-nano' ? (
+          {editorMode === 'openai' ? (
             <>
-              {/* Gemini Nano Controls */}
+              {/* AI Editor Controls */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Edit Mode
@@ -389,7 +384,7 @@ const EnhancedImageEditorWithChoice: React.FC<EnhancedImageEditorWithChoiceProps
               </div>
 
               <button
-                onClick={handleGeminiNanoEdit}
+                onClick={handleOpenAIEdit}
                 disabled={isEditing || (editMode === 'custom' && !customPrompt.trim())}
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >

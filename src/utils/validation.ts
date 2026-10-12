@@ -47,8 +47,9 @@ export const isValidUrl = (url: string): boolean => {
  * Validate phone number format (basic validation)
  */
 export const isValidPhone = (phone: string): boolean => {
-  const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-  return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, '')) && phone.length <= 20;
+  const digits = phone.replace(/[\s\-\(\)]/g, '');
+  const phoneRegex = /^[\+]?[1-9]\d{6,14}$/;
+  return phoneRegex.test(digits) && digits.length <= 15;
 };
 
 /**

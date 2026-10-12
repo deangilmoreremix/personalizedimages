@@ -1,4 +1,5 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2'
+import { getCorsHeaders } from './cors.ts';
 
 export interface RateLimitConfig {
   maxRequests: number;
@@ -194,9 +195,9 @@ export function createSecureResponse(
   headers: Record<string, string> = {}
 ): Response {
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': getCorsHeaders(null)['Access-Control-Allow-Origin'],
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, x-user-api-key, x-request-id, x-debug-mode',
     'Content-Type': 'application/json',
     ...headers
   };

@@ -70,7 +70,7 @@ class SecurityHeadersManager {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https: http:",
-      "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com https://*.supabase.co wss://*.supabase.co",
+      "connect-src 'self' https://api.openai.com https://*.supabase.co wss://*.supabase.co",
       "media-src 'self' blob: data:",
       "object-src 'none'",
       "frame-src 'none'",

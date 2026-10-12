@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Wand2, Image as ImageIcon, Download, Sparkles, Zap, Save, Upload, Layers, Settings, RefreshCw, Eye, EyeOff, Copy, Check } from 'lucide-react';
-import { generateImageWithGeminiNano, editImageWithGeminiNano } from '../utils/geminiNanoApi';
+import { generateImageWithGptImage, editImageWithDalle } from '../utils/api';
 import { PERSONALIZATION_TOKENS, createDefaultTokenValues } from '../types/personalization';
 import { sanitizePrompt, sanitizeTokenValue } from '../utils/validation';
 import DroppableTextArea from './DroppableTextArea';
@@ -79,17 +79,9 @@ const GeminiNanoPersonalizationEditor: React.FC<GeminiNanoPersonalizationEditorP
       setError(null);
 
       const personalizedPrompt = generatePersonalizedPrompt();
-      console.log('🎨 Generating with Gemini Nano:', personalizedPrompt);
+      console.log('🎨 Generating with GPT Image 2.5:', personalizedPrompt);
 
-      const imageUrl = await generateImageWithGeminiNano(
-        personalizedPrompt,
-        {
-          aspectRatio,
-          style: imageStyle,
-          quality,
-          negativePrompt: negativePrompt || undefined
-        }
-      );
+      const imageUrl = await generateImageWithGptImage(personalizedPrompt);
 
       setGeneratedImage(imageUrl);
 
@@ -118,14 +110,10 @@ const GeminiNanoPersonalizationEditor: React.FC<GeminiNanoPersonalizationEditorP
       setIsGenerating(true);
       setError(null);
 
-      const editedImageUrl = await editImageWithGeminiNano(
+      const editedImageUrl = await editImageWithDalle(
         generatedImage,
-        {
-          mode: editMode,
-          intensity: editIntensity,
-          style: imageStyle,
-          customPrompt: editMode === 'custom' ? prompt : undefined
-        }
+        '',
+        editMode === 'custom' ? prompt : `${editMode.replace(/_/g, ' ')} edit of this image`
       );
 
       setGeneratedImage(editedImageUrl);
@@ -186,7 +174,7 @@ const GeminiNanoPersonalizationEditor: React.FC<GeminiNanoPersonalizationEditorP
           <div>
             <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <Sparkles className="w-8 h-8 text-indigo-600" />
-              Gemini Nano Personalization Editor
+              Personalization Editor
             </h2>
             <p className="text-gray-600 mt-2">Create personalized images with AI-powered generation and editing</p>
           </div>

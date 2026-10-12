@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Check, Zap, Camera, Cpu, Sparkles, Eye } from 'lucide-react';
 
 interface ModelSelectorProps {
@@ -10,12 +11,11 @@ interface ModelSelectorProps {
 const models = [
   {
     id: 'openai',
-    name: 'DALL-E 3',
+    name: 'GPT Image 2.5',
     icon: Sparkles,
     description: 'Premium Quality',
     features: ['Multiple sizes', 'HD quality', 'Natural & Vivid styles'],
     speed: 'Medium',
-    cost: '$0.04',
     color: 'from-purple-500 to-pink-500',
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-200',
@@ -23,48 +23,44 @@ const models = [
   },
   {
     id: 'imagen',
-    name: 'Imagen 3',
+    name: 'GPT Image 2.5 HD',
     icon: Camera,
     description: 'Photo-Realistic',
     features: ['Photorealism', 'Style control', 'Detail-rich'],
     speed: 'Medium',
-    cost: '$0.02',
     color: 'from-blue-500 to-cyan-500',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200'
   },
   {
     id: 'gemini2flash',
-    name: 'Gemini Flash',
+    name: 'GPT Image 2.5 Fast',
     icon: Zap,
     description: 'Ultra-Fast',
     features: ['2-4x faster', 'Real-time', 'Efficient'],
     speed: 'Very Fast',
-    cost: '$0.01',
     color: 'from-yellow-500 to-orange-500',
     bgColor: 'bg-yellow-50',
     borderColor: 'border-yellow-200'
   },
   {
     id: 'gemini',
-    name: 'Gemini',
+    name: 'GPT Image 2.5 Natural',
     icon: Cpu,
     description: 'Balanced',
     features: ['Natural look', 'Good detail', 'Reliable'],
     speed: 'Fast',
-    cost: '$0.02',
     color: 'from-green-500 to-teal-500',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200'
   },
   {
     id: 'gpt-image-1',
-    name: 'GPT-4 Vision',
+    name: 'GPT Image 2.5 Pro',
     icon: Eye,
     description: 'Advanced AI',
     features: ['Complex prompts', 'Exceptional detail', 'Latest tech'],
     speed: 'Medium',
-    cost: '$0.05',
     color: 'from-indigo-500 to-purple-500',
     bgColor: 'bg-indigo-50',
     borderColor: 'border-indigo-200'
@@ -75,6 +71,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
   selectedModel,
   onModelChange
 }) => {
+  const navigate = useNavigate();
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
@@ -148,9 +145,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                     <span className="text-gray-600">
                       Speed: <span className="font-medium text-gray-900">{model.speed}</span>
                     </span>
-                    <span className="text-gray-600">
-                      Cost: <span className="font-medium text-gray-900">{model.cost}</span>
-                    </span>
                   </div>
                 </div>
               </div>
@@ -160,7 +154,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       </div>
 
       {/* Model Comparison Link */}
-      <button className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium text-center py-2">
+      <button
+        onClick={() => navigate('/model-comparison')}
+        className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium text-center py-2"
+      >
         Compare all models →
       </button>
     </div>

@@ -1,11 +1,19 @@
 /**
- * This module handles streaming AI responses using the Gemini 1.5 Flash API
+ * This module handles streaming AI responses using the OpenAI Responses API
+ * through the assistant-stream Supabase Edge Function (BYOK).
  */
 
-import { getGeminiApiKey, hasApiKey } from './apiUtils';
+import { getUserApiKey } from './userApiKeyStorage';
 import { supabase, supabaseUrl, isSupabaseConfigured } from './supabaseClient';
 import { FEATURES } from '../components/ui/FeatureDialogProvider';
-import { generateImageWithDalle, generateImageWithGemini, generateImageWithGemini2Flash, generateImageWithImagen, generateImageWithGptImage } from './api';
+import { generateImageWithDalle, generateImageWithGptImage } from './api';
+
+const ASSISTANT_KEY_MISSING_MESSAGE =
+  'OpenAI API key not configured. Add your key in Settings → API Keys.';
+
+function isKeyMissingError(status: number, body: string): boolean {
+  return status === 400 && body.includes('API key not configured');
+}
 
 interface StreamingOptions {
   messages: Array<{role: string, content: string}>;
@@ -16,7 +24,7 @@ interface StreamingOptions {
 }
 
 /**
- * Streams an AI response using the Gemini API, with proper error handling and fallbacks
+ * Streams an AI response using the OpenAI assistant edge function, with proper error handling
  */
 export async function streamAIResponse({
   messages,
@@ -39,13 +47,15 @@ export async function streamAIResponse({
         const token = authData?.session?.access_token || '';
 
         const apiUrl = `${supabaseUrl}/functions/v1/assistant-stream`;
+        const userApiKey = getUserApiKey('openai');
 
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
-            'X-Request-ID': requestId
+            'X-Request-ID': requestId,
+            ...(userApiKey ? { 'x-user-api-key': userApiKey } : {}),
           },
           body: JSON.stringify({
             messages,
@@ -58,56 +68,42 @@ export async function streamAIResponse({
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`Edge function error: ${response.status} - ${errorText}`);
+          if (isKeyMissingError(response.status, errorText)) {
+            onComplete(ASSISTANT_KEY_MISSING_MESSAGE);
+            return;
+          }
           throw new Error(`Edge function returned status ${response.status}`);
         }
 
-        // The edge function should return a readable stream
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('Response body is not readable');
+        // The assistant-stream edge function returns a single JSON envelope
+        // {text, model, message} for every provider.
+        const payload = await response.json().catch(() => null);
+        const assistantText = typeof payload === 'string'
+          ? payload
+          : (payload?.text || payload?.message || '');
+
+        if (!assistantText) {
+          throw new Error('Assistant returned an empty response');
         }
 
-        const decoder = new TextDecoder();
-        let done = false;
-
-        // Process the stream
-        while (!done) {
-          const { value, done: doneReading } = await reader.read();
-          done = doneReading;
-          
-          if (value) {
-            const text = decoder.decode(value);
-            
-            // Handle special markers in the stream
-            if (text.includes('FEATURES:')) {
-              // Extract feature suggestions
-              const featuresMatch = text.match(/FEATURES:(\[.*?\])/);
-              if (featuresMatch && featuresMatch[1]) {
-                try {
-                  suggestedFeatures = JSON.parse(featuresMatch[1]);
-                } catch (e) {
-                  console.error('Failed to parse feature suggestions:', e);
-                }
-                
-                // Remove the features marker from the displayed text
-                const textWithoutFeatures = text.replace(/FEATURES:\[.*?\]/, '');
-                fullResponse += textWithoutFeatures;
-                onTokenReceived(textWithoutFeatures);
-              }
-            } else {
-              // Regular token
-              fullResponse += text;
-              onTokenReceived(text);
-            }
+        // Extract feature suggestions and strip the marker from the displayed text
+        const featuresMatch = assistantText.match(/FEATURES:(\[.*?\])/);
+        if (featuresMatch && featuresMatch[1]) {
+          try {
+            suggestedFeatures = JSON.parse(featuresMatch[1]);
+          } catch (e) {
+            console.error('Failed to parse feature suggestions:', e);
           }
         }
+        const cleanText = assistantText.replace(/FEATURES:\[.*?\]/g, '').trim();
+        fullResponse = cleanText;
+        onTokenReceived(cleanText);
 
-        console.log(`✅ [${requestId}] Stream completed successfully`);
+        console.log(`✅ [${requestId}] Assistant response received`);
         if (suggestedFeatures.length === 0) {
-          // Try to extract feature suggestions from the content
-          suggestedFeatures = extractFeatureSuggestions(fullResponse);
+          suggestedFeatures = extractFeatureSuggestions(cleanText);
         }
-        
+
         onComplete(fullResponse, suggestedFeatures);
         return;
       } catch (edgeError) {
@@ -116,117 +112,7 @@ export async function streamAIResponse({
       }
     }
 
-    // Fallback: Direct API call to Gemini
-    if (!hasApiKey('gemini')) {
-      throw new Error('Gemini API key is not configured');
-    }
-
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      throw new Error('Gemini API key not available');
-    }
-    
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?key=${apiKey}`;
-
-    // Format messages for Gemini API
-    // Prepend a system message with feature information
-    const systemMessage = `You are an AI assistant for a creative tool called VideoRemix that helps users create personalized images, action figures, Ghibli-style images, cartoon-style images, memes, and other visual content using AI. 
-    
-First name: ${userContext['FIRSTNAME'] || 'User'}
-Last name: ${userContext['LASTNAME'] || 'Unknown'}
-Company: ${userContext['COMPANY'] || 'Unknown'}
-
-The available features are:
-- AI Image Generator (image): Create custom images from text descriptions
-- Action Figure Generator (action-figure): Create personalized action figures
-- Studio Ghibli Style (ghibli): Create images in the style of Studio Ghibli
-- Cartoon Style (cartoon): Transform images into cartoon styles
-- Meme Generator (meme): Create personalized memes
-- Crazy Image Generator (crazy): Create wild, surreal images
-- GIF Editor (gif): Create animated GIFs with personalization
-- Email-Ready Image Editor (email): Design images optimized for email
-
-When suggesting features, include the feature ID in brackets like [image] at the end of your response like this: "You might want to try our AI Image Generator [image]"
-
-First provide a helpful, conversational response, then recommend 1-3 relevant features when appropriate.
-IMPORTANT: Keep responses concise (max 3-4 sentences).
-At the end of your response include a marker with feature IDs like this: FEATURES:["image","action-figure"]`;
-
-    const formattedMessages = [
-      { role: 'system', parts: [{ text: systemMessage }] },
-      ...messages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }))
-    ];
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: formattedMessages,
-        generationConfig: {
-          temperature,
-          topP: 0.8,
-          topK: 40
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('Response body is not readable');
-    }
-
-    const decoder = new TextDecoder();
-    let streamBuffer = '';
-    let done = false;
-
-    while (!done) {
-      const { value, done: doneReading } = await reader.read();
-      done = doneReading;
-
-      if (value) {
-        const chunk = decoder.decode(value);
-        streamBuffer += chunk;
-        
-        // Try to parse complete JSON objects from the buffer
-        let startIndex = 0;
-        let endIndex = 0;
-        
-        while ((endIndex = streamBuffer.indexOf('}\n', startIndex)) !== -1) {
-          const jsonStr = streamBuffer.substring(startIndex, endIndex + 1);
-          startIndex = endIndex + 2; // Move past the "}\n"
-          
-          try {
-            const dataObj = JSON.parse(jsonStr);
-            if (dataObj.candidates?.[0]?.content?.parts?.[0]?.text) {
-              const text = dataObj.candidates[0].content.parts[0].text;
-              fullResponse += text;
-              onTokenReceived(text);
-            }
-          } catch (e) {
-            console.warn('Failed to parse JSON chunk:', e);
-          }
-        }
-        
-        // Keep remaining incomplete JSON in buffer
-        streamBuffer = streamBuffer.substring(startIndex);
-      }
-    }
-
-    // Try to extract feature suggestions
-    suggestedFeatures = extractFeatureSuggestions(fullResponse);
-    
-    // Remove any FEATURES marker from the text before completing
-    const cleanResponse = fullResponse.replace(/FEATURES:\[.*?\]/g, '').trim();
-    
-    onComplete(cleanResponse, suggestedFeatures);
+    onComplete(ASSISTANT_KEY_MISSING_MESSAGE);
   } catch (error) {
     console.error('Error streaming AI response:', error);
     const errorMessage = 'Sorry, I encountered an error while processing your request. Please try again.';
@@ -242,7 +128,7 @@ export function streamImageGeneration({
   onStatusUpdate,
   onProgress,
   onComplete,
-  provider = 'gemini',
+  provider = 'openai',
   steps = 10,
   dalleOptions = {}
 }: {
@@ -299,30 +185,12 @@ export function streamImageGeneration({
     if (currentStep >= totalSteps) {
       clearInterval(interval);
       setTimeout(() => {
-        // Generate the actual image based on the provider
-        if (provider === 'openai') {
-          generateImageWithDalle(prompt, dalleOptions)
-            .then(imageUrl => onComplete?.(imageUrl))
-            .catch(error => console.error('Error generating image:', error));
-        } else if (provider === 'gemini') {
-          generateImageWithGemini(prompt)
-            .then(imageUrl => onComplete?.(imageUrl))
-            .catch(error => console.error('Error generating image:', error));
-        } else if (provider === 'gemini2flash') {
-          generateImageWithGemini2Flash(prompt)
-            .then(imageUrl => onComplete?.(imageUrl))
-            .catch(error => console.error('Error generating image:', error));
-        } else if (provider === 'imagen') {
-          generateImageWithImagen(prompt)
-            .then(imageUrl => onComplete?.(imageUrl))
-            .catch(error => console.error('Error generating image:', error));
-        } else if (provider === 'gpt-image-1') {
+        if (provider === 'gpt-image-1') {
           generateImageWithGptImage(prompt)
             .then(imageUrl => onComplete?.(imageUrl))
             .catch(error => console.error('Error generating image:', error));
         } else {
-          // Default to Gemini
-          generateImageWithGemini(prompt)
+          generateImageWithDalle(prompt, dalleOptions)
             .then(imageUrl => onComplete?.(imageUrl))
             .catch(error => console.error('Error generating image:', error));
         }

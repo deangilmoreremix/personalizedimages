@@ -2,8 +2,8 @@
 const allowedOrigins = Deno.env.get('ALLOWED_ORIGINS')?.split(',') || ['http://localhost:3000'];
 
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Origin': allowedOrigins[0],
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, x-user-api-key, x-request-id, x-debug-mode',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
@@ -88,7 +88,7 @@ async function dbQuery(path: string, body: Record<string, unknown>, serviceKey: 
 }
 
 export async function checkRateLimit(
-  identifier: string,
+  rawIdentifier: string,
   isAuthenticated: boolean = false
 ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
   const limits = isAuthenticated ? RATE_LIMITS.authenticated : RATE_LIMITS.anonymous;
@@ -96,13 +96,20 @@ export async function checkRateLimit(
   const windowStart = new Date(now - limits.windowMs).toISOString();
   const config = getSupabaseServiceClient();
 
+  // The shared rate_limits table is written by several VideoRemix applications.
+  // Its deployed columns are (id, scope, key, window_start, count, created_at,
+  // updated_at) with a UNIQUE index on (scope, key, window_start). Rows are
+  // namespaced by scope so this app never collides with another app's keys.
+  const scope = 'edge';
+  const key = `${isAuthenticated ? 'auth' : 'anon'}:${rawIdentifier}`;
+
   if (!config) {
     return { allowed: false, remaining: 0, resetTime: now + limits.windowMs };
   }
 
   try {
     const selectRes = await fetch(
-      `${config.url}/rest/v1/rate_limits?identifier=eq.${encodeURIComponent(identifier)}&is_authenticated=eq.${isAuthenticated}&select=id,request_count,window_start`,
+      `${config.url}/rest/v1/rate_limits?scope=eq.${scope}&key=eq.${encodeURIComponent(key)}&select=id,count,window_start&order=window_start.desc`,
       {
         headers: {
           'apikey': config.serviceKey,
@@ -114,18 +121,20 @@ export async function checkRateLimit(
     const record = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 
     if (!record || new Date(record.window_start).getTime() < new Date(windowStart).getTime()) {
+      // ON CONFLICT DO NOTHING needs no unique index, so it is safe on every
+      // deployed shape of this shared table.
       const upsertRes = await fetch(`${config.url}/rest/v1/rate_limits`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': config.serviceKey,
           'Authorization': `Bearer ${config.serviceKey}`,
-          'Prefer': 'resolution=merge-duplicates',
+          'Prefer': 'resolution=ignore-duplicates',
         },
         body: JSON.stringify({
-          identifier,
-          is_authenticated: isAuthenticated,
-          request_count: 1,
+          scope,
+          key,
+          count: 1,
           window_start: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }),
@@ -136,7 +145,7 @@ export async function checkRateLimit(
       return { allowed: true, remaining: limits.requests - 1, resetTime: now + limits.windowMs };
     }
 
-    if (record.request_count >= limits.requests) {
+    if (record.count >= limits.requests) {
       const resetTime = new Date(record.window_start).getTime() + limits.windowMs;
       return { allowed: false, remaining: 0, resetTime };
     }
@@ -149,54 +158,16 @@ export async function checkRateLimit(
         'Authorization': `Bearer ${config.serviceKey}`,
       },
       body: JSON.stringify({
-        request_count: record.request_count + 1,
+        count: record.count + 1,
         updated_at: new Date().toISOString(),
       }),
     });
 
-    const remaining = limits.requests - (record.request_count + 1);
+    const remaining = limits.requests - (record.count + 1);
     const resetTime = new Date(record.window_start).getTime() + limits.windowMs;
     return { allowed: true, remaining, resetTime };
   } catch {
     return { allowed: false, remaining: 0, resetTime: now + limits.windowMs };
-  }
-}
-
-export async function checkCredits(
-  userId: string
-): Promise<{ allowed: boolean; remainingCredits: number; resetTime: number }> {
-  const config = getSupabaseServiceClient();
-  const now = Date.now();
-
-  if (!config) {
-    return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
-  }
-
-  try {
-    const rpcRes = await fetch(`${config.url}/rest/v1/rpc/check_and_deduct_credit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.serviceKey,
-        'Authorization': `Bearer ${config.serviceKey}`,
-      },
-      body: JSON.stringify({ p_user_id: userId, p_reason: 'edge_function_generation' }),
-    });
-
-    if (!rpcRes.ok) {
-      return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
-    }
-
-    const result = await rpcRes.json();
-    const parsed = typeof result === 'string' ? JSON.parse(result) : result;
-
-    return {
-      allowed: !!parsed?.allowed,
-      remainingCredits: parsed?.balance ?? 0,
-      resetTime: now + 86400000,
-    };
-  } catch {
-    return { allowed: false, remainingCredits: 0, resetTime: now + 86400000 };
   }
 }
 
@@ -233,3 +204,11 @@ export async function authenticateUser(req: Request): Promise<{ user: any; error
     return { user: null, error: 'Authentication failed' };
   }
 }
+
+export function getUserApiKey(req: Request, provider: 'openai' | 'muapi' = 'openai'): string | null {
+  const key = req.headers.get('x-user-api-key');
+  if (!key || key.trim().length === 0) return null;
+  return key.trim();
+}
+export const OPENAI_KEY_MISSING_ERROR = 'OpenAI API key not configured. Add your key in Settings → API Keys.';
+export const MUAPI_KEY_MISSING_ERROR = 'MuAPI API key not configured. Add your key in Settings → API Keys.';

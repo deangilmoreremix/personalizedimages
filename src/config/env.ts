@@ -21,18 +21,9 @@ interface EnvConfig {
   // App Environment
   VITE_APP_ENV: 'development' | 'staging' | 'production';
   
-  // AI Services (optional but recommended)
-  VITE_OPENAI_API_KEY?: string;
-  VITE_GEMINI_API_KEY?: string;
-  VITE_GEMINI_NANO_API_KEY?: string;
-  VITE_LEONARDO_API_KEY?: string;
-  VITE_GIPHY_API_KEY?: string;
   
   // AI Configuration
   VITE_OPENAI_ASSISTANT_ID?: string;
-  
-  // Payments
-  VITE_STRIPE_PUBLISHABLE_KEY?: string;
   
   // Feature Flags
   VITE_FEATURE_USE_MODERN_UI?: string;
@@ -53,12 +44,6 @@ const URL_VARS: Array<keyof EnvConfig> = [
 // Variables that should be secrets (sanitized in logs)
 const SECRET_VARS = [
   'VITE_SUPABASE_ANON_KEY',
-  'VITE_OPENAI_API_KEY',
-  'VITE_GEMINI_API_KEY',
-  'VITE_GEMINI_NANO_API_KEY',
-  'VITE_LEONARDO_API_KEY',
-  'VITE_GIPHY_API_KEY',
-  'VITE_STRIPE_PUBLISHABLE_KEY',
 ];
 
 /**
@@ -139,13 +124,6 @@ function validateEnv(): EnvConfig {
   logger.info('Environment Configuration', {
     appEnv: appEnv || 'development (default)',
     supabaseConfigured: !!env.VITE_SUPABASE_URL && !!env.VITE_SUPABASE_ANON_KEY,
-    features: {
-      openai: !!env.VITE_OPENAI_API_KEY,
-      gemini: !!env.VITE_GEMINI_API_KEY,
-      geminiNano: !!env.VITE_GEMINI_NANO_API_KEY,
-      leonardo: !!env.VITE_LEONARDO_API_KEY,
-      stripe: !!env.VITE_STRIPE_PUBLISHABLE_KEY,
-    }
   });
 
   // Log warnings
@@ -182,13 +160,7 @@ function validateEnv(): EnvConfig {
     VITE_SUPABASE_URL: env.VITE_SUPABASE_URL || '',
     VITE_SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY || '',
     VITE_APP_ENV: (env.VITE_APP_ENV as 'development' | 'staging' | 'production') || 'development',
-    VITE_OPENAI_API_KEY: env.VITE_OPENAI_API_KEY,
-    VITE_GEMINI_API_KEY: env.VITE_GEMINI_API_KEY,
-    VITE_GEMINI_NANO_API_KEY: env.VITE_GEMINI_NANO_API_KEY,
-    VITE_LEONARDO_API_KEY: env.VITE_LEONARDO_API_KEY,
-    VITE_GIPHY_API_KEY: env.VITE_GIPHY_API_KEY,
     VITE_OPENAI_ASSISTANT_ID: env.VITE_OPENAI_ASSISTANT_ID,
-    VITE_STRIPE_PUBLISHABLE_KEY: env.VITE_STRIPE_PUBLISHABLE_KEY,
     VITE_FEATURE_USE_MODERN_UI: env.VITE_FEATURE_USE_MODERN_UI,
     VITE_FEATURE_ENABLE_BETA: env.VITE_FEATURE_ENABLE_BETA,
   };
@@ -201,10 +173,5 @@ export const env = validateEnv();
 export const isDevelopment = env.VITE_APP_ENV === 'development';
 export const isStaging = env.VITE_APP_ENV === 'staging';
 export const isProduction = env.VITE_APP_ENV === 'production';
-
-// Feature flag helpers
-export const hasOpenAI = !!env.VITE_OPENAI_API_KEY;
-export const hasGemini = !!env.VITE_GEMINI_API_KEY;
-export const hasStripe = !!env.VITE_STRIPE_PUBLISHABLE_KEY;
 
 export default env;

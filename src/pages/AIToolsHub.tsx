@@ -34,7 +34,7 @@ const TOOLS: ToolConfig[] = [
   {
     id: 'mystic',
     name: 'Mystic AI Generator',
-    description: 'Create ultra-realistic images with Freepik\'s flagship AI model',
+    description: 'Create ultra-realistic images with OpenAI GPT Image 2.5',
     icon: Wand2,
     gradient: 'from-amber-500 to-orange-600',
     tag: 'Popular',
@@ -51,7 +51,7 @@ const TOOLS: ToolConfig[] = [
   {
     id: 'upscale',
     name: 'Image Upscaler',
-    description: 'Enhance resolution up to 4x with Magnific AI',
+    description: 'Enhance resolution up to 4x with OpenAI GPT Image 2.5',
     icon: Maximize2,
     gradient: 'from-blue-500 to-cyan-600',
     tag: 'New',
@@ -126,7 +126,7 @@ export default function AIToolsHub() {
             <p className="text-sm text-gray-500 mt-0.5">
               {activeTool
                 ? activeConfig?.description
-                : 'Powered by Freepik API -- professional AI tools at your fingertips'}
+                : 'Powered by OpenAI GPT Image 2.5 -- professional AI tools at your fingertips'}
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function AIToolsHub() {
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-5 h-5 text-amber-400" />
                   <span className="text-sm font-semibold text-amber-400 uppercase tracking-wide">
-                    Freepik AI Suite
+                    AI Tools Suite
                   </span>
                 </div>
                 <h2 className="text-xl font-bold mb-2">
@@ -148,7 +148,7 @@ export default function AIToolsHub() {
                 <p className="text-gray-400 text-sm max-w-lg">
                   Generate images with Mystic AI, remove backgrounds, upscale resolution,
                   change lighting, transfer artistic styles, and improve your prompts --
-                  all powered by Freepik's enterprise-grade API.
+                  all powered by OpenAI's GPT Image 2.5.
                 </p>
                 <div className="flex items-center gap-4 mt-4">
                   <div className="flex items-center gap-1.5 text-xs text-gray-500">

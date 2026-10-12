@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Lightbulb, Dices, Paintbrush as PaintBrush, Shapes } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
+import { generateImage, GenerationError } from '../services/imageGenerationService';
+import { callEdgeFunction } from '../utils/supabaseClient';
+import { isApiKeyMissingError } from '../utils/apiKeyMissing';
+import ApiKeyMissingNotice from './ApiKeyMissingNotice';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
@@ -30,7 +33,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider] = useState<'openai'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
   const [personalizedContent, setPersonalizedContent] = useState('');
   const { shouldShowPanel } = usePersonalizationPreferences('cartoon');
@@ -44,6 +47,8 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [showTokenPalette, setShowTokenPalette] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  const [referenceNotice, setReferenceNotice] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [showAllThemes, setShowAllThemes] = useState(false);
@@ -82,30 +87,53 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
     try {
       setIsGenerating(true);
       setError(null);
-      
+      setApiKeyMissing(false);
+      setReferenceNotice(null);
+
       // Combine the theme prompt with any custom additions
-      const finalPrompt = customPrompt 
+      const finalPrompt = customPrompt
         ? `${prompt} ${customPrompt}`
         : prompt;
-      
+
       console.log(`🎨 Generating cartoon image with ${selectedProvider}:`, { finalPrompt, hasReferenceImage: !!referenceImage });
-      
+
       const themeLabel = cartoonThemesConfig.themes[selectedTheme]?.label || 'cartoon';
       const styledPrompt = `${finalPrompt} (${themeLabel} cartoon style)`;
 
-      const result = await generateImage(styledPrompt, {
-        style: themeLabel,
-        category: 'cartoon'
-      });
+      let imageUrl: string;
 
-      setGeneratedImage(result.imageUrl);
+      if (referenceImage) {
+        // Route through the dedicated cartoon-style edge function so the uploaded
+        // reference image is actually sent to the image provider.
+        try {
+          const referenceResult = await callEdgeFunction('cartoon-style', {
+            prompt: styledPrompt,
+            provider: 'openai',
+            style: themeLabel,
+            referenceImageUrl: referenceImage
+          });
+
+          if (referenceResult?.imageUrl) {
+            imageUrl = referenceResult.imageUrl;
+          } else {
+            throw new Error('Cartoon style service returned no image');
+          }
+        } catch (referenceError) {
+          console.warn('Reference image generation failed, falling back to prompt-only generation:', referenceError);
+          imageUrl = await generateCartoonWithProvider(styledPrompt, themeLabel);
+          setReferenceNotice('The reference image could not be processed, so the cartoon was generated from the prompt only.');
+        }
+      } else {
+        imageUrl = await generateCartoonWithProvider(styledPrompt, themeLabel);
+      }
+
+      setGeneratedImage(imageUrl);
       if (onImageGenerated) {
-        onImageGenerated(result.imageUrl);
+        onImageGenerated(imageUrl);
       }
     } catch (err) {
-      if (err instanceof InsufficientCreditsError) {
-        setError(`Insufficient credits (${err.remainingCredits} remaining). Purchase more to continue.`);
-      } else if (err instanceof GenerationError) {
+      setApiKeyMissing(isApiKeyMissingError(err));
+      if (err instanceof GenerationError) {
         setError(err.message);
       } else {
         setError(`Failed to generate cartoon image: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -118,6 +146,14 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const handleSurpriseMe = () => {
     const randomIndex = Math.floor(Math.random() * cartoonThemesConfig.themes.length);
     handleThemeSelect(randomIndex);
+  };
+
+  const generateCartoonWithProvider = async (styledPrompt: string, themeLabel: string): Promise<string> => {
+    const result = await generateImage(styledPrompt, {
+      style: themeLabel,
+      category: 'cartoon'
+    });
+    return result.imageUrl;
   };
   
   // Handle token drop on the prompt textarea
@@ -300,6 +336,14 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
               {error}
             </div>
           )}
+
+          {apiKeyMissing && <ApiKeyMissingNotice className="mt-3" />}
+
+          {referenceNotice && (
+            <div className={getAlertClasses('warning')}>
+              {referenceNotice}
+            </div>
+          )}
           
           {/* Additional options toggle */}
           <div className="flex justify-end space-x-3">
@@ -351,7 +395,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
                     {/* Fallback warning for edge functions */}
                     <div className="p-3 bg-yellow-50 rounded-lg">
                       <p className="text-xs text-yellow-700">
-                        <span className="font-medium">Note:</span> If edge functions are unavailable, the system will automatically fall back to direct API calls. You may need to add your API keys to the .env file for direct calls to work.
+                        <span className="font-medium">Note:</span> Generations use your own API key. Add it in Settings → API Keys if a run fails with a key error.
                       </p>
                     </div>
                   </div>

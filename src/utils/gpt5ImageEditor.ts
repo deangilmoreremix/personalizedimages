@@ -1,9 +1,10 @@
 /**
- * GPT-4o/GPT-5 Image Editing API
- * Advanced image editing using OpenAI's latest models with vision capabilities
+ * GPT-5 Image Editing API
+ * Advanced image editing using GPT-5 mini analysis and GPT Image 2.5 editing
  */
 
-import { getOpenAIApiKey, hasApiKey } from './apiUtils';
+import { getUserApiKey } from './userApiKeyStorage';
+import { hasApiKey } from './apiUtils';
 
 export interface GPT5EditOptions {
   mode: 'enhance' | 'adjust' | 'transform' | 'effects' | 'custom';
@@ -17,7 +18,7 @@ export interface GPT5EditOptions {
 
 export interface GPT5EditResult {
   imageUrl: string;
-  editedWith: 'gpt-4o' | 'gpt-4-turbo' | 'dall-e-3';
+  editedWith: 'gpt-image-2.5-sunburst';
   metadata?: {
     originalPrompt?: string;
     editInstructions?: string;
@@ -25,14 +26,14 @@ export interface GPT5EditResult {
 }
 
 /**
- * GPT-4o Image Editor Service Class
+ * GPT-5 Image Editor Service Class
  */
 export class GPT5ImageEditorService {
   private apiKey: string | null;
   private baseUrl = 'https://api.openai.com/v1';
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || getOpenAIApiKey() || null;
+    this.apiKey = apiKey || getUserApiKey('openai');
   }
 
   isAvailable(): boolean {
@@ -41,14 +42,14 @@ export class GPT5ImageEditorService {
 
   private ensureApiKey(): void {
     if (!this.apiKey) {
-      throw new Error('OpenAI API key is required for GPT-5 image editing. Please configure VITE_OPENAI_API_KEY in your environment.');
+      throw new Error('OpenAI API key is required for GPT-5 image editing. Please add your own OpenAI API key in settings.');
     }
   }
 
   /**
-   * Edit an image using GPT-4o vision and DALL-E 3
-   * Strategy: Use GPT-4o to analyze the image and create an edit prompt,
-   * then use DALL-E 3 to generate the edited version
+   * Edit an image using GPT-5 mini vision and GPT Image 2.5
+   * Strategy: Use GPT-5 mini to analyze the image and create an edit prompt,
+   * then use GPT Image 2.5 to generate the edited version
    */
   async editImage(
     imageUrl: string,
@@ -56,124 +57,147 @@ export class GPT5ImageEditorService {
   ): Promise<GPT5EditResult> {
     this.ensureApiKey();
     try {
-      console.log('Editing image with GPT-4o + DALL-E 3:', { imageUrl, options });
+      console.log('Editing image with GPT-5 mini + GPT Image 2.5:', { imageUrl, options });
 
-      // Step 1: Analyze the image with GPT-4o Vision
+      // Step 1: Analyze the image with GPT-5 mini Vision
       const analysisPrompt = this.createAnalysisPrompt(options);
-      const editInstructions = await this.analyzeImageWithGPT4o(imageUrl, analysisPrompt);
+      const editInstructions = await this.analyzeImageWithGPT5(imageUrl, analysisPrompt);
 
-      console.log('📋 GPT-4o edit instructions:', editInstructions);
+      console.log('📋 GPT-5 edit instructions:', editInstructions);
 
-      // Step 2: Generate edited image with DALL-E 3
-      const editedImageUrl = await this.generateEditedImageWithDALLE(editInstructions);
+      // Step 2: Generate edited image with GPT Image 2.5
+      const editedImageUrl = await this.generateEditedImage(imageUrl, editInstructions);
 
       return {
         imageUrl: editedImageUrl,
-        editedWith: 'gpt-4o',
+        editedWith: 'gpt-image-2.5-sunburst',
         metadata: {
           editInstructions
         }
       };
     } catch (error) {
-      console.error('Error editing image with GPT-4o:', error);
+      console.error('Error editing image with GPT-5:', error);
       throw error;
     }
   }
 
   /**
-   * Analyze image with GPT-4o Vision
+   * Analyze image with GPT-5 mini via the Responses API
    */
-  private async analyzeImageWithGPT4o(
+  private async analyzeImageWithGPT5(
     imageUrl: string,
     prompt: string
   ): Promise<string> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      const response = await fetch(`${this.baseUrl}/responses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
+          model: 'gpt-5-mini',
+          input: [
             {
               role: 'user',
               content: [
                 {
-                  type: 'text',
+                  type: 'input_text',
                   text: prompt
                 },
                 {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageUrl,
-                    detail: 'high'
-                  }
+                  type: 'input_image',
+                  image_url: imageUrl
                 }
               ]
             }
           ],
-          max_tokens: 1000,
-          temperature: 0.7
+          max_output_tokens: 1000
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(`GPT-4o API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        throw new Error(`GPT-5 API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
       }
 
       const data = await response.json();
-      const editInstructions = data.choices?.[0]?.message?.content || '';
+      const editInstructions = this.extractTextFromResponse(data);
 
       if (!editInstructions) {
-        throw new Error('No edit instructions generated by GPT-4o');
+        throw new Error('No edit instructions generated by GPT-5');
       }
 
       return editInstructions;
     } catch (error) {
-      console.error('Error analyzing image with GPT-4o:', error);
+      console.error('Error analyzing image with GPT-5:', error);
       throw error;
     }
   }
 
   /**
-   * Generate edited image with DALL-E 3
+   * Extract text from a Responses API payload
    */
-  private async generateEditedImageWithDALLE(prompt: string): Promise<string> {
+  private extractTextFromResponse(data: any): string {
+    for (const item of data?.output || []) {
+      if (item?.type === 'output_text' && item.text) {
+        return item.text;
+      }
+      for (const part of item?.content || []) {
+        if (part?.type === 'output_text' && part.text) {
+          return part.text;
+        }
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Normalize an image reference to a URL or base64 data URL
+   */
+  private toImageUrl(imageUrl: string): string {
+    if (imageUrl.startsWith('data:') || imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    return `data:image/png;base64,${imageUrl}`;
+  }
+
+  /**
+   * Generate edited image with GPT Image 2.5
+   */
+  private async generateEditedImage(imageUrl: string, prompt: string): Promise<string> {
     try {
-      const response = await fetch(`${this.baseUrl}/images/generations`, {
+      const response = await fetch(`${this.baseUrl}/images/edits`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
-          model: 'dall-e-3',
+          model: 'gpt-image-2.5-sunburst',
+          images: [{ image_url: this.toImageUrl(imageUrl) }],
           prompt: prompt,
           n: 1,
           size: '1024x1024',
-          quality: 'hd',
-          style: 'natural'
+          output_format: 'png'
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(`DALL-E 3 API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        throw new Error(`GPT Image 2.5 API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
       }
 
       const data = await response.json();
-      const imageUrl = data.data?.[0]?.url;
+      const b64Image = data.data?.[0]?.b64_json;
 
-      if (!imageUrl) {
-        throw new Error('No image URL returned from DALL-E 3');
+      if (!b64Image) {
+        throw new Error('No image data returned from GPT Image 2.5');
       }
 
-      return imageUrl;
+      return `data:image/png;base64,${b64Image}`;
     } catch (error) {
-      console.error('Error generating image with DALL-E 3:', error);
+      console.error('Error generating image with GPT Image 2.5:', error);
       throw error;
     }
   }
@@ -184,7 +208,7 @@ export class GPT5ImageEditorService {
   private createAnalysisPrompt(options: GPT5EditOptions): string {
     const { mode, brightness, contrast, saturation, blur, rotation, customPrompt } = options;
 
-    let basePrompt = 'Analyze this image carefully and create a detailed DALL-E 3 prompt to recreate it with the following modifications:\n\n';
+    let basePrompt = 'Analyze this image carefully and create a detailed image editing prompt to recreate it with the following modifications:\n\n';
 
     switch (mode) {
       case 'enhance':
@@ -236,7 +260,7 @@ export class GPT5ImageEditorService {
         basePrompt += '- Apply general enhancements to improve the image';
     }
 
-    basePrompt += '\n\nIMPORTANT: Your response should ONLY be a detailed DALL-E 3 prompt that describes the edited image. Do not include explanations or commentary, just the prompt itself.';
+    basePrompt += '\n\nIMPORTANT: Your response should ONLY be a detailed image editing prompt that describes the edited image. Do not include explanations or commentary, just the prompt itself.';
 
     return basePrompt;
   }
@@ -250,19 +274,19 @@ export class GPT5ImageEditorService {
   ): Promise<string[]> {
     this.ensureApiKey();
     try {
-      console.log('Creating variations with GPT-4o + DALL-E 3');
+      console.log('Creating variations with GPT-5 mini + GPT Image 2.5');
 
       // Analyze the original image
-      const analysisPrompt = 'Describe this image in detail, including composition, colors, style, and mood. Then create 3 different DALL-E 3 prompts for variations that maintain the core subject but explore different styles, angles, or color schemes.';
+      const analysisPrompt = 'Describe this image in detail, including composition, colors, style, and mood. Then create 3 different image editing prompts for variations that maintain the core subject but explore different styles, angles, or color schemes.';
 
-      const variationPrompts = await this.analyzeImageWithGPT4o(imageUrl, analysisPrompt);
+      const variationPrompts = await this.analyzeImageWithGPT5(imageUrl, analysisPrompt);
 
       // Parse and generate variations (simplified - in production, parse individual prompts)
       const variations: string[] = [];
 
       for (let i = 0; i < count; i++) {
         const variationPrompt = `${variationPrompts} - Variation ${i + 1}`;
-        const variationUrl = await this.generateEditedImageWithDALLE(variationPrompt);
+        const variationUrl = await this.generateEditedImage(imageUrl, variationPrompt);
         variations.push(variationUrl);
       }
 

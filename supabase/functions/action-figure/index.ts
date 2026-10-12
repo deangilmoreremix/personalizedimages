@@ -1,8 +1,9 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
+import { generateWithGptImage } from "../_shared/imageProviders.ts"
 
 interface ActionFigureRequest {
   prompt: string
-  provider: 'openai' | 'gemini' | 'gpt-image-1'
+  provider?: 'openai' | 'gpt-image-1'
   referenceImageUrl?: string
 }
 
@@ -31,15 +32,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const credits = await checkCredits(user.id)
-    if (!credits.allowed) {
-      return new Response(
-        JSON.stringify({ error: 'Insufficient credits', remainingCredits: credits.remainingCredits }),
-        { status: 402, headers: { ...headers, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const { prompt, provider, referenceImageUrl }: ActionFigureRequest = await req.json()
+    const { prompt, referenceImageUrl }: ActionFigureRequest = await req.json()
 
     if (!prompt || typeof prompt !== 'string') {
       return new Response(
@@ -57,115 +50,23 @@ Deno.serve(async (req) => {
       )
     }
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    if ((!openaiKey || !validateApiKey(openaiKey, 'openai')) &&
-        (!geminiKey || !validateApiKey(geminiKey, 'gemini'))) {
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
     const enhancedPrompt = `Create a highly detailed, professional-quality product photo of an action figure: ${sanitizedPrompt}. The figure should look like a real commercial toy with articulation points, detailed textures, realistic packaging design, and toy store lighting.`
 
-    let imageUrl: string = ''
+    let imageUrl = ''
 
-    if (provider === 'openai' && openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: enhancedPrompt,
-          n: 1,
-          size: "1024x1024"
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-      }
-
-      const data = await response.json()
-      imageUrl = data.data[0].url
-
-    } else if (provider === 'gemini' && geminiKey) {
-      const requestBody: any = {
-        contents: [{ parts: [{ text: enhancedPrompt }] }],
-        generationConfig: { responseMediaType: "IMAGE" }
-      }
-
-      if (referenceImageUrl) {
-        try {
-          let imageData = ''
-          let mimeType = 'image/png'
-
-          if (referenceImageUrl.startsWith('data:')) {
-            const match = referenceImageUrl.match(/^data:([^;]+);base64,(.+)$/)
-            if (match) {
-              mimeType = match[1]
-              imageData = match[2]
-            }
-          } else {
-            const imageResponse = await fetch(referenceImageUrl)
-            if (imageResponse.ok) {
-              const imageBlob = await imageResponse.blob()
-              mimeType = imageBlob.type || 'image/png'
-              const arrayBuffer = await imageBlob.arrayBuffer()
-              const uint8Array = new Uint8Array(arrayBuffer)
-              imageData = uint8Array.reduce((s, b) => s + String.fromCharCode(b), '')
-              imageData = btoa(imageData)
-            }
-          }
-
-          if (imageData) {
-            requestBody.contents[0].parts.push({
-              inline_data: { mime_type: mimeType, data: imageData }
-            })
-          }
-        } catch (error) {
-          console.warn('Failed to fetch reference image:', error)
-        }
-      }
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`)
-      }
-
-      const data = await response.json()
-
-      for (const candidate of data.candidates || []) {
-        for (const part of candidate.content?.parts || []) {
-          if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-            imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-            break
-          }
-        }
-        if (imageUrl) break
-      }
-
-      if (!imageUrl) {
-        throw new Error('No image found in Gemini response')
-      }
-
-    } else {
-      return new Response(
-        JSON.stringify({ error: `Provider ${provider} not available or API key missing` }),
-        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
-      )
+    try {
+      imageUrl = await generateWithGptImage({ prompt: enhancedPrompt, apiKey: userApiKey, referenceImageUrl })
+    } catch (providerError) {
+      console.error('Action figure image generation failed:', providerError)
+      throw providerError
     }
 
     return new Response(

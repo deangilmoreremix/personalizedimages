@@ -46,10 +46,6 @@ export interface VideoConversionResult {
   error?: string;
   downloadUrl?: string;
   previewUrl?: string;
-  paymentRequired: boolean;
-  paymentStatus?: 'pending' | 'completed' | 'failed';
-  paymentAmount?: number;
-  paymentCurrency?: string;
 }
 
 export interface VideoProcessingStatus {

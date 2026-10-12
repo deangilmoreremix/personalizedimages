@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getUserApiKey } from './userApiKeyStorage';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -35,6 +36,35 @@ const EDGE_FUNCTION_TIMEOUT = 60_000;
 const MAX_RETRIES = 2;
 const RETRYABLE_STATUSES = new Set([502, 503, 504]);
 
+type KeyProvider = 'openai' | 'muapi';
+
+const EDGE_FUNCTION_KEY_PROVIDERS: Record<string, KeyProvider> = {
+  'assistant-stream': 'openai',
+  'image-generation': 'openai',
+  'image-editing': 'openai',
+  'action-figure': 'openai',
+  'cartoon-style': 'openai',
+  'ghibli-image': 'openai',
+  'meme-generator': 'openai',
+  'reference-image': 'openai',
+  'image-variations': 'openai',
+  'image-enhancement': 'openai',
+  'freepik-ai-image': 'openai',
+  'freepik-remove-bg': 'openai',
+  'freepik-upscale': 'openai',
+  'freepik-relight': 'openai',
+  'freepik-style-transfer': 'openai',
+  'freepik-improve-prompt': 'openai',
+  'image-description': 'openai',
+  'prompt-recommendations': 'openai',
+  'image-generation-secure': 'openai',
+  'api': 'openai',
+  'p': 'openai',
+  'image-to-video': 'muapi',
+  'video-status': 'muapi',
+  'video-result': 'muapi',
+};
+
 async function callEdgeFunction(functionName: string, payload: any = {}) {
   if (!supabase) {
     throw new Error('Supabase client not initialized');
@@ -49,6 +79,9 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
 
   const apiUrl = `${supabaseUrl}/functions/v1/${functionName}`;
 
+  const keyProvider = EDGE_FUNCTION_KEY_PROVIDERS[functionName];
+  const userApiKey = keyProvider ? getUserApiKey(keyProvider) : null;
+
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -60,6 +93,7 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          ...(userApiKey ? { 'x-user-api-key': userApiKey } : {}),
         },
         body: JSON.stringify(payload),
         signal: controller.signal,

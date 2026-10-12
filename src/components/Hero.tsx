@@ -289,7 +289,7 @@ const Hero: React.FC = () => {
               {[
                 { icon: <ShieldCheck className="w-4 h-4" />, text: "Personalized for Every Customer" },
                 { icon: <Zap className="w-4 h-4" />, text: "985% Higher Conversion Rates" },
-                { icon: <Check className="w-4 h-4" />, text: "No Credit Card Required" }
+                { icon: <Check className="w-4 h-4" />, text: "Bring your own API key" }
               ].map((item, index) => (
                 <motion.div
                   key={index}

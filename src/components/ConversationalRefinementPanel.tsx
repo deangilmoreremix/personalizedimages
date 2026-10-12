@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Send, Sparkles, History, X, Image as ImageIcon, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
-import { refineImageConversationally, RefinementStep } from '../utils/geminiNanoApi';
+import { editImageWithDalle } from '../utils/api';
+
+interface RefinementStep {
+  userPrompt: string;
+  imageUrl: string;
+  timestamp: number;
+}
 
 interface ConversationalRefinementPanelProps {
   initialImageUrl: string;
@@ -40,11 +46,7 @@ const ConversationalRefinementPanel: React.FC<ConversationalRefinementPanelProps
       setIsProcessing(true);
       setError(null);
 
-      const refinedImageUrl = await refineImageConversationally({
-        currentImageUrl,
-        refinementPrompt: prompt,
-        history: refinementHistory
-      });
+      const refinedImageUrl = await editImageWithDalle(currentImageUrl, '', prompt);
 
       // Add to history
       const newStep: RefinementStep = {

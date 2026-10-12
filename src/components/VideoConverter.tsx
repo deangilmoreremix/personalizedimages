@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Video, Play, Download, RefreshCw, Zap, Settings, Sparkles, DollarSign, Check, X, Info, Clock, Film, Clapperboard, Wand2, Shapes } from 'lucide-react';
+import { Video, Play, Download, Check, Info, Clock, Film, Clapperboard, Wand2, Shapes, Zap, Sparkles, Settings, RefreshCw } from 'lucide-react';
 import { VideoConversionOptions, VideoConversionResult, VideoEffect } from '../types/VideoTypes';
-import { convertImageToVideo, checkVideoProcessingStatus, getVideoConversionResult, getVideoPresets, createPaymentIntent } from '../utils/videoApi';
+import { convertImageToVideo, checkVideoProcessingStatus, getVideoConversionResult, getVideoPresets } from '../utils/videoApi';
+import { isApiKeyMissingError } from '../utils/apiKeyMissing';
+import ApiKeyMissingNotice from './ApiKeyMissingNotice';
 import ReactPlayer from 'react-player';
 import NanoBananaModal from './shared/nano-banana/NanoBananaModal';
 import TokenPalette from './shared/tokens/TokenPalette';
@@ -31,9 +32,9 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingMessage, setProcessingMessage] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [conversionError, setConversionError] = useState<string | null>(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<string>('zoom');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Nano Banana editing
   const [showNanoBanana, setShowNanoBanana] = useState(false);
@@ -66,6 +67,10 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
           }
         } catch (error) {
           console.error('Error checking video status:', error);
+          clearInterval(statusInterval);
+          setConversionError('Could not check the video processing status. Please try generating again.');
+          setProcessingMessage('');
+          setIsConverting(false);
         }
       }, 2000);
     }
@@ -97,6 +102,8 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
     
     try {
       setIsConverting(true);
+      setConversionError(null);
+      setApiKeyMissing(false);
       setProcessingProgress(0);
       setProcessingMessage('Initializing video conversion...');
       
@@ -107,35 +114,10 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
       setProcessingMessage('Processing your video...');
     } catch (error) {
       console.error('Error converting image to video:', error);
+      setApiKeyMissing(isApiKeyMissingError(error));
+      setConversionError(error instanceof Error ? error.message : 'Video conversion failed. Please try again.');
+      setProcessingMessage('');
       setIsConverting(false);
-    }
-  };
-  
-  // Handle payment
-  const handlePayment = async () => {
-    if (!conversionResult?.id) return;
-    
-    try {
-      setPaymentStatus('processing');
-      
-      // In a real implementation, this would integrate with Stripe
-      const { clientSecret } = await createPaymentIntent(conversionResult.id);
-      
-      // Simulate payment success after a delay
-      setTimeout(() => {
-        // Update the conversion result with payment completed
-        setConversionResult({
-          ...conversionResult,
-          paymentStatus: 'completed',
-          downloadUrl: conversionResult.videoUrl
-        });
-        
-        setPaymentStatus('success');
-        setShowPaymentModal(false);
-      }, 2000);
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      setPaymentStatus('error');
     }
   };
   
@@ -160,7 +142,7 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-bold flex items-center">
           <Video className="h-6 w-6 text-indigo-500 mr-2" />
-          Convert to Video ($1 per download)
+          Convert to Video
         </h3>
         <div className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
           New Feature
@@ -331,6 +313,13 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
               </div>
             </div>
           )}
+
+          {/* Conversion Error */}
+          {conversionError && (
+            <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-sm text-red-700" role="alert">
+              {conversionError}
+            </div>
+          )}
         </div>
         
         <div className="flex flex-col space-y-4">
@@ -373,24 +362,14 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
           {conversionResult?.status === 'completed' && (
             <div className="space-y-3">
               <div className="flex gap-2">
-                {conversionResult.paymentStatus === 'completed' ? (
-                  <a
-                    href={conversionResult.downloadUrl}
-                    download="video.mp4"
-                    className="btn btn-primary flex-1 flex items-center justify-center"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Video
-                  </a>
-                ) : (
-                  <button
-                    onClick={() => setShowPaymentModal(true)}
-                    className="btn btn-primary flex-1 flex items-center justify-center"
-                  >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Purchase Download ($1)
-                  </button>
-                )}
+                <a
+                  href={conversionResult.downloadUrl || conversionResult.videoUrl}
+                  download="video.mp4"
+                  className="btn btn-primary flex-1 flex items-center justify-center"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Video
+                </a>
 
                 <button
                   onClick={() => window.open(conversionResult.previewUrl)}
@@ -421,6 +400,10 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
             </div>
           )}
           
+          {apiKeyMissing && (
+            <ApiKeyMissingNotice provider="muapi" />
+          )}
+
           {/* Video Info */}
           {conversionResult?.status === 'completed' && (
             <div className="bg-indigo-50 p-4 rounded-lg">
@@ -481,94 +464,6 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
         </div>
       </div>
       
-      {/* Payment Modal */}
-      <AnimatePresence>
-        {showPaymentModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowPaymentModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <DollarSign className="w-8 h-8 text-indigo-600" />
-                </div>
-                <h3 className="text-xl font-bold mb-1">Purchase Video Download</h3>
-                <p className="text-gray-600">
-                  Your video is ready! Pay $1.00 to download the full video without watermark.
-                </p>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-700">Video conversion</span>
-                  <span className="font-medium">$1.00</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-500 mb-2">
-                  <span>Processing fee</span>
-                  <span>$0.00</span>
-                </div>
-                <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>$1.00</span>
-                </div>
-              </div>
-              
-              <button
-                onClick={handlePayment}
-                disabled={paymentStatus === 'processing'}
-                className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center"
-              >
-                {paymentStatus === 'processing' ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : paymentStatus === 'success' ? (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Payment Successful
-                  </>
-                ) : paymentStatus === 'error' ? (
-                  <>
-                    <X className="w-4 h-4 mr-2" />
-                    Payment Failed
-                  </>
-                ) : (
-                  <>
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Pay $1.00
-                  </>
-                )}
-              </button>
-              
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Cancel
-                </button>
-              </div>
-              
-              <div className="mt-6 text-xs text-gray-500 flex items-center justify-center">
-                <Lock className="w-3 h-3 mr-1" />
-                Secure payment powered by Stripe
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Nano Banana AI Editor */}
       {showNanoBanana && imageUrl && (
         <NanoBananaModal
@@ -608,21 +503,5 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
   );
 };
 
-// Lock icon component
-const Lock = ({ className = '' }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-  </svg>
-);
 
 export default VideoConverter;

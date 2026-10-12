@@ -11,6 +11,9 @@ import DroppableTextArea from '../DroppableTextArea';
 import { TokenDragItem } from '../../types/DragTypes';
 import { generateImageWithGemini } from '../../utils/api';
 import { ghibliStyles } from '../../data/ghibliStyles';
+import PersonalizationToggle from '../PersonalizationToggle';
+import UniversalPersonalizationPanel from '../UniversalPersonalizationPanel';
+import { usePersonalizationPreferences } from '../../hooks/usePersonalizationPreferences';
 
 interface ModernGhibliImageGeneratorProps {
   tokens: Record<string, string>;
@@ -26,6 +29,8 @@ const ModernGhibliImageGenerator: React.FC<ModernGhibliImageGeneratorProps> = ({
   const [selectedStyle, setSelectedStyle] = useState(ghibliStyles[0]);
   const [intensity, setIntensity] = useState(80);
   const [mode, setMode] = useState<'character' | 'scene'>('scene');
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const { shouldShowPanel } = usePersonalizationPreferences('ghibli');
 
   const handleDrop = (item: TokenDragItem, caretPosition: number) => {
     const tokenText = `[${item.tokenKey}]`;
@@ -39,6 +44,34 @@ const ModernGhibliImageGenerator: React.FC<ModernGhibliImageGeneratorProps> = ({
       result = result.replace(new RegExp(`\\[${key}\\]`, 'g'), value || `[${key}]`);
     });
     return result;
+  };
+
+  const handleShare = async () => {
+    if (!generatedImage) return;
+
+    const shareData = {
+      title: 'My Ghibli-style Image',
+      text: 'Check out the Ghibli-style image I created!',
+      url: generatedImage
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // User dismissed the share sheet or sharing failed; fall back to clipboard.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedImage);
+      setShareNotice('Image link copied to clipboard.');
+      setTimeout(() => setShareNotice(null), 2500);
+    } catch {
+      setShareNotice('Sharing is not available in this browser.');
+      setTimeout(() => setShareNotice(null), 2500);
+    }
   };
 
   const handleGenerate = async () => {
@@ -129,6 +162,19 @@ const ModernGhibliImageGenerator: React.FC<ModernGhibliImageGeneratorProps> = ({
         />
       </LeftPanelSection>
 
+      <LeftPanelSection title="Personalization">
+        <div className="space-y-3">
+          <PersonalizationToggle generatorType="ghibli" size="sm" />
+          {shouldShowPanel && (
+            <UniversalPersonalizationPanel
+              initialContent={prompt}
+              initialContentType="prompt-ai"
+              onContentGenerated={(content) => setPrompt(content)}
+            />
+          )}
+        </div>
+      </LeftPanelSection>
+
       <LeftPanelSection title="Style Intensity">
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-gray-600">
@@ -180,11 +226,12 @@ const ModernGhibliImageGenerator: React.FC<ModernGhibliImageGeneratorProps> = ({
           <Download className="w-4 h-4" />
           Download
         </button>
-        <button className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2">
+        <button onClick={handleShare} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2">
           <Share2 className="w-4 h-4" />
           Share
         </button>
       </div>
+      {shareNotice && <p className="text-xs text-gray-500 mt-2 text-center">{shareNotice}</p>}
     </div>
   ) : (
     <EmptyState

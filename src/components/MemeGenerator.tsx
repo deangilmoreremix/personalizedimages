@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dices, Sparkles, RefreshCw, Download, Image as ImageIcon, Zap, SlidersHorizontal, Lightbulb, MessageSquare, Shapes, PaintBucket, Search } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
-import { generateMemeWithReference, generateImageWithGeminiNano } from '../utils/api';
+import { generateMemeWithReference } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { FontSelector } from './ui/FontSelector';
@@ -38,6 +38,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
   const [generatedMeme, setGeneratedMeme] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiEnhancementNotice, setAiEnhancementNotice] = useState<string | null>(null);
   
   // Model selection
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
@@ -111,6 +112,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
     try {
       setIsGenerating(true);
       setError(null);
+      setAiEnhancementNotice(null);
       
       // Replace tokens in text
       const processedTopText = replaceTokens(topText);
@@ -125,15 +127,24 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
             memeImage,
             aiEnhancementPrompt
           );
-          
-          setGeneratedMeme(enhancedMemeUrl);
-          if (onMemeGenerated) {
-            onMemeGenerated(enhancedMemeUrl);
+
+          // generateMemeWithReference returns the unmodified reference image when the
+          // edge function is unavailable. Treat that as a failure instead of presenting
+          // the original template as an AI-generated meme.
+          if (enhancedMemeUrl && enhancedMemeUrl !== memeImage) {
+            setGeneratedMeme(enhancedMemeUrl);
+            if (onMemeGenerated) {
+              onMemeGenerated(enhancedMemeUrl);
+            }
+            setIsGenerating(false);
+            return;
           }
-          setIsGenerating(false);
-          return;
+
+          console.warn('❌ AI meme enhancement returned the original image, falling back to standard meme generation');
+          setAiEnhancementNotice('AI enhancement is unavailable right now. Generated a standard meme instead.');
         } catch (err) {
           console.warn('❌ AI enhancement failed, falling back to standard meme generation:', err);
+          setAiEnhancementNotice('AI enhancement is unavailable right now. Generated a standard meme instead.');
           // Continue with standard generation
         }
       }
@@ -946,6 +957,12 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
           {error && (
             <div className={getAlertClasses('error')}>
               {error}
+            </div>
+          )}
+
+          {aiEnhancementNotice && (
+            <div className={getAlertClasses('warning')}>
+              {aiEnhancementNotice}
             </div>
           )}
         </div>

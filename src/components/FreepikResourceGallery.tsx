@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Download, Heart, Grid, List, Loader2 } from 'lucide-react';
 import { fetchFreepikResources } from '../utils/api';
-import { hasApiKey } from '../utils/apiUtils';
+import { STOCK_IMAGE_SEARCH_AVAILABLE, STOCK_SEARCH_UNAVAILABLE_MESSAGE } from '../services/stockImageService';
 
 interface FreepikResource {
   id: number;
@@ -42,12 +42,12 @@ const FreepikResourceGallery: React.FC<FreepikResourceGalleryProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
 
-  // Check if stock API is available
-  const isStockAvailable = hasApiKey('freepik');
+  // Stock image search is no longer available in this application
+  const isStockAvailable = STOCK_IMAGE_SEARCH_AVAILABLE;
 
   const loadResources = useCallback(async (page: number = 1, append: boolean = false) => {
     if (!isStockAvailable) {
-      setError('Stock API key not configured. Please add VITE_FREEPIK_API_KEY to your environment variables.');
+      setError(STOCK_SEARCH_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -72,7 +72,8 @@ const FreepikResourceGallery: React.FC<FreepikResourceGalleryProps> = ({
         options.orientation = selectedOrientation;
       }
 
-      const result = await fetchFreepikResources(options);
+      void options;
+      const result = await fetchFreepikResources();
 
       if (append) {
         setResources(prev => [...prev, ...result.resources]);
@@ -127,8 +128,8 @@ const FreepikResourceGallery: React.FC<FreepikResourceGalleryProps> = ({
       <div className="p-6 text-center border-2 border-dashed border-gray-300 rounded-lg">
         <div className="text-gray-500">
           <Search className="w-12 h-12 mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Stock Library Not Available</h3>
-          <p className="text-sm">Please configure your API key to access stock resources.</p>
+          <h3 className="text-lg font-medium mb-2">Stock Image Search Unavailable</h3>
+          <p className="text-sm">{STOCK_SEARCH_UNAVAILABLE_MESSAGE}</p>
         </div>
       </div>
     );

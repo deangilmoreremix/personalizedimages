@@ -1,149 +1,125 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.78.0";
-import { getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, isValidUrl } from "../_shared/cors.ts";
 
-async function resolveImageUrl(imageUrl: string): Promise<string> {
-  if (!imageUrl.startsWith("data:")) return imageUrl;
-  const match = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-  if (!match) throw new Error("Invalid base64 image data");
-  const ext = match[1] === "jpeg" ? "jpg" : match[1];
-  const raw = Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0));
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-  const fileName = `freepik-tmp/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage
-    .from("temp-uploads")
-    .upload(fileName, raw, { contentType: `image/${match[1]}`, upsert: true });
-  if (error) throw new Error(`Upload failed: ${error.message}`);
-  const { data } = supabase.storage.from("temp-uploads").getPublicUrl(fileName);
-  return data.publicUrl;
+const IMAGE_MODEL = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-2.5-sunburst";
+const BASE_PROMPT =
+  "Keep the subject, composition, shapes, colors and textures unchanged; only change the lighting.";
+
+function isValidImageRef(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0) return false;
+  if (value.startsWith("data:image/")) return true;
+  return isValidUrl(value);
 }
 
-const FREEPIK_BASE = "https://api.freepik.com/v1";
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 10;
+function jsonResponse(data: unknown, status: number, headers: Record<string, string>): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(clientIp: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(clientIp);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
+function mapUpstreamError(status: number): { message: string; status: number } {
+  if (status === 429) return { message: "Relight provider rate limit reached", status: 429 };
+  if (status === 401 || status === 403) {
+    return { message: "Relight provider rejected the server credentials", status: 502 };
   }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
+  if (status === 404) return { message: "Relight provider endpoint not found", status: 502 };
+  return { message: "Relight provider rejected the request", status: 502 };
+}
+
+function toPercent(value: unknown): number | null {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return null;
+  if (num <= 1) return Math.round(num * 100);
+  return Math.round(Math.min(num, 100));
+}
+
+function buildRelightPrompt(options: {
+  lightDirection?: unknown;
+  lightIntensity?: unknown;
+  ambientLight?: unknown;
+}): string {
+  const direction =
+    typeof options.lightDirection === "string" ? options.lightDirection.replace(/[-_]+/g, " ").trim() : "";
+  const intensity = toPercent(options.lightIntensity);
+  const ambient = toPercent(options.ambientLight);
+
+  let prompt = "Relight this image";
+  if (direction) prompt += ` with the main light coming from the ${direction}`;
+  if (intensity !== null) prompt += ` at ${intensity}% intensity`;
+  if (ambient !== null) prompt += ` with ${ambient}% soft ambient light`;
+  prompt += `. ${BASE_PROMPT}`;
+  return prompt;
 }
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-
-  function jsonRes(data: unknown, status = 200) {
-    return new Response(JSON.stringify(data), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const headers = getCorsHeaders(origin);
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 200, headers });
   }
 
   try {
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (!checkRateLimit(clientIp)) {
-      return jsonRes({ error: "Rate limit exceeded. Please wait before trying again." }, 429);
+    const { user, error: authError } = await authenticateUser(req);
+    if (authError || !user) {
+      return jsonResponse({ error: authError || "Authentication required" }, 401, headers);
     }
 
-    const freepikKey = Deno.env.get("FREEPIK_API_KEY");
-    if (!freepikKey) {
-      return jsonRes({ error: "Freepik API key not configured" }, 500);
+    const rateLimit = await checkRateLimit(user.id, true);
+    if (!rateLimit.allowed) {
+      return jsonResponse({ error: "Rate limit exceeded. Please wait before trying again." }, 429, headers);
     }
 
-    const body = await req.json();
-    const { action, taskId, imageUrl, lightDirection, lightIntensity, ambientLight } = body;
+    const userApiKey = getUserApiKey(req, "openai");
+    if (!userApiKey || !validateApiKey(userApiKey, "openai")) {
+      return jsonResponse({ error: OPENAI_KEY_MISSING_ERROR }, 400, headers);
+    }
+
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return jsonResponse({ error: "Invalid JSON body" }, 400, headers);
+    }
+    const payload = body as Record<string, unknown>;
+    const { action, taskId, imageUrl, lightDirection, lightIntensity, ambientLight } = payload;
 
     if (action === "status" && taskId) {
-      const statusRes = await fetch(
-        `${FREEPIK_BASE}/ai/image-relight/${taskId}`,
-        {
-          method: "GET",
-          headers: { "x-freepik-api-key": freepikKey },
-        }
-      );
-
-      if (!statusRes.ok) {
-        const errText = await statusRes.text();
-        return jsonRes({ status: "FAILED", error: `Status check failed: ${statusRes.status} ${errText}` });
-      }
-
-      const statusData = await statusRes.json();
-      const taskStatus = statusData.data?.status || statusData.status;
-
-      if (
-        taskStatus === "COMPLETED" ||
-        taskStatus === "completed" ||
-        statusData.data?.image?.url
-      ) {
-        return jsonRes({
-          status: "COMPLETED",
-          resultUrl: statusData.data?.image?.url || statusData.data?.result?.url,
-        });
-      }
-
-      if (taskStatus === "FAILED" || taskStatus === "failed") {
-        return jsonRes({ status: "FAILED", error: statusData.data?.error || "Relight task failed" });
-      }
-
-      return jsonRes({ status: "PROCESSING" });
+      return jsonResponse({ status: "FAILED", error: "This operation is synchronous" }, 200, headers);
     }
 
-    if (!imageUrl) {
-      return jsonRes({ error: "imageUrl is required" }, 400);
+    if (!isValidImageRef(imageUrl)) {
+      return jsonResponse({ error: "imageUrl is required and must be an image data URL or HTTPS URL" }, 400, headers);
     }
 
-    const resolvedUrl = await resolveImageUrl(imageUrl);
+    const upstream = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${userApiKey}` },
+      body: JSON.stringify({
+        model: IMAGE_MODEL,
+        images: [{ image_url: imageUrl }],
+        prompt: buildRelightPrompt({ lightDirection, lightIntensity, ambientLight }),
+        n: 1,
+        output_format: "png",
+      }),
+    });
 
-    const requestBody: Record<string, unknown> = {
-      image_url: resolvedUrl,
-    };
-
-    if (lightDirection) requestBody.light_direction = lightDirection;
-    if (lightIntensity !== undefined) requestBody.light_intensity = lightIntensity;
-    if (ambientLight !== undefined) requestBody.ambient_light = ambientLight;
-
-    const generateRes = await fetch(
-      `${FREEPIK_BASE}/ai/image-relight`,
-      {
-        method: "POST",
-        headers: {
-          "x-freepik-api-key": freepikKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      }
-    );
-
-    if (!generateRes.ok) {
-      const errText = await generateRes.text();
-      return jsonRes({ error: `Freepik API error: ${generateRes.status} ${errText}` }, generateRes.status);
+    const result = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) {
+      console.error("OpenAI relight failed", { status: upstream.status, code: result?.error?.code });
+      const mapped = mapUpstreamError(upstream.status);
+      return jsonResponse({ error: mapped.message, providerStatus: upstream.status }, mapped.status, headers);
     }
 
-    const data = await generateRes.json();
-
-    if (data.data?.image?.url) {
-      return jsonRes({ status: "COMPLETED", resultUrl: data.data.image.url });
+    const image = result?.data?.[0];
+    const b64 = typeof image?.b64_json === "string" ? image.b64_json : "";
+    if (!b64 && typeof image?.url !== "string") {
+      return jsonResponse({ error: "Relight returned no image" }, 502, headers);
     }
+    const resultUrl = b64 ? `data:image/png;base64,${b64}` : image.url;
 
-    const returnedTaskId = data.data?.task_id || data.data?.id || data.task_id;
-    return jsonRes({ taskId: returnedTaskId, status: "PROCESSING" });
+    return jsonResponse({ resultUrl }, 200, headers);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return jsonRes({ error: message }, 500);
+    console.error("freepik-relight failed", error instanceof Error ? error.name : "unknown");
+    return jsonResponse({ error: "Internal server error" }, 500, headers);
   }
 });

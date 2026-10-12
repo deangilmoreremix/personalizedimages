@@ -1,13 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, CreditCard, CheckCircle, AlertCircle, Loader, Video } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { createPaymentIntent, hasUserPurchasedVideo } from '../utils/stripeUtils';
-import { useAuth } from '../auth/AuthContext';
-
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+import { X, Download, CheckCircle, Video } from 'lucide-react';
 
 interface VideoDownloadModalProps {
   isOpen: boolean;
@@ -18,116 +11,6 @@ interface VideoDownloadModalProps {
   onDownloadComplete?: () => void;
 }
 
-// Checkout Form Component
-const CheckoutForm = ({ 
-  videoId, 
-  onSuccess, 
-  onError 
-}: { 
-  videoId: string; 
-  onSuccess: () => void; 
-  onError: (message: string) => void;
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { user } = useAuth();
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setLoading(true);
-    setErrorMessage(null);
-
-    try {
-      // Create payment intent
-      const { clientSecret } = await createPaymentIntent(100, { 
-        videoId,
-        userId: user?.id || 'anonymous'
-      });
-
-      // Confirm card payment
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: elements.getElement(CardElement)!,
-          billing_details: {
-            email: user?.email || '',
-          },
-        },
-      });
-
-      if (error) {
-        setErrorMessage(error.message || 'Payment failed');
-        onError(error.message || 'Payment failed');
-      } else if (paymentIntent.status === 'succeeded') {
-        onSuccess();
-      }
-    } catch (error) {
-      setErrorMessage('An unexpected error occurred');
-      onError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-3 border border-gray-200 rounded-lg">
-        <CardElement 
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#424770',
-                '::placeholder': {
-                  color: '#aab7c4',
-                },
-              },
-              invalid: {
-                color: '#9e2146',
-              },
-            },
-          }}
-        />
-      </div>
-      
-      {errorMessage && (
-        <div className="text-red-500 text-sm flex items-center">
-          <AlertCircle className="w-4 h-4 mr-1" />
-          {errorMessage}
-        </div>
-      )}
-      
-      <button
-        type="submit"
-        disabled={!stripe || loading}
-        className={`w-full py-2 px-4 rounded-lg flex items-center justify-center ${
-          loading 
-            ? 'bg-gray-300 cursor-not-allowed' 
-            : 'bg-primary-600 hover:bg-primary-700 text-white'
-        }`}
-      >
-        {loading ? (
-          <>
-            <Loader className="w-4 h-4 mr-2 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <CreditCard className="w-4 h-4 mr-2" />
-            Pay $1.00
-          </>
-        )}
-      </button>
-    </form>
-  );
-};
-
 const VideoDownloadModal: React.FC<VideoDownloadModalProps> = ({
   isOpen,
   onClose,
@@ -136,40 +19,6 @@ const VideoDownloadModal: React.FC<VideoDownloadModalProps> = ({
   videoId,
   onDownloadComplete
 }) => {
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'success' | 'error'>('pending');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [alreadyPurchased, setAlreadyPurchased] = useState(false);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    // Check if user has already purchased this video
-    const checkPurchaseStatus = async () => {
-      if (user && videoId) {
-        const purchased = await hasUserPurchasedVideo(user.id, videoId);
-        setAlreadyPurchased(purchased);
-      }
-    };
-
-    if (isOpen) {
-      checkPurchaseStatus();
-    }
-  }, [isOpen, user, videoId]);
-
-  const handlePaymentSuccess = () => {
-    setPaymentStatus('success');
-    // Wait a moment before allowing download
-    setTimeout(() => {
-      if (onDownloadComplete) {
-        onDownloadComplete();
-      }
-    }, 1500);
-  };
-
-  const handlePaymentError = (message: string) => {
-    setPaymentStatus('error');
-    setErrorMessage(message);
-  };
-
   const handleDownload = () => {
     // Create a temporary anchor element
     const link = document.createElement('a');
@@ -178,11 +27,11 @@ const VideoDownloadModal: React.FC<VideoDownloadModalProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     if (onDownloadComplete) {
       onDownloadComplete();
     }
-    
+
     onClose();
   };
 
@@ -210,14 +59,14 @@ const VideoDownloadModal: React.FC<VideoDownloadModalProps> = ({
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
-          
+
           <div className="p-6">
             {/* Preview */}
             <div className="mb-6">
               <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-3">
-                <img 
-                  src={imageUrl} 
-                  alt="Video preview" 
+                <img
+                  src={imageUrl}
+                  alt="Video preview"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -230,46 +79,19 @@ const VideoDownloadModal: React.FC<VideoDownloadModalProps> = ({
                 Preview of your generated video
               </p>
             </div>
-            
-            {alreadyPurchased || paymentStatus === 'success' ? (
-              <div className="text-center">
-                <div className="mb-4 bg-green-50 text-green-700 p-4 rounded-lg flex items-center">
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  <span>{alreadyPurchased ? 'You already own this video!' : 'Payment successful!'}</span>
-                </div>
-                <button
-                  onClick={handleDownload}
-                  className="btn btn-primary w-full flex items-center justify-center"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Video
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="mb-6">
-                  <h4 className="font-medium mb-2">Complete Your Purchase</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Download this video for just $1.00. After payment, you'll have immediate access to download.
-                  </p>
-                  
-                  <div className="bg-primary-50 p-3 rounded-lg text-sm text-primary-700 mb-4">
-                    <p className="flex items-start">
-                      <CheckCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>One-time payment for permanent access to this video</span>
-                    </p>
-                  </div>
-                </div>
-                
-                <Elements stripe={stripePromise}>
-                  <CheckoutForm 
-                    videoId={videoId}
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                  />
-                </Elements>
-              </>
-            )}
+
+            <div className="mb-4 bg-green-50 text-green-700 p-4 rounded-lg flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2" />
+              <span>Your video is ready to download.</span>
+            </div>
+
+            <button
+              onClick={handleDownload}
+              className="btn btn-primary w-full flex items-center justify-center"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Video
+            </button>
           </div>
         </motion.div>
       </AnimatePresence>

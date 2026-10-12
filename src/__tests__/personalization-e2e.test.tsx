@@ -73,26 +73,43 @@ describe('Personalization E2E Tests', () => {
         />
       );
 
-      // Check that basic mode elements are present
-      expect(screen.getByText('Basic Personalization')).toBeInTheDocument();
+      // Header + the three personalization mode switchers
+      expect(screen.getByText('Personalization Studio')).toBeInTheDocument();
+      expect(screen.getByText('Basic')).toBeInTheDocument();
+      expect(screen.getByText('Action Figure')).toBeInTheDocument();
+      expect(screen.getByText('Advanced')).toBeInTheDocument();
+      // Basic-mode token fields
       expect(screen.getByText('First Name')).toBeInTheDocument();
       expect(screen.getByText('Last Name')).toBeInTheDocument();
       expect(screen.getByText('Company')).toBeInTheDocument();
     });
 
     it('switches between personalization modes', async () => {
-      const UniversalPersonalizationPanel = (await import('../components/UniversalPersonalizationPanel')).default;
+      const PersonalizationPanel = (await import('../components/PersonalizationPanel')).default;
 
-      render(
-        <UniversalPersonalizationPanel
-          initialContent="Test content"
-          initialContentType="prompt-ai"
-          onContentGenerated={vi.fn()}
-        />
-      );
+      // Drive the panel's mode so we can exercise an actual mode switch.
+      const ModeSwitcher: React.FC = () => {
+        const [mode, setMode] = React.useState<'basic' | 'action-figure' | 'advanced'>('basic');
+        return (
+          <PersonalizationPanel
+            tokens={mockTokens}
+            onTokensChange={vi.fn()}
+            mode={mode}
+            onModeChange={setMode}
+            showPreview={false}
+          />
+        );
+      };
 
-      // Check that action figure mode elements are present
-      expect(screen.getByText('Action Figure')).toBeInTheDocument();
+      render(<ModeSwitcher />);
+
+      // Basic mode shows the base token fields
+      expect(screen.getByText('First Name')).toBeInTheDocument();
+
+      // Switch to action-figure mode
+      fireEvent.click(screen.getByText('Action Figure'));
+
+      // Action-figure specific content now renders
       expect(screen.getByText('Character Identity')).toBeInTheDocument();
     });
 
@@ -107,8 +124,10 @@ describe('Personalization E2E Tests', () => {
         />
       );
 
-      // Check token usage instructions
-      expect(screen.getByText(/Use tokens like \[FIRSTNAME\]/)).toBeInTheDocument();
+      // Check token usage instructions (matches the Universal panel's editor hint)
+      expect(
+        screen.getByText(/insert personalization tokens like \[FIRSTNAME\] or \[EMAIL\]/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -143,14 +162,18 @@ describe('Personalization E2E Tests', () => {
 
       render(<UnifiedImageDashboard />);
 
-      // Should render without crashing
-      expect(screen.getByText(/image generation/i)).toBeInTheDocument();
+      // Should render without crashing (dashboard header is always present)
+      expect(screen.getByText('AI Image Studio')).toBeInTheDocument();
     });
 
     it('MemeGenerator includes personalization panel', async () => {
       const MemeGenerator = (await import('../components/MemeGenerator')).default;
 
       render(<MemeGenerator tokens={mockTokens} onMemeGenerated={vi.fn()} />);
+
+      // The personalization toggle lives inside the AI-enhancement panel,
+      // so enable that first, after which the toggle renders.
+      fireEvent.click(screen.getByLabelText('Use AI Image Enhancement'));
 
       // Should have personalization toggle
       expect(screen.getByText('Show Personalization')).toBeInTheDocument();

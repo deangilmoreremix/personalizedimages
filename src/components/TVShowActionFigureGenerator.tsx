@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Tv, PaintBucket, Shapes } from 'lucide-react';
-import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
+import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import tvPrompts from '../data/tvShowActionFigures';
@@ -156,14 +156,7 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
     } catch (err) {
       console.error('❌ Failed to generate TV show action figure:', err);
       setError(`Failed to generate action figure: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      
-      // Fallback to a placeholder image for better UX
-      const placeholderUrl = `https://placehold.co/800/333/FFF?text=Generation+Failed`;
-      setGeneratedFigure(placeholderUrl);
-      
-      if (onImageGenerated) {
-        onImageGenerated(placeholderUrl);
-      }
+      setGeneratedFigure(null);
     } finally {
       setIsGenerating(false);
     }

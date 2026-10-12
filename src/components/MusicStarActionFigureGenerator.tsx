@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Music, Shapes, PaintBucket } from 'lucide-react';
-import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
+import { generateActionFigure } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import { musicStarActionFigurePrompts as musicPrompts } from '../data/musicStarActionFigures';
@@ -162,14 +162,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
     } catch (err) {
       console.error('❌ Failed to generate music star action figure:', err);
       setError(`Failed to generate action figure: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      
-      // Fallback to a placeholder image for better UX
-      const placeholderUrl = `https://placehold.co/800/333/FFF?text=Generation+Failed`;
-      setGeneratedFigure(placeholderUrl);
-      
-      if (onImageGenerated) {
-        onImageGenerated(placeholderUrl);
-      }
+      setGeneratedFigure(null);
     } finally {
       setIsGenerating(false);
     }
@@ -311,6 +304,17 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
             </div>
           </div>
           
+          {/* Universal Personalization Panel */}
+          <div>
+            <button
+              onClick={() => setShowPersonalizationPanel(!showPersonalizationPanel)}
+              className="btn btn-outline w-full flex items-center justify-center"
+            >
+              <Shapes className="w-4 h-4 mr-2" />
+              {showPersonalizationPanel ? 'Hide' : 'Show'} Personalization Panel
+            </button>
+          </div>
+
           {/* Reference Image Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

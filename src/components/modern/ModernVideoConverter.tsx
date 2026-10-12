@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Play, Download, Film, RefreshCw, AlertCircle } from 'lucide-react';
+import { Upload, Play, Download, Film, RefreshCw, AlertCircle, KeyRound } from 'lucide-react';
 import FullScreenLayout from '../layout/FullScreenLayout';
 import ModernTopHeader from '../layout/ModernTopHeader';
 import LeftPanel, { LeftPanelSection, LeftPanelFooter } from '../layout/LeftPanel';
@@ -7,7 +7,8 @@ import RightPanel from '../layout/RightPanel';
 import EmptyState from '../layout/EmptyState';
 import GuideContent from '../layout/GuideContent';
 import APIContent from '../layout/APIContent';
-import { convertImageToVideo } from '../../utils/videoApi';
+import { callEdgeFunction, isSupabaseConfigured } from '../../utils/supabaseClient';
+import { isApiKeyMissingError } from '../../utils/apiKeyMissing';
 
 const ModernVideoConverter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'result' | 'guide' | 'api'>('result');
@@ -37,12 +38,14 @@ const ModernVideoConverter: React.FC = () => {
   };
 
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const handleGenerate = async () => {
     if (!sourceImage) return;
     setIsGenerating(true);
     setError(null);
+    setApiKeyMissing(false);
     setProgress(0);
 
     const progressInterval = setInterval(() => {
@@ -50,25 +53,33 @@ const ModernVideoConverter: React.FC = () => {
     }, 500);
 
     try {
-      const result = await convertImageToVideo(sourceImage, {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Video conversion service is not configured. Please try again later.');
+      }
+
+      // The image-to-video edge function reads duration and prompt at the top level
+      // of the request body, so they are sent directly instead of nested in options.
+      const result = await callEdgeFunction('image-to-video', {
+        imageUrl: sourceImage,
         duration,
-        effect: effect as any,
-        resolution: resolution as any,
-        outputFormat: 'mp4',
-        quality: 'high',
+        prompt: `Create a smooth cinematic ${effect} motion animation from this image at ${resolution} quality.`
       });
 
       clearInterval(progressInterval);
       setProgress(100);
 
-      if (result && (result as any).videoUrl) {
-        setVideoUrl((result as any).videoUrl);
+      if (result && result.videoUrl) {
+        setVideoUrl(result.videoUrl);
       } else if (result && result.id) {
         setVideoUrl(null);
         setError('Video is being processed. Check back in a few moments.');
+      } else {
+        setVideoUrl(null);
+        setError(result?.error || 'Video conversion failed. Please try again.');
       }
     } catch (err: any) {
       clearInterval(progressInterval);
+      setApiKeyMissing(isApiKeyMissingError(err));
       setError(err.message || 'Video conversion failed. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -177,9 +188,15 @@ const ModernVideoConverter: React.FC = () => {
   ) : error ? (
     <div className="p-8 text-center">
       <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-      <h3 className="text-lg font-semibold text-gray-700 mb-2">Conversion Issue</h3>
+      <h3 className="text-lg font-semibold text-gray-700 mb-2">{apiKeyMissing ? 'MuAPI API Key Required' : 'Conversion Issue'}</h3>
       <p className="text-gray-500 text-sm max-w-md mx-auto">{error}</p>
-      <button onClick={handleGenerate} className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors">Try Again</button>
+      {apiKeyMissing && (
+        <a href="/settings/api-keys" className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+          <KeyRound className="w-4 h-4" />
+          Go to API Key Settings
+        </a>
+      )}
+      <button onClick={handleGenerate} className="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors">Try Again</button>
     </div>
   ) : isGenerating ? (
     <div className="p-12 text-center">

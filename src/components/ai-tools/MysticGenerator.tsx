@@ -110,7 +110,7 @@ export default function MysticGenerator() {
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">Mystic AI Generator</h3>
-            <p className="text-sm text-gray-500">Ultra-realistic images with Freepik Mystic</p>
+            <p className="text-sm text-gray-500">Ultra-realistic images with GPT Image 2.5</p>
           </div>
         </div>
       </div>

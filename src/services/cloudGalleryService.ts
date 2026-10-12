@@ -104,7 +104,7 @@ class CloudGalleryService {
     if (!user.user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .insert({
         ...imageData,
         user_id: user.user.id
@@ -132,7 +132,7 @@ class CloudGalleryService {
     if (!user.user) return [];
 
     let query = supabase
-      .from('user_images')
+      .from('pi_user_images')
       .select('*')
       .eq('user_id', user.user.id)
       .order('created_at', { ascending: false });
@@ -163,7 +163,7 @@ class CloudGalleryService {
     if (!user.user) return null;
 
     const { data, error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .select('*')
       .eq('id', id)
       .eq('user_id', user.user.id)
@@ -184,7 +184,7 @@ class CloudGalleryService {
     const { user_id: _uid, id: _id, created_at: _ca, ...safeUpdates } = updates as any;
 
     const { data, error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .update(safeUpdates)
       .eq('id', id)
       .eq('user_id', user.user.id)
@@ -204,7 +204,7 @@ class CloudGalleryService {
     if (!user.user) return false;
 
     const { error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .delete()
       .eq('id', id)
       .eq('user_id', user.user.id);
@@ -222,7 +222,7 @@ class CloudGalleryService {
     if (!user.user) return false;
 
     const { error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .update({ is_favorite: isFavorite })
       .eq('id', id)
       .eq('user_id', user.user.id);
@@ -240,7 +240,7 @@ class CloudGalleryService {
     if (!user.user) return false;
 
     const { error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .update({ tags: newTags })
       .eq('id', imageId)
       .eq('user_id', user.user.id);
@@ -258,7 +258,7 @@ class CloudGalleryService {
     if (!user.user) return false;
 
     const { error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .update({ tags: newTags })
       .eq('id', imageId)
       .eq('user_id', user.user.id);
@@ -361,7 +361,7 @@ class CloudGalleryService {
     if (!user.user) return false;
 
     const { error } = await supabase
-      .from('user_images')
+      .from('pi_user_images')
       .update({ folder_id: folderId })
       .in('id', imageIds)
       .eq('user_id', user.user.id);

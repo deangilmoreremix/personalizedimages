@@ -34,12 +34,12 @@ const defaultFaqs: FAQItem[] = [
     answer: 'No. All images created with VideoRemix are hosted on our secure servers with high-speed CDN delivery. You can embed them on your website, landing pages, or share them directly via URL.',
   },
   {
-    question: 'Subscription Policy',
-    answer: 'Our subscriptions are billed monthly or annually (with a 20% discount). You can upgrade, downgrade, or cancel your subscription at any time from your account dashboard. Access to features will remain until the end of your billing period.',
+    question: 'How does billing work?',
+    answer: 'PersonalizedImages is bring-your-own-key. You add your own OpenAI and MuAPI API keys in Settings → API Keys, and each provider bills you directly for what you use. We never charge you for generations and there are no credits or subscriptions.',
   },
   {
-    question: 'Refund Policy',
-    answer: 'We offer a 14-day money-back guarantee for all new subscriptions. If you\'re not satisfied with our service, contact our support team within 14 days of your purchase for a full refund.',
+    question: 'Where do my API keys go?',
+    answer: 'Your keys are stored for your account and sent only to the provider that needs them. You can add, replace, or remove a key at any time from Settings → API Keys.',
   },
 ];
 

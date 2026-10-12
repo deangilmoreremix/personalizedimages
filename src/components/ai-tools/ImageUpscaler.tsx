@@ -65,7 +65,7 @@ export default function ImageUpscaler() {
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">Image Upscaler</h3>
-            <p className="text-sm text-gray-500">Enhance resolution with Magnific AI</p>
+            <p className="text-sm text-gray-500">Enhance resolution with OpenAI GPT Image 2.5</p>
           </div>
         </div>
       </div>

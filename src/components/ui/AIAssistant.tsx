@@ -4,10 +4,12 @@ import { X, Send, Brain, RefreshCw, Image as ImageIcon, Scan, Clipboard, Bot, Ro
 import { streamAIResponse } from '../../utils/streamingApi';
 import { FEATURES } from '../ui/FeatureDialogProvider';
 import { useFeatureDialog } from '../ui/FeatureDialogProvider';
-import { Location, NavigateFunction, useLocation, useNavigate } from 'react-router-dom';
+import { Location, NavigateFunction, useLocation, useNavigate, Link } from 'react-router-dom';
+import { KeyRound } from 'lucide-react';
 import { createOpenAIAssistant } from '../../utils/openaiAssistant';
 import { SpeechRecognitionService, SpeechSynthesisService, prepareSpokenResponse } from '../../utils/speechUtils';
 import { getUserApiKey } from '../../utils/userApiKeyStorage';
+import { API_KEY_MISSING_MESSAGE } from '../../utils/apiKeyMissing';
 
 interface AiAssistantProps {
   onClose: () => void;
@@ -99,7 +101,7 @@ What would you like to work on today?`,
   useEffect(() => {
     const checkOpenAIKey = async () => {
       const userKey = getUserApiKey('openai');
-      const envKey = import.meta.env.VITE_OPENAI_API_KEY;
+      const envKey = undefined;
       setUseEnhancedAI(!!(userKey || envKey));
     };
 
@@ -437,6 +439,17 @@ What would you like to work on today?`,
                     <div className={message.role === 'user' ? 'text-white' : 'text-gray-700'}>{message.content}</div>
                   )}
                 </div>
+
+                {/* Missing API key notice */}
+                {message.role === 'assistant' && message.content === API_KEY_MISSING_MESSAGE && (
+                  <Link
+                    to="/settings/api-keys"
+                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    Add your API key
+                  </Link>
+                )}
 
                 {/* Feature suggestions */}
                 {message.role === 'assistant' && message.suggestedFeatures && message.suggestedFeatures.length > 0 && (

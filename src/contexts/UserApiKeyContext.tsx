@@ -27,11 +27,7 @@ interface UserApiKeyContextType {
 const UserApiKeyContext = createContext<UserApiKeyContextType>({
   keys: {
     openai: null,
-    gemini: null,
-    'gemini-nano': null,
-    leonardo: null,
-    giphy: null,
-    freepik: null,
+    muapi: null,
   },
   statuses: [],
   setKey: async () => {},
@@ -44,26 +40,12 @@ const UserApiKeyContext = createContext<UserApiKeyContextType>({
 
 export const useUserApiKeys = () => useContext(UserApiKeyContext);
 
-const PROVIDERS: ApiKeyProvider[] = [
-  'openai',
-  'gemini',
-  'gemini-nano',
-  'leonardo',
-  'giphy',
-  'freepik',
-];
+const PROVIDERS: ApiKeyProvider[] = ['openai', 'muapi'];
 
 export const UserApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [keys, setKeys] = useState<Record<ApiKeyProvider, string | null>>(() => {
-    const initial: Record<ApiKeyProvider, string | null> = {
-      openai: null,
-      gemini: null,
-      'gemini-nano': null,
-      leonardo: null,
-      giphy: null,
-      freepik: null,
-    };
+    const initial: Record<ApiKeyProvider, string | null> = { openai: null, muapi: null };
     PROVIDERS.forEach(provider => {
       const value = getUserApiKey(provider);
       if (value) initial[provider] = value;
@@ -74,14 +56,7 @@ export const UserApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    const fresh: Record<ApiKeyProvider, string | null> = {
-      openai: null,
-      gemini: null,
-      'gemini-nano': null,
-      leonardo: null,
-      giphy: null,
-      freepik: null,
-    };
+    const fresh: Record<ApiKeyProvider, string | null> = { openai: null, muapi: null };
     PROVIDERS.forEach(provider => {
       const value = getUserApiKey(provider);
       if (value) fresh[provider] = value;
@@ -170,14 +145,7 @@ export const UserApiKeyProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSaveError(null);
 
     clearAllUserApiKeys();
-    const empty: Record<ApiKeyProvider, string | null> = {
-      openai: null,
-      gemini: null,
-      'gemini-nano': null,
-      leonardo: null,
-      giphy: null,
-      freepik: null,
-    };
+    const empty: Record<ApiKeyProvider, string | null> = { openai: null, muapi: null };
     setKeys(empty);
 
     if (user?.id) {

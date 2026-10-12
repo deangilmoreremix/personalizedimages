@@ -1,41 +1,19 @@
 /**
  * User API Key Storage Module
  *
- * Provides synchronous, runtime access to user-provided API keys.
+ * Provides synchronous, runtime access to user-provided API keys (BYOK).
  * User keys are stored in localStorage and synced to Supabase
  * personalization_tokens table for authenticated users.
  *
  * Priority order for API key resolution:
- * 1. User-provided keys (via this module)
- * 2. Environment variables (VITE_*)
+ * 1. User-provided keys (via this module, from the user's own settings)
+ *
+ * Shared platform credentials are intentionally NOT read from the browser.
  */
 
-export type ApiKeyProvider = 
-  | 'openai'
-  | 'gemini'
-  | 'gemini-nano'
-  | 'imagen'
-  | 'leonardo'
-  | 'giphy'
-  | 'freepik';
+export type ApiKeyProvider = 'openai' | 'muapi';
 
-const USER_API_KEY_PROVIDERS: Array<ApiKeyProvider> = [
-  'openai',
-  'gemini',
-  'gemini-nano',
-  'leonardo',
-  'giphy',
-  'freepik',
-];
-
-/**
- * Get the storage provider for a given API key provider.
- * Some providers (e.g., imagen) share storage with their base model.
- */
-function getStorageProvider(provider: ApiKeyProvider): string {
-  if (provider === 'imagen') return 'gemini';
-  return provider;
-}
+const USER_API_KEY_PROVIDERS: Array<ApiKeyProvider> = ['openai', 'muapi'];
 
 export interface ApiKeyStatus {
   provider: ApiKeyProvider;
@@ -47,38 +25,18 @@ export interface ApiKeyStatus {
 const PROVIDER_META: Record<ApiKeyProvider, { label: string; hint: string }> = {
   openai: {
     label: 'OpenAI',
-    hint: 'Starts with sk-... Used for GPT, DALL-E, Whisper',
+    hint: 'Starts with sk-... Used for the Responses API and GPT Image 2.5',
   },
-  gemini: {
-    label: 'Google Gemini',
-    hint: 'Starts with AIza... Used for image generation and description',
-  },
-  'gemini-nano': {
-    label: 'Gemini Nano',
-    hint: 'Reuses Gemini key if not set',
-  },
-  imagen: {
-    label: 'Imagen',
-    hint: 'Reuses Gemini key if not set',
-  },
-  leonardo: {
-    label: 'Leonardo AI',
-    hint: 'Used for Leonardo image generation models',
-  },
-  giphy: {
-    label: 'GIPHY',
-    hint: 'Used for GIF search and sticker generation',
-  },
-  freepik: {
-    label: 'Freepik',
-    hint: 'Used for stock image and vector search',
+  muapi: {
+    label: 'MuAPI',
+    hint: 'Used for image-to-video generation',
   },
 };
 
 const USER_KEY_STORAGE_PREFIX = 'user_api_key_';
 
 function getStorageKey(provider: ApiKeyProvider): string {
-  return `${USER_KEY_STORAGE_PREFIX}${getStorageProvider(provider)}`;
+  return `${USER_KEY_STORAGE_PREFIX}${provider}`;
 }
 
 /**
@@ -166,26 +124,9 @@ export function validateUserApiKey(provider: ApiKeyProvider, key: string): { val
         return { valid: false, message: 'OpenAI key appears too short' };
       }
       break;
-    case 'gemini':
-    case 'gemini-nano':
-    case 'imagen':
-      if (!key.startsWith('AIza')) {
-        return { valid: false, message: 'Google API keys should start with AIza' };
-      }
-      break;
-    case 'leonardo':
-      if (key.length < 10) {
-        return { valid: false, message: 'Leonardo key appears too short' };
-      }
-      break;
-    case 'giphy':
-      if (key.length < 10) {
-        return { valid: false, message: 'GIPHY key appears too short' };
-      }
-      break;
-    case 'freepik':
-      if (!/^[A-Za-z0-9]{20,}$/.test(key)) {
-        return { valid: false, message: 'Freepik key must be alphanumeric and at least 20 characters' };
+    case 'muapi':
+      if (key.trim().length < 8) {
+        return { valid: false, message: 'MuAPI key appears too short' };
       }
       break;
   }

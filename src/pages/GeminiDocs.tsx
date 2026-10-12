@@ -15,10 +15,11 @@ const GeminiDocs: React.FC = () => {
           >
             <h1 className="text-4xl font-bold mb-4 flex items-center justify-center">
               <Sparkles className="w-8 h-8 text-purple-600 mr-3" />
-              Gemini AI Integration Guide
+              OpenAI Integration Guide
             </h1>
             <p className="text-xl text-gray-600">
-              Complete documentation for implementing Google's Gemini AI in your VideoRemix application
+              Complete documentation for implementing the OpenAI Responses API and GPT Image 2.5 in your
+              PersonalizedImages application
             </p>
           </motion.div>
 
@@ -26,44 +27,44 @@ const GeminiDocs: React.FC = () => {
           <div className="bg-white rounded-xl shadow-md p-8 mb-12">
             <h2 className="text-2xl font-bold mb-4 flex items-center">
               <Book className="w-6 h-6 text-purple-600 mr-2" />
-              Gemini AI Overview
+              OpenAI API Overview
             </h2>
             
             <p className="mb-6 text-gray-700">
-              Gemini is Google's most capable AI model family, designed for multimodal reasoning across text, images, video, and code. 
-              Our application uses several Gemini models to power different AI features:
+              PersonalizedImages runs on two OpenAI model families: the Responses API for text and the
+              GPT Image 2.5 model for images. Every call uses the API key you add in Settings → API Keys.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold mb-2 text-purple-800">Gemini 1.5 Flash</h3>
+                <h3 className="font-bold mb-2 text-purple-800">GPT Image 2.5</h3>
                 <p className="text-sm text-purple-700">
-                  Ultra-fast model for generating images and handling image-to-image transformations.
-                  Great for real-time interactions and quick image generations.
+                  Image generation and editing model used for every image feature. Generates
+                  images from prompts and edits existing images with the Images API.
                 </p>
               </div>
               
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold mb-2 text-purple-800">Gemini 1.5 Pro Vision</h3>
+                <h3 className="font-bold mb-2 text-purple-800">Responses API</h3>
                 <p className="text-sm text-purple-700">
-                  Advanced vision understanding model that can analyze images in detail.
-                  Powers our image analysis features and comprehension capabilities.
+                  Text model used for image descriptions, prompt recommendations and the AI assistant.
+                  Accepts simple text input and returns structured text output.
                 </p>
               </div>
               
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold mb-2 text-purple-800">Gemini 1.5 Pro</h3>
+                <h3 className="font-bold mb-2 text-purple-800">BYOK Model</h3>
                 <p className="text-sm text-purple-700">
-                  Powerful model for generating text and handling complex reasoning tasks.
-                  Used for generating descriptions, prompt recommendations, and creative content.
+                  Bring-your-own-key: your OpenAI key is sent only to OpenAI and OpenAI bills your
+                  account. There are no application credits, subscriptions or platform-funded calls.
                 </p>
               </div>
               
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold mb-2 text-purple-800">Imagen (via Gemini)</h3>
+                <h3 className="font-bold mb-2 text-purple-800">MuAPI (video)</h3>
                 <p className="text-sm text-purple-700">
-                  Google's specialized image generation technology, accessible through Gemini.
-                  Creates high-quality images from text descriptions with precise control.
+                  Image-to-video generation uses your own MuAPI API key, added in the same
+                  API Keys settings page.
                 </p>
               </div>
             </div>
@@ -73,48 +74,43 @@ const GeminiDocs: React.FC = () => {
           <div className="bg-white rounded-xl shadow-md p-8 mb-12">
             <h2 className="text-2xl font-bold mb-4 flex items-center">
               <Zap className="w-6 h-6 text-purple-600 mr-2" />
-              Setting Up Gemini API
+              Setting Up the OpenAI API
             </h2>
             
             <div className="mb-6 space-y-4">
               <p className="text-gray-700">
-                To use the Gemini API in your application, you need an API key from Google AI Studio. 
-                Follow these steps to get your API key and properly configure your application:
+                PersonalizedImages is bring-your-own-key. Add your own OpenAI key in Settings → API Keys
+                and every request is sent straight to OpenAI with your credentials.
               </p>
               
               <ol className="list-decimal pl-5 space-y-4 text-gray-700">
                 <li>
-                  <strong>Create a Google AI Studio Account:</strong>
+                  <strong>Create an OpenAI Account:</strong>
                   <p className="text-sm text-gray-600 mt-1">
-                    Visit <a href="https://makersuite.google.com/" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Google AI Studio</a> and sign in with your Google account.
+                    Visit <a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">the OpenAI platform</a> and sign in.
                   </p>
                 </li>
                 
                 <li>
                   <strong>Generate an API Key:</strong>
                   <p className="text-sm text-gray-600 mt-1">
-                    In the Google AI Studio dashboard, navigate to the API keys section and create a new API key.
+                    In the OpenAI dashboard, navigate to API keys and create a new secret key. It starts with sk-.
                   </p>
                 </li>
                 
                 <li>
-                  <strong>Add API Key to Environment Variables:</strong>
+                  <strong>Add the key in API Key Settings:</strong>
                   <p className="text-sm text-gray-600 mt-1">
-                    Create a <code className="bg-gray-100 px-1 py-0.5 rounded">.env</code> file in your project root (copy from <code className="bg-gray-100 px-1 py-0.5 rounded">.env.example</code>) and add your Gemini API key:
+                    Open Settings → API Keys, paste the key into the OpenAI section and save. The stored key is
+                    shown masked only, for example <code className="bg-gray-100 px-1 py-0.5 rounded">sk-…abcd</code>.
                   </p>
-                  <pre className="bg-gray-100 p-3 rounded-md text-sm mt-2 overflow-auto text-gray-800">
-                    VITE_GEMINI_API_KEY=your_gemini_api_key_here
-                  </pre>
                 </li>
                 
                 <li>
-                  <strong>Configure Supabase Edge Functions (Optional):</strong>
+                  <strong>Video needs MuAPI:</strong>
                   <p className="text-sm text-gray-600 mt-1">
-                    If using Supabase Edge Functions, add your API key to Supabase secrets:
+                    Add your own MuAPI key in the same page to enable image-to-video generation.
                   </p>
-                  <pre className="bg-gray-100 p-3 rounded-md text-sm mt-2 overflow-auto text-gray-800">
-                    supabase secrets set GEMINI_API_KEY=your_gemini_api_key_here
-                  </pre>
                 </li>
               </ol>
             </div>
@@ -126,13 +122,13 @@ const GeminiDocs: React.FC = () => {
               </h3>
               <ul className="list-disc pl-5 text-sm text-yellow-700">
                 <li className="mb-2">
-                  Never commit your API keys to version control. Use environment variables.
+                  Your key is sent only to OpenAI from your browser or through the authenticated edge function.
                 </li>
                 <li className="mb-2">
-                  Gemini API is currently free for most usage tiers, but quotas apply.
+                  OpenAI bills your account for the requests you make. Rate limits and quotas follow your plan.
                 </li>
                 <li>
-                  For production use, consider implementing rate limiting and usage tracking.
+                  Missing key errors tell you to add a key in Settings → API Keys - there is no shared key fallback.
                 </li>
               </ul>
             </div>
@@ -142,107 +138,111 @@ const GeminiDocs: React.FC = () => {
           <div className="bg-white rounded-xl shadow-md p-8 mb-12">
             <h2 className="text-2xl font-bold mb-4 flex items-center">
               <Cpu className="w-6 h-6 text-purple-600 mr-2" />
-              Using Gemini in Your Project
+              Using OpenAI in Your Project
             </h2>
 
             <h3 className="text-lg font-semibold mt-8 mb-3">Text-to-Image Generation</h3>
             <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-auto">
-{`// Generate an image from a text prompt using Gemini
-async function generateImage(prompt) {
-  // Initialize the Gemini client
-  const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
-  
-  // Use the Gemini Flash model for image generation
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-  
-  // Generate content with image output
-  const result = await model.generateContent({
-    contents: [{ text: prompt }],
-    generationConfig: {
-      responseMediaType: "IMAGE"
-    }
+{`// Generate an image from a text prompt with GPT Image 2.5 (BYOK)
+async function generateImage(prompt, apiKey) {
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': \`Bearer \${apiKey}\`
+    },
+    body: JSON.stringify({
+      model: 'gpt-image-2.5-sunburst',
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'medium',
+      output_format: 'png'
+    })
   });
-  
-  // Extract the image from the response
-  const response = await result.response;
-  for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData && part.inlineData.mimeType.startsWith('image/')) {
-      return \`data:\${part.inlineData.mimeType};base64,\${part.inlineData.data}\`;
-    }
+
+  if (!response.ok) {
+    throw new Error(\`OpenAI API error: \${response.status}\`);
   }
-  
-  throw new Error('No image found in the response');
+
+  const data = await response.json();
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new Error('Image provider returned no image data');
+  }
+  return \`data:image/png;base64,\${b64}\`;
 }`}
             </pre>
 
             <h3 className="text-lg font-semibold mt-8 mb-3">Image-to-Image Transformation</h3>
             <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-auto">
-{`// Transform an existing image using Gemini
-async function transformImage(imageUrl, prompt) {
-  // Initialize the Gemini client
-  const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
-  
-  // Fetch the image
-  const response = await fetch(imageUrl);
-  const imageBlob = await response.blob();
-  
-  // Convert to base64
-  const base64Data = await blobToBase64(imageBlob);
-  
-  // Use Gemini Flash for image transformation
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-  
-  // Generate content based on the image and prompt
-  const result = await model.generateContent({
-    contents: [
-      { text: prompt },
-      { inlineData: { data: base64Data, mimeType: imageBlob.type } }
-    ],
-    generationConfig: {
-      responseMediaType: "IMAGE"
-    }
+{`// Edit an existing image with GPT Image 2.5 (BYOK)
+async function editImage(imageUrl, prompt, apiKey) {
+  const response = await fetch('https://api.openai.com/v1/images/edits', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': \`Bearer \${apiKey}\`
+    },
+    body: JSON.stringify({
+      model: 'gpt-image-2.5-sunburst',
+      images: [{ image_url: imageUrl }],
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      output_format: 'png'
+    })
   });
-  
-  // Extract the transformed image from the response
-  const genResponse = await result.response;
-  for (const part of genResponse.candidates[0].content.parts) {
-    if (part.inlineData && part.inlineData.mimeType.startsWith('image/')) {
-      return \`data:\${part.inlineData.mimeType};base64,\${part.inlineData.data}\`;
-    }
+
+  if (!response.ok) {
+    throw new Error(\`OpenAI API error: \${response.status}\`);
   }
-  
-  throw new Error('No image found in the response');
+
+  const data = await response.json();
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new Error('Image provider returned no image data');
+  }
+  return \`data:image/png;base64,\${b64}\`;
 }`}
             </pre>
 
             <h3 className="text-lg font-semibold mt-8 mb-3">Image Analysis</h3>
             <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-auto">
-{`// Analyze an image using Gemini Vision
-async function analyzeImage(imageUrl, prompt = "Describe this image in detail") {
-  // Initialize the Gemini client
-  const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY);
-  
-  // Fetch the image
-  const response = await fetch(imageUrl);
-  const imageBlob = await response.blob();
-  
-  // Convert to base64
-  const base64Data = await blobToBase64(imageBlob);
-  
-  // Use Gemini Pro Vision for image analysis
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-vision-latest' });
-  
-  // Generate content based on the image and prompt
-  const result = await model.generateContent({
-    contents: [
-      { text: prompt },
-      { inlineData: { data: base64Data, mimeType: imageBlob.type } }
-    ]
+{`// Analyze an image with the Responses API (BYOK)
+async function analyzeImage(imageUrl, prompt = "Describe this image in detail", apiKey) {
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': \`Bearer \${apiKey}\`
+    },
+    body: JSON.stringify({
+      model: 'gpt-5-mini',
+      input: [
+        {
+          role: 'user',
+          content: [
+            { type: 'input_text', text: prompt },
+            { type: 'input_image', image_url: imageUrl }
+          ]
+        }
+      ],
+      max_output_tokens: 1024
+    })
   });
-  
-  // Return the analysis text
-  const analysisResponse = await result.response;
-  return analysisResponse.text();
+
+  if (!response.ok) {
+    throw new Error(\`OpenAI API error: \${response.status}\`);
+  }
+
+  const data = await response.json();
+  return (data.output || [])
+    .flatMap((item) => item.content || [])
+    .filter((part) => part.type === 'output_text')
+    .map((part) => part.text || '')
+    .join('')
+    .trim();
 }`}
             </pre>
           </div>
@@ -251,7 +251,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
           <div className="bg-white rounded-xl shadow-md p-8 mb-12">
             <h2 className="text-2xl font-bold mb-4 flex items-center">
               <LayoutGrid className="w-6 h-6 text-purple-600 mr-2" />
-              Key Features Implemented with Gemini
+              Key Features Implemented with OpenAI
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -263,11 +263,11 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
                   <h3 className="ml-3 font-semibold">Image Generation</h3>
                 </div>
                 <p className="text-sm text-gray-700 mb-3">
-                  Create high-quality images from text descriptions using Gemini Flash models. Perfect for generating custom visuals based on user input.
+                  Create high-quality images from text descriptions using GPT Image 2.5. Perfect for generating custom visuals based on user input.
                 </p>
                 <div className="text-xs font-medium text-gray-500 flex items-center">
                   <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                  Uses gemini-1.5-flash-latest
+                  Uses gpt-image-2.5-sunburst
                 </div>
               </div>
               
@@ -283,7 +283,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
                 </p>
                 <div className="text-xs font-medium text-gray-500 flex items-center">
                   <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                  Uses image-to-image capabilities
+                  Uses the GPT Image 2.5 edits endpoint
                 </div>
               </div>
               
@@ -299,7 +299,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
                 </p>
                 <div className="text-xs font-medium text-gray-500 flex items-center">
                   <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                  Uses gemini-1.5-pro-vision-latest
+                  Uses the Responses API
                 </div>
               </div>
               
@@ -315,7 +315,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
                 </p>
                 <div className="text-xs font-medium text-gray-500 flex items-center">
                   <Zap className="w-3 h-3 mr-1 text-purple-500" />
-                  Uses gemini-1.5-pro-latest
+                  Uses the Responses API
                 </div>
               </div>
             </div>
@@ -323,7 +323,7 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
             <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-100">
               <h3 className="font-bold mb-2 text-green-800 flex items-center">
                 <Sparkles className="w-5 h-5 mr-1 text-green-600" />
-                Best Practices for Gemini Integration
+                Best Practices for OpenAI Integration
               </h3>
               <ul className="list-disc pl-5 text-sm text-green-700">
                 <li className="mb-2">
@@ -356,8 +356,8 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
               <div className="border-b border-gray-200 pb-4">
                 <h3 className="font-bold mb-2">API Keys Not Working</h3>
                 <p className="text-gray-700 text-sm">
-                  Make sure you have created a proper Gemini API key and added it to your environment variables.
-                  Check that the API key has the necessary permissions and has not exceeded quota limits.
+                  Make sure you have added your own OpenAI key in Settings → API Keys. Keys are shown masked
+                  and are sent only to OpenAI.
                 </p>
               </div>
               
@@ -380,18 +380,18 @@ async function analyzeImage(imageUrl, prompt = "Describe this image in detail") 
               <div className="border-b border-gray-200 pb-4">
                 <h3 className="font-bold mb-2">Edge Functions vs. Direct API Calls</h3>
                 <p className="text-gray-700 text-sm">
-                  Edge functions provide better security by keeping API keys server-side but may have more latency.
-                  Direct API calls from the client are faster but require exposing API keys (use with caution).
-                  Our implementation attempts edge functions first, then falls back to direct calls if needed.
+                  Edge functions read your key from the x-user-api-key header and call OpenAI on your behalf.
+                  Direct calls from the client are used when you supply a key. There is no shared platform key
+                  fallback in either path.
                 </p>
               </div>
               
               <div>
                 <h3 className="font-bold mb-2">Rate Limiting and Quotas</h3>
                 <p className="text-gray-700 text-sm">
-                  Gemini API has quota limits which vary based on your account tier. Monitor your usage
-                  through the Google AI Studio dashboard and implement appropriate rate limiting in your application
-                  to avoid unexpected service interruptions.
+                  OpenAI rate limits and quotas vary by account tier. Monitor your usage in the OpenAI
+                  dashboard and implement appropriate rate limiting in your application to avoid
+                  unexpected service interruptions.
                 </p>
               </div>
             </div>

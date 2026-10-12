@@ -3,76 +3,34 @@
  * Updated to use centralized environment configuration with user-provided key support
  */
 
-import { getApiKey, hasValidApiKey } from './env';
+import { hasValidApiKey } from './env';
 import { getUserApiKey, validateUserApiKey } from './userApiKeyStorage';
-
-// Helper function to get the GIPHY API key from environment variables or user settings
-export const getGiphyApiKey = () => {
-  const userKey = getUserApiKey('giphy');
-  if (userKey) return userKey;
-  return getApiKey('giphy') || '';
-};
-
-// Helper function to get the OpenAI API key from environment variables or user settings
-export const getOpenAIApiKey = () => {
-  const userKey = getUserApiKey('openai');
-  if (userKey) return userKey;
-  return getApiKey('openai') || '';
-};
-
-// Helper function to get the Gemini API key from environment variables or user settings
-export const getGeminiApiKey = () => {
-  const userKey = getUserApiKey('gemini');
-  if (userKey) return userKey;
-  return getApiKey('gemini') || '';
-};
-
-// Helper function to get the Gemini Nano API key from environment variables or user settings
-// Note: Gemini Nano uses the same API key as regular Gemini
-export const getGeminiNanoApiKey = () => {
-  const userKey = getUserApiKey('gemini-nano') || getUserApiKey('gemini');
-  if (userKey) return userKey;
-  return getApiKey('gemini-nano') || getApiKey('gemini') || '';
-};
-
-// Helper function to get the Freepik API key from environment variables or user settings
-export const getFreepikApiKey = () => {
-  const userKey = getUserApiKey('freepik');
-  if (userKey) return userKey;
-  return getApiKey('freepik') || '';
-};
 
 // Helper function to check if an API key is available
 export const hasApiKey = (provider: string): boolean => {
   switch (provider) {
     case 'openai': {
-      const key = getUserApiKey('openai') || getApiKey('openai');
+      const key = getUserApiKey('openai');
       return !!(key && key.startsWith('sk-'));
     }
-    case 'gemini':
-    case 'imagen': {
-      const key = getUserApiKey('gemini') || getApiKey('gemini');
-      return !!(key && key.startsWith('AIza'));
-    }
-    case 'gemini-nano': {
-      const key = getUserApiKey('gemini-nano') || getUserApiKey('gemini') || getApiKey('gemini-nano') || getApiKey('gemini');
-      return !!(key && key.startsWith('AIza'));
-    }
-    case 'giphy': {
-      const key = getUserApiKey('giphy') || getApiKey('giphy');
-      return !!key;
-    }
-    case 'freepik': {
-      const key = getUserApiKey('freepik') || getApiKey('freepik');
-      return !!(key && /^[A-Za-z0-9]{20,}$/.test(key));
-    }
-    case 'leonardo': {
-      const key = getUserApiKey('leonardo') || getApiKey('leonardo');
+    case 'muapi': {
+      const key = getUserApiKey('muapi');
       return !!key;
     }
     default:
       return false;
   }
+};
+
+// Direct browser provider calls are only permitted with the USER'S OWN key (BYOK).
+// Shared deployment credentials (VITE_* env vars) must never be used from the browser.
+export const getUserProvidedApiKey = (provider: 'openai' | 'muapi'): string | null => {
+  const userKey = getUserApiKey(provider);
+  if (!userKey) return null;
+  if (provider === 'openai') {
+    return userKey.startsWith('sk-') ? userKey : null;
+  }
+  return userKey.length >= 8 ? userKey : null;
 };
 
 /**

@@ -1,4 +1,4 @@
-import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
+import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, getUserApiKey, OPENAI_KEY_MISSING_ERROR, sanitizeInput } from "../_shared/cors.ts"
 
 interface PromptRecommendationsRequest {
   basePrompt: string
@@ -48,16 +48,11 @@ Deno.serve(async (req) => {
 
     const sanitizedPrompt = sanitizeInput(basePrompt)
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    const geminiKey = Deno.env.get('GEMINI_API_KEY')
-
-    const useOpenAI = openaiKey && validateApiKey(openaiKey, 'openai')
-    const useGemini = geminiKey && validateApiKey(geminiKey, 'gemini')
-
-    if (!useOpenAI && !useGemini) {
+    const userApiKey = getUserApiKey(req, 'openai')
+    if (!userApiKey || !validateApiKey(userApiKey, 'openai')) {
       return new Response(
-        JSON.stringify({ error: 'Valid API keys not configured' }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: OPENAI_KEY_MISSING_ERROR }),
+        { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -71,95 +66,47 @@ Deno.serve(async (req) => {
 
     let recommendations: string[] = []
 
-    if (useOpenAI) {
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 1024
-          })
+    try {
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userApiKey}`
+        },
+        body: JSON.stringify({
+          model: Deno.env.get('OPENAI_RESPONSES_MODEL') || 'gpt-5-mini',
+          instructions: systemPrompt,
+          input: userPrompt,
+          max_output_tokens: 1024
         })
+      })
 
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
+      }
 
-        const data = await response.json()
-        const responseText = data.choices?.[0]?.message?.content || ''
+      const data = await response.json()
+      const responseText = (data.output || [])
+        .flatMap((item: any) => item.content || [])
+        .filter((part: any) => part.type === 'output_text')
+        .map((part: any) => part.text || '')
+        .join('')
 
-        try {
-          recommendations = JSON.parse(responseText)
-        } catch (_e) {
-          const matches = responseText.match(/"([^"]+)"/g)
-          if (matches) {
-            recommendations = matches.map((match: string) => match.replace(/"/g, ''))
-          } else {
-            throw new Error('Failed to parse recommendations from response')
-          }
-        }
-
-      } catch (error) {
-        console.error('OpenAI recommendations error:', error)
-        if (!useGemini) {
-          throw error
+      try {
+        recommendations = JSON.parse(responseText)
+      } catch (_e) {
+        const matches = responseText.match(/"([^"]+)"/g)
+        if (matches) {
+          recommendations = matches.map((match: string) => match.replace(/"/g, ''))
+        } else {
+          throw new Error('Failed to parse recommendations from response')
         }
       }
-    }
 
-    if (recommendations.length === 0 && useGemini) {
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `${systemPrompt}\n\n${userPrompt}`
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1024
-            }
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-        try {
-          recommendations = JSON.parse(responseText)
-        } catch (_e) {
-          const matches = responseText.match(/"([^"]+)"/g)
-          if (matches) {
-            recommendations = matches.map((match: string) => match.replace(/"/g, ''))
-          } else {
-            throw new Error('Failed to parse recommendations from Gemini response')
-          }
-        }
-
-      } catch (error) {
-        console.error('Gemini recommendations error:', error)
-        throw error
-      }
+    } catch (error) {
+      console.error('OpenAI recommendations error:', error)
+      throw error
     }
 
     if (recommendations.length === 0) {

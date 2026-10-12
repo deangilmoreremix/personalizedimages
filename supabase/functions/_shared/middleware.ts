@@ -11,7 +11,7 @@ import {
   type RateLimitConfig,
   type ValidationRule
 } from './security.ts';
-import { corsHeaders } from './cors.ts';
+import { corsHeaders, getCorsHeaders } from './cors.ts';
 
 export interface EdgeFunctionConfig {
   requireAuth?: boolean;
@@ -41,7 +41,7 @@ export function createEdgeFunction(
       if (req.method === 'OPTIONS') {
         return new Response(null, {
           status: 200,
-          headers: corsHeaders
+          headers: getCorsHeaders(req.headers.get('origin'))
         });
       }
 

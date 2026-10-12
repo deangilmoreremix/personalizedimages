@@ -166,6 +166,24 @@ CREATE POLICY pi_user_images_delete_own
   TO authenticated
   USING (auth.uid() = user_id);
 
+-- ----------------------------------------------------------------------------
+-- Explicit role privileges
+--
+-- The live project's pg_default_acl already grants anon/authenticated/
+-- service_role on new public tables (verified before writing this migration),
+-- but the grants are stated explicitly so the migration is self-contained and
+-- does not depend on cluster-wide default privileges remaining unchanged.
+-- RLS still restricts `authenticated` to their own rows.
+-- ----------------------------------------------------------------------------
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.pi_generated_videos TO authenticated;
+GRANT SELECT ON public.pi_generated_videos TO anon;
+GRANT ALL ON public.pi_generated_videos TO service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.pi_user_images TO authenticated;
+GRANT SELECT ON public.pi_user_images TO anon;
+GRANT ALL ON public.pi_user_images TO service_role;
+
 -- ============================================================================
 -- ROLLBACK
 -- ============================================================================

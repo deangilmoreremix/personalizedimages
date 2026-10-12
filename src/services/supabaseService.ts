@@ -502,10 +502,11 @@ export const dbUtils = {
       'user_profiles',
       'personalization_tokens',
       'generated_images',
+      'pi_generated_videos',
+      'pi_user_images',
       'user_projects',
       'reference_images',
       'user_fonts',
-      'generated_videos',
       'api_usage'
     ];
 

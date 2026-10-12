@@ -24,7 +24,7 @@ export interface ContentRevision {
   created_at: string;
 }
 
-const STORAGE_BUCKET = 'landing-page-images';
+const STORAGE_BUCKET = 'generated-images';
 
 export async function getImageBySlot(section: string, slot: string): Promise<LandingPageImage | null> {
   if (!supabase) return null;

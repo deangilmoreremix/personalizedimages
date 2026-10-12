@@ -16,10 +16,10 @@ async function resolveImageUrl(imageUrl: string): Promise<string> {
   );
   const fileName = `video-tmp/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
-    .from("temp-uploads")
+    .from("generated-images")
     .upload(fileName, raw, { contentType: `image/${match[1]}`, upsert: true });
   if (error) throw new Error(`Upload failed: ${error.message}`);
-  const { data } = supabase.storage.from("temp-uploads").getPublicUrl(fileName);
+  const { data } = supabase.storage.from("generated-images").getPublicUrl(fileName);
   return data.publicUrl;
 }
 

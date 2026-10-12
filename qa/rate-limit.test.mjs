@@ -88,6 +88,10 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.includes('/rest/v1/rate_limits') && method === 'GET') {
     return jsonResponse(state.row ? [state.row] : []);
   }
+  // The deployed table raises 42703 for unknown columns, like PostgREST does.
+  if (url.includes('/rest/v1/rate_limits') && /identifier=eq|is_authenticated=eq/.test(url)) {
+    return jsonResponse({ code: '42703', message: 'column rate_limits.request_count does not exist' }, 400);
+  }
   if (url === `${SUPABASE}/rest/v1/rate_limits` && method === 'POST') {
     return jsonResponse({}, state.postStatus);
   }
@@ -106,12 +110,13 @@ test('edge rate-limit rows are namespaced with the edge: prefix', async () => {
   const result = await checkRateLimit('qa-user-1', true);
   assert.equal(result.allowed, true);
   const select = calls.find((c) => c.method === 'GET');
-  assert.ok(select.url.includes('identifier=eq.edge%3Aqa-user-1'), `SELECT must use namespaced identifier: ${select.url}`);
+  assert.ok(select.url.includes('scope=eq.edge'), `SELECT must use the deployed scope column: ${select.url}`);
+  assert.ok(select.url.includes('key=eq.auth%3Aqa-user-1'), `SELECT must namespace the key: ${select.url}`);
   const post = calls.find((c) => c.method === 'POST');
   const body = JSON.parse(post.init.body);
-  assert.equal(body.identifier, 'edge:qa-user-1');
-  assert.equal(body.is_authenticated, true);
-  assert.equal(body.request_count, 1);
+  assert.equal(body.scope, 'edge');
+  assert.equal(body.key, 'auth:qa-user-1');
+  assert.equal(body.count, 1);
 });
 
 test('insert uses resolution=ignore-duplicates (no unique index required)', async () => {
@@ -131,7 +136,7 @@ test('existing fresh row is incremented via PATCH, not re-inserted', async () =>
   // Authenticated limit is 100 requests/hour (RATE_LIMITS in cors.ts).
   state.row = {
     id: 'row-1',
-    request_count: 96,
+    count: 96,
     window_start: new Date().toISOString(),
   };
   const result = await checkRateLimit('qa-user-1', true);
@@ -139,7 +144,7 @@ test('existing fresh row is incremented via PATCH, not re-inserted', async () =>
   assert.equal(result.remaining, 3);
   const patch = calls.find((c) => c.method === 'PATCH');
   assert.ok(patch, 'PATCH issued for existing row');
-  assert.equal(JSON.parse(patch.init.body).request_count, 97);
+  assert.equal(JSON.parse(patch.init.body).count, 97);
   assert.ok(patch.url.includes('id=eq.row-1'));
   assert.ok(!calls.some((c) => c.method === 'POST'), 'no INSERT when a fresh row exists');
 });
@@ -147,7 +152,7 @@ test('existing fresh row is incremented via PATCH, not re-inserted', async () =>
 test('stale window row triggers a fresh INSERT', async () => {
   state.row = {
     id: 'row-old',
-    request_count: 99,
+    count: 99,
     window_start: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
   };
   const result = await checkRateLimit('qa-user-1', true);
@@ -158,7 +163,7 @@ test('stale window row triggers a fresh INSERT', async () => {
 test('request_count at the limit is denied', async () => {
   state.row = {
     id: 'row-1',
-    request_count: 100,
+    count: 100,
     window_start: new Date().toISOString(),
   };
   const result = await checkRateLimit('qa-user-1', true);
@@ -170,8 +175,8 @@ test('request_count at the limit is denied', async () => {
 test('anonymous identifiers are namespaced the same way', async () => {
   await checkRateLimit('1.2.3.4', false);
   const post = calls.find((c) => c.method === 'POST');
-  assert.equal(JSON.parse(post.init.body).identifier, 'edge:1.2.3.4');
-  assert.equal(JSON.parse(post.init.body).is_authenticated, false);
+  assert.equal(JSON.parse(post.init.body).key, 'anon:1.2.3.4');
+  assert.equal(JSON.parse(post.init.body).scope, 'edge');
 });
 
 test('fails closed when service configuration is missing', async () => {

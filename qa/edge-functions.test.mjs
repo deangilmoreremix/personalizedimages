@@ -465,7 +465,7 @@ if (UNDER_VITEST) {
   });
 
   test('image-generation: rate limit is enforced before the provider (no credit RPC exists)', async () => {
-    mock.rateLimitRow = { id: 'rl-1', request_count: 100, window_start: new Date().toISOString() };
+    mock.rateLimitRow = { id: 'rl-1', count: 100, window_start: new Date().toISOString() };
     const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' } });
     assert.equal(res.status, 429);
     assert.equal((await readJson(res)).error, 'Rate limit exceeded');
@@ -474,7 +474,7 @@ if (UNDER_VITEST) {
   });
 
   test('image-generation: the rate limit wins over the missing-key error (checked first)', async () => {
-    mock.rateLimitRow = { id: 'rl-2', request_count: 100, window_start: new Date().toISOString() };
+    mock.rateLimitRow = { id: 'rl-2', count: 100, window_start: new Date().toISOString() };
     const res = await invoke(imageGenerationHandler, { body: { prompt: 'a cat' }, apiKey: null });
     assert.equal(res.status, 429);
     assert.equal((await readJson(res)).error, 'Rate limit exceeded');
@@ -811,7 +811,7 @@ if (UNDER_VITEST) {
   });
 
   test('assistant-stream: rate limit exceeded returns 429', async () => {
-    mock.rateLimitRow = { id: 'rl-2', request_count: 100, window_start: new Date().toISOString() };
+    mock.rateLimitRow = { id: 'rl-2', count: 100, window_start: new Date().toISOString() };
     const res = await invoke(assistantStreamHandler, {
       body: { messages: [{ role: 'user', content: 'hi' }] },
     });

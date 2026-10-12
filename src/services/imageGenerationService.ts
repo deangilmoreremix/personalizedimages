@@ -45,16 +45,17 @@ export async function saveGeneratedImage(
   const userId = await getUserId();
   if (!userId || !supabase) return null;
 
+  // The deployed generated_images table has (id, url, prompt, user_id, model,
+  // size, quality, format, compression, background, action,
+  // previous_response_id, created_at, updated_at). Persist only those columns;
+  // the prompt carries the category/style context.
   const { data, error } = await (supabase as any)
     .from('generated_images')
     .insert({
       user_id: userId,
-      prompt,
-      image_url: imageUrl,
-      provider,
-      model: 'gpt-image-2.5-sunburst',
-      category,
-      tokens_used: tokensUsed || {}
+      prompt: category && category !== 'ai-image' ? `[${category}] ${prompt}` : prompt,
+      url: imageUrl,
+      model: 'gpt-image-2.5-sunburst'
     })
     .select('id')
     .maybeSingle();

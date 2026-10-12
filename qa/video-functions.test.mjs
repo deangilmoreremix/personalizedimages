@@ -251,7 +251,7 @@ test('image-to-video: data URL is resolved to a public URL before submitting', a
   assert.equal(res.status, 200);
   const submit = muapiSubmitCall();
   const uploaded = JSON.parse(submit.init.body).image_url;
-  assert.match(uploaded, /^https:\/\/qa-test-project\.supabase\.co\/storage\/v1\/object\/public\/temp-uploads\/video-tmp\/.+\.png$/);
+  assert.match(uploaded, /^https:\/\/qa-test-project\.supabase\.co\/storage\/v1\/object\/public\/generated-images\/video-tmp\/.+\.png$/);
   assert.equal(mock.insert.duration, 5);
   assert.equal(JSON.parse(submit.init.body).duration, 5);
   assertMuapiCallsUseUserKeyOnly();
@@ -328,7 +328,7 @@ test('image-to-video: validation, auth and rate limit guards are preserved', asy
   assert.equal(res.status, 401);
 
   resetMocks();
-  mock.rateLimitRow = { id: 'rl-1', request_count: 100, window_start: new Date().toISOString() };
+  mock.rateLimitRow = { id: 'rl-1', count: 100, window_start: new Date().toISOString() };
   res = await invoke(imageToVideoHandler, { body: { imageUrl: 'https://cdn.example.com/a.png' } });
   assert.equal(res.status, 429);
   assert.equal(muapiSubmitCall(), undefined);

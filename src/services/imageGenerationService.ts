@@ -57,24 +57,11 @@ export async function checkCredits(): Promise<{ allowed: boolean; balance: numbe
   return { allowed: data.balance > 0, balance: data.balance };
 }
 
-async function deductCredit(prompt: string, provider: string, imageUrl: string): Promise<number> {
+async function logGenerationUsage(prompt: string, provider: string, imageUrl: string): Promise<void> {
   const userId = await getUserId();
-  if (!userId || !supabase) return -1;
+  if (!userId || !supabase) return;
 
   const sb = supabase as any;
-
-  const { data, error } = await sb.rpc('check_and_deduct_credit', {
-    p_user_id: userId,
-    p_reason: `Image generation (${provider}): ${prompt.substring(0, 80)}`
-  });
-
-  if (error) {
-    console.error('Atomic credit deduction failed:', error);
-    return -1;
-  }
-
-  const result = typeof data === 'string' ? JSON.parse(data) : data;
-  if (!result?.deducted) return result?.balance ?? -1;
 
   await sb.from('usage_logs').insert({
     user_id: userId,
@@ -84,8 +71,6 @@ async function deductCredit(prompt: string, provider: string, imageUrl: string):
     request_metadata: { prompt: prompt.substring(0, 500) },
     response_metadata: { image_url: imageUrl }
   });
-
-  return result.balance;
 }
 
 export async function saveGeneratedImage(
@@ -145,7 +130,9 @@ export async function generateImage(
       });
 
       if (result?.imageUrl) {
-        await deductCredit(prompt, 'openai', result.imageUrl);
+        // The edge function already deducts the credit atomically server-side
+        // via check_and_deduct_credit_service; recording usage locally only.
+        await logGenerationUsage(prompt, 'openai', result.imageUrl);
         await saveGeneratedImage(prompt, result.imageUrl, 'openai', category);
         return {
           imageUrl: result.imageUrl,

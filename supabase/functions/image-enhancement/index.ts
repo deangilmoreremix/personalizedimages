@@ -115,8 +115,6 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ imageUrl: resultImageUrl }),
       { headers: { ...headers, 'Content-Type': 'application/json' } }
-    ),
-      { headers: { ...headers, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {

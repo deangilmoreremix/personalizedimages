@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Wand2, Download, Share2, Edit3, Trash2, RefreshCw, Sparkles, Image as ImageIcon, Brain, Clock, Dices } from 'lucide-react';
 import FullScreenLayout from '../layout/FullScreenLayout';
 import ModernTopHeader from '../layout/ModernTopHeader';
@@ -20,12 +21,14 @@ interface ModernActionFigureGeneratorProps {
 }
 
 const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = ({ tokens, onImageGenerated }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'result' | 'guide' | 'api'>('result');
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generationTime, setGenerationTime] = useState<number | null>(null);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
   const [selectedCategory, setSelectedCategory] = useState<'general' | 'wrestling' | 'music' | 'retro'>('general');
@@ -143,6 +146,34 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
     link.href = generatedImage;
     link.download = `action-figure-${Date.now()}.png`;
     link.click();
+  };
+
+  const handleShare = async () => {
+    if (!generatedImage) return;
+
+    const shareData = {
+      title: 'My Action Figure',
+      text: 'Check out the action figure I created!',
+      url: generatedImage
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // User dismissed the share sheet or sharing failed; fall back to clipboard.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedImage);
+      setShareNotice('Image link copied to clipboard.');
+      setTimeout(() => setShareNotice(null), 2500);
+    } catch {
+      setShareNotice('Sharing is not available in this browser.');
+      setTimeout(() => setShareNotice(null), 2500);
+    }
   };
 
   const leftPanelContent = (
@@ -398,17 +429,24 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
           <Download className="w-4 h-4" />
           Download
         </button>
-        <button className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2">
+        <button onClick={handleShare} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2">
           <Share2 className="w-4 h-4" />
           Share
         </button>
-        <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+        <button
+          onClick={() => navigate('/editor')}
+          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          title="Edit in the full editor"
+          aria-label="Edit in the full editor"
+        >
           <Edit3 className="w-4 h-4" />
         </button>
         <button onClick={() => setGeneratedImage(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
+
+      {shareNotice && <p className="text-xs text-gray-500 mt-2 text-center">{shareNotice}</p>}
 
       {generationHistory.length > 1 && (
         <div>

@@ -31,6 +31,7 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingMessage, setProcessingMessage] = useState('');
+  const [conversionError, setConversionError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [selectedPreset, setSelectedPreset] = useState<string>('zoom');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -66,6 +67,10 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
           }
         } catch (error) {
           console.error('Error checking video status:', error);
+          clearInterval(statusInterval);
+          setConversionError('Could not check the video processing status. Please try generating again.');
+          setProcessingMessage('');
+          setIsConverting(false);
         }
       }, 2000);
     }
@@ -97,6 +102,7 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
     
     try {
       setIsConverting(true);
+      setConversionError(null);
       setProcessingProgress(0);
       setProcessingMessage('Initializing video conversion...');
       
@@ -107,6 +113,8 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
       setProcessingMessage('Processing your video...');
     } catch (error) {
       console.error('Error converting image to video:', error);
+      setConversionError(error instanceof Error ? error.message : 'Video conversion failed. Please try again.');
+      setProcessingMessage('');
       setIsConverting(false);
     }
   };
@@ -329,6 +337,13 @@ const VideoConverter: React.FC<VideoConverterProps> = ({
                   style={{ width: `${processingProgress}%` }}
                 ></div>
               </div>
+            </div>
+          )}
+
+          {/* Conversion Error */}
+          {conversionError && (
+            <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-sm text-red-700" role="alert">
+              {conversionError}
             </div>
           )}
         </div>

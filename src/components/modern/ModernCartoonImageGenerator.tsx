@@ -25,6 +25,7 @@ const ModernCartoonImageGenerator: React.FC<ModernCartoonImageGeneratorProps> = 
   const [error, setError] = useState<string | null>(null);
   const [selectedTheme, setSelectedTheme] = useState(cartoonThemes[0]);
   const [colorfulness, setColorfulness] = useState(80);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const handleDrop = (item: TokenDragItem, caretPosition: number) => {
     const tokenText = `[${item.tokenKey}]`;
@@ -60,6 +61,34 @@ const ModernCartoonImageGenerator: React.FC<ModernCartoonImageGeneratorProps> = 
       setError(err instanceof Error ? err.message : 'Failed to generate image');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!generatedImage) return;
+
+    const shareData = {
+      title: 'My Cartoon Image',
+      text: 'Check out the cartoon image I created!',
+      url: generatedImage
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // User dismissed the share sheet or sharing failed; fall back to clipboard.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedImage);
+      setShareNotice('Image link copied to clipboard.');
+      setTimeout(() => setShareNotice(null), 2500);
+    } catch {
+      setShareNotice('Sharing is not available in this browser.');
+      setTimeout(() => setShareNotice(null), 2500);
     }
   };
 
@@ -121,8 +150,9 @@ const ModernCartoonImageGenerator: React.FC<ModernCartoonImageGeneratorProps> = 
       </div>
       <div className="flex gap-3">
         <button onClick={() => { const link = document.createElement('a'); link.href = generatedImage; link.download = `cartoon-${Date.now()}.png`; link.click(); }} className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center justify-center gap-2"><Download className="w-4 h-4" />Download</button>
-        <button className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center justify-center gap-2"><Share2 className="w-4 h-4" />Share</button>
+        <button onClick={handleShare} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center justify-center gap-2"><Share2 className="w-4 h-4" />Share</button>
       </div>
+      {shareNotice && <p className="text-xs text-gray-500 mt-2 text-center">{shareNotice}</p>}
     </div>
   ) : (
     <EmptyState icon={ImageIcon} title="No Cartoon Generated Yet" description="Select a style and describe your character or scene" tips={['Try Disney style for classic characters', 'Anime works great for action scenes', 'Pixar style for 3D-looking cartoons']} />

@@ -1,20 +1,42 @@
-/**
- * QA -- OpenAI-backed feature function contract tests (no live API keys).
- *
- * Covers the six former-Freepik AI functions that were reimplemented on
- * OpenAI GPT Image 2.5 / the Responses API, keeping their existing frontend
- * contract:
- *
- *   node qa/openai-functions.test.mjs
- *
- * The Deno global is stubbed, global fetch is routed to fake Supabase auth /
- * rate-limit endpoints and fake OpenAI upstreams, and the real edge function
- * files on disk are imported unchanged.
- */
-
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { register } from 'node:module';
+
+function resolveSelfPath() {
+  const fromImportMeta = new URL('./openai-functions.test.mjs', import.meta.url);
+  if (fromImportMeta.protocol === 'file:') return fileURLToPath(fromImportMeta);
+  const fromCwd = join(process.cwd(), 'qa', 'openai-functions.test.mjs');
+  if (existsSync(fromCwd)) return fromCwd;
+  throw new Error('Cannot locate qa/openai-functions.test.mjs');
+}
+
+const SCRIPT_PATH = resolveSelfPath();
+const REPO_ROOT = join(SCRIPT_PATH, '..', '..');
+const UNDER_VITEST = Boolean(process.env.VITEST || process.env.VITEST_WORKER_ID);
+
+if (UNDER_VITEST) {
+  const { test } = await import('vitest');
+  const { spawnSync } = await import('node:child_process');
+  test('OpenAI-backed function contract suite (qa/openai-functions.test.mjs) passes under node', () => {
+    const childEnv = { ...process.env };
+    delete childEnv.VITEST;
+    delete childEnv.VITEST_WORKER_ID;
+    delete childEnv.VITEST_POOL_ID;
+    const res = spawnSync(process.execPath, ['--experimental-strip-types', SCRIPT_PATH], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      env: childEnv,
+    });
+    if (res.error) throw res.error;
+    assert.equal(res.status, 0, `node contract runner failed:\n${res.stdout}\n${res.stderr}`);
+  });
+} else {
+
+
+
 
 const denoEnv = new Map();
 const servedHandlers = [];
@@ -262,3 +284,4 @@ test('missing imageUrl returns 400', async () => {
   const res = await invoke(removeBgHandler, { body: { action: 'remove' } });
   assert.equal(res.status, 400);
 });
+}

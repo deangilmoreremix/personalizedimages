@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Sparkles, SlidersHorizontal, Lightbulb, Dices, Shapes, PaintBucket, Tag } from 'lucide-react';
 import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
+import { callEdgeFunction } from '../utils/supabaseClient';
+import { generateImageWithGemini, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import DroppableInput from './DroppableInput';
@@ -28,7 +30,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider] = useState<'openai'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [sceneType, setSceneType] = useState<string>('nature');
@@ -38,6 +40,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [includePersonalization, setIncludePersonalization] = useState(true);
   const [customCharacterName, setCustomCharacterName] = useState('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [referenceNotice, setReferenceNotice] = useState<string | null>(null);
 
   const [personalizedContent, setPersonalizedContent] = useState('');
   const { shouldShowPanel } = usePersonalizationPreferences('ghibli');
@@ -153,6 +156,25 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
     }, 100);
   };
 
+  const generateGhibliWithProvider = async (styledPrompt: string): Promise<string> => {
+    if (selectedProvider === 'gemini') {
+      return generateImageWithGemini(styledPrompt, '16:9', 'illustration');
+    }
+
+    if (selectedProvider === 'gemini-nano') {
+      return generateImageWithGeminiNano(styledPrompt, {
+        style: 'ghibli',
+        aspectRatio: '16:9'
+      });
+    }
+
+    const result = await generateImage(styledPrompt, {
+      style: 'Studio Ghibli anime',
+      category: 'ghibli'
+    });
+    return result.imageUrl;
+  };
+
   const handleGenerateImage = async () => {
     if (!prompt) {
       const newPrompt = generatePrompt();
@@ -161,26 +183,56 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
         return;
       }
     }
-
     try {
       setIsGenerating(true);
       setError(null);
-      
+      setReferenceNotice(null);
+
       const finalPrompt = prompt || generatePrompt();
-      console.log(`🌟 Generating Ghibli-style image with ${selectedProvider}:`, { 
-        finalPrompt, 
+      console.log(`🌟 Generating Ghibli-style image with ${selectedProvider}:`, {
+        finalPrompt,
         hasReferenceImage: !!referenceImage
       });
-      
-      const styledPrompt = `${finalPrompt} (Studio Ghibli anime art style, soft watercolor palette, dreamy atmosphere)`;
-      const result = await generateImage(styledPrompt, {
-        style: 'Studio Ghibli anime',
-        category: 'ghibli'
-      });
 
-      setGeneratedImage(result.imageUrl);
+      const styledPrompt = `${finalPrompt} (Studio Ghibli anime art style, soft watercolor palette, dreamy atmosphere)`;
+
+      let imageUrl: string;
+
+      if (referenceImage) {
+        // Route through the dedicated Ghibli edge function so the reference image is
+        // actually sent to the image provider. The function only accepts http(s) URLs,
+        // so locally uploaded (data:) references fall back to prompt-only generation.
+        const isHttpReference = /^https?:\/\//i.test(referenceImage);
+
+        if (isHttpReference) {
+          try {
+            const referenceResult = await callEdgeFunction('ghibli-image', {
+              prompt: styledPrompt,
+              provider: selectedProvider === 'gemini' ? 'gemini' : 'openai',
+              referenceImageUrl: referenceImage
+            });
+
+            if (referenceResult?.imageUrl) {
+              imageUrl = referenceResult.imageUrl;
+            } else {
+              throw new Error('Ghibli style service returned no image');
+            }
+          } catch (referenceError) {
+            console.warn('Reference image generation failed, falling back to prompt-only generation:', referenceError);
+            imageUrl = await generateGhibliWithProvider(styledPrompt);
+            setReferenceNotice('The reference image could not be processed, so the image was generated from the prompt only.');
+          }
+        } else {
+          imageUrl = await generateGhibliWithProvider(styledPrompt);
+          setReferenceNotice('The Ghibli service only accepts reference images hosted at a web URL, so this image was generated from the prompt only.');
+        }
+      } else {
+        imageUrl = await generateGhibliWithProvider(styledPrompt);
+      }
+
+      setGeneratedImage(imageUrl);
       if (onImageGenerated) {
-        onImageGenerated(result.imageUrl);
+        onImageGenerated(imageUrl);
       }
     } catch (err) {
       if (err instanceof InsufficientCreditsError) {
@@ -489,6 +541,12 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
           {error && (
             <div className={getAlertClasses('error')}>
               {error}
+            </div>
+          )}
+
+          {referenceNotice && (
+            <div className={getAlertClasses('warning')}>
+              {referenceNotice}
             </div>
           )}
 

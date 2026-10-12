@@ -29,6 +29,7 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
   const [selectedModel, setSelectedModel] = useState('openai');
   const [prompt, setPrompt] = useState('');
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const cancelRef = useRef(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,6 +81,7 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
   const handleProcess = async () => {
     if (!prompt.trim()) return;
     setIsProcessing(true);
+    setError(null);
     setProgress(0);
     cancelRef.current = false;
 
@@ -125,6 +127,24 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
     link.href = url;
     link.download = 'batch-template.csv';
     link.click();
+  };
+
+  const handleDownloadAll = () => {
+    const completed = batchItems.filter(item => item.status === 'completed' && item.imageUrl);
+
+    if (completed.length === 0) {
+      setError('No completed images to download yet.');
+      return;
+    }
+
+    completed.forEach((item, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = item.imageUrl as string;
+        link.download = `batch-image-${item.id}-${index + 1}.png`;
+        link.click();
+      }, index * 300);
+    });
   };
 
   const leftPanelContent = (
@@ -216,8 +236,10 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
           <div><span className="font-semibold">{batchItems.filter(i => i.status === 'processing').length}</span> <span className="text-gray-600">Processing</span></div>
           <div><span className="font-semibold">{batchItems.filter(i => i.status === 'failed').length}</span> <span className="text-gray-600">Failed</span></div>
         </div>
-        <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm flex items-center gap-2 hover:bg-primary-700 transition-colors"><Download className="w-4 h-4" />Download All</button>
+        <button onClick={handleDownloadAll} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm flex items-center gap-2 hover:bg-primary-700 transition-colors"><Download className="w-4 h-4" />Download All</button>
       </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {batchItems.map((item) => (

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, Sparkles, SlidersHorizontal, Lightbulb, Dices, Paintbrush as PaintBrush, Shapes } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
+import { callEdgeFunction } from '../utils/supabaseClient';
+import { generateImageWithGemini, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
 import cartoonThemesConfig from '../data/cartoonThemes';
@@ -30,7 +32,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider] = useState<'openai'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
   const [personalizedContent, setPersonalizedContent] = useState('');
   const { shouldShowPanel } = usePersonalizationPreferences('cartoon');
@@ -44,6 +46,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [showTokenPalette, setShowTokenPalette] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+  const [referenceNotice, setReferenceNotice] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [showAllThemes, setShowAllThemes] = useState(false);
@@ -82,25 +85,48 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
     try {
       setIsGenerating(true);
       setError(null);
-      
+      setReferenceNotice(null);
+
       // Combine the theme prompt with any custom additions
-      const finalPrompt = customPrompt 
+      const finalPrompt = customPrompt
         ? `${prompt} ${customPrompt}`
         : prompt;
-      
+
       console.log(`🎨 Generating cartoon image with ${selectedProvider}:`, { finalPrompt, hasReferenceImage: !!referenceImage });
-      
+
       const themeLabel = cartoonThemesConfig.themes[selectedTheme]?.label || 'cartoon';
       const styledPrompt = `${finalPrompt} (${themeLabel} cartoon style)`;
 
-      const result = await generateImage(styledPrompt, {
-        style: themeLabel,
-        category: 'cartoon'
-      });
+      let imageUrl: string;
 
-      setGeneratedImage(result.imageUrl);
+      if (referenceImage) {
+        // Route through the dedicated cartoon-style edge function so the uploaded
+        // reference image is actually sent to the image provider.
+        try {
+          const referenceResult = await callEdgeFunction('cartoon-style', {
+            prompt: styledPrompt,
+            provider: selectedProvider === 'gemini' ? 'gemini' : 'openai',
+            style: themeLabel,
+            referenceImageUrl: referenceImage
+          });
+
+          if (referenceResult?.imageUrl) {
+            imageUrl = referenceResult.imageUrl;
+          } else {
+            throw new Error('Cartoon style service returned no image');
+          }
+        } catch (referenceError) {
+          console.warn('Reference image generation failed, falling back to prompt-only generation:', referenceError);
+          imageUrl = await generateCartoonWithProvider(styledPrompt, themeLabel);
+          setReferenceNotice('The reference image could not be processed, so the cartoon was generated from the prompt only.');
+        }
+      } else {
+        imageUrl = await generateCartoonWithProvider(styledPrompt, themeLabel);
+      }
+
+      setGeneratedImage(imageUrl);
       if (onImageGenerated) {
-        onImageGenerated(result.imageUrl);
+        onImageGenerated(imageUrl);
       }
     } catch (err) {
       if (err instanceof InsufficientCreditsError) {
@@ -118,6 +144,22 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const handleSurpriseMe = () => {
     const randomIndex = Math.floor(Math.random() * cartoonThemesConfig.themes.length);
     handleThemeSelect(randomIndex);
+  };
+
+  const generateCartoonWithProvider = async (styledPrompt: string, themeLabel: string): Promise<string> => {
+    if (selectedProvider === 'gemini') {
+      return generateImageWithGemini(styledPrompt, '1:1', 'illustration');
+    }
+
+    if (selectedProvider === 'gemini-nano') {
+      return generateImageWithGeminiNano(styledPrompt);
+    }
+
+    const result = await generateImage(styledPrompt, {
+      style: themeLabel,
+      category: 'cartoon'
+    });
+    return result.imageUrl;
   };
   
   // Handle token drop on the prompt textarea
@@ -298,6 +340,12 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
           {error && (
             <div className={getAlertClasses('error')}>
               {error}
+            </div>
+          )}
+
+          {referenceNotice && (
+            <div className={getAlertClasses('warning')}>
+              {referenceNotice}
             </div>
           )}
           

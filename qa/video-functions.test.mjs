@@ -1,5 +1,41 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'node:test';
 import { register } from 'node:module';
+
+function resolveSelfPath() {
+  const fromImportMeta = new URL('./video-functions.test.mjs', import.meta.url);
+  if (fromImportMeta.protocol === 'file:') return fileURLToPath(fromImportMeta);
+  const fromCwd = join(process.cwd(), 'qa', 'video-functions.test.mjs');
+  if (existsSync(fromCwd)) return fromCwd;
+  throw new Error('Cannot locate qa/video-functions.test.mjs');
+}
+
+const SCRIPT_PATH = resolveSelfPath();
+const REPO_ROOT = join(SCRIPT_PATH, '..', '..');
+const UNDER_VITEST = Boolean(process.env.VITEST || process.env.VITEST_WORKER_ID);
+
+if (UNDER_VITEST) {
+  const { test } = await import('vitest');
+  const { spawnSync } = await import('node:child_process');
+  test('MuAPI video function contract suite (qa/video-functions.test.mjs) passes under node', () => {
+    const childEnv = { ...process.env };
+    delete childEnv.VITEST;
+    delete childEnv.VITEST_WORKER_ID;
+    delete childEnv.VITEST_POOL_ID;
+    const res = spawnSync(process.execPath, ['--experimental-strip-types', SCRIPT_PATH], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      env: childEnv,
+    });
+    if (res.error) throw res.error;
+    assert.equal(res.status, 0, `node contract runner failed:\n${res.stdout}\n${res.stderr}`);
+  });
+} else {
+
+
 
 const denoEnv = new Map();
 const servedHandlers = [];
@@ -138,7 +174,7 @@ const muapiResultCall = () => fetchCalls.find((c) => c.url === MUAPI_RESULT);
 const patchesTo = (suffix) => mock.patches.filter((p) => p && Object.keys(p).length > 0);
 const lastPatch = () => mock.patches[mock.patches.length - 1];
 
-import { test } from 'node:test';
+
 test.beforeEach(() => { resetMocks(); resetEnv(); });
 
 test('image-to-video: submits to MuAPI kling-master with x-api-key and tracks the task', async () => {
@@ -453,3 +489,4 @@ test('video-result: guards still apply', async () => {
   res = await invoke(videoResultHandler, { method: 'OPTIONS' });
   assert.equal(res.status, 200);
 });
+}

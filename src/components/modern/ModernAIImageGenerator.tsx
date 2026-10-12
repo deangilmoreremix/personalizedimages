@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Upload, Sparkles, RefreshCw, Download, Heart, Folder, Tag, Image as ImageIcon, Search, ImagePlus } from 'lucide-react';
 import FullScreenLayout from '../layout/FullScreenLayout';
 import ModernTopHeader from '../layout/ModernTopHeader';
@@ -43,6 +44,9 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   const [quality, setQuality] = useState<'standard' | 'hd'>('standard');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [style, setStyle] = useState('natural');
+  const [error, setError] = useState<string | null>(null);
+  const [savedImageId, setSavedImageId] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   // Asset integration
   const assetIntegration = useAssetIntegration({
@@ -50,6 +54,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
     preferredTypes: ['image'],
     autoTrackUsage: true
   });
+  const navigate = useNavigate();
 
   // Stock image picker
   const [isStockPickerOpen, setIsStockPickerOpen] = useState(false);
@@ -105,6 +110,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
+    setError(null);
     const startTime = Date.now();
 
     try {
@@ -147,10 +153,11 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       setGeneratedImages(prev => [imageUrl, ...prev]);
       onImageGenerated(imageUrl);
       setActiveTab('result');
+      setIsFavorite(false);
 
       // Save to cloud gallery
       try {
-        await cloudGalleryService.saveImage({
+        const saved = await cloudGalleryService.saveImage({
           image_url: imageUrl,
           prompt: processedPrompt,
           enhanced_prompt: enhancedPrompt,
@@ -162,13 +169,33 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
           tags: [],
           generation_time_ms: generationTimeMs
         });
+        setSavedImageId(saved?.id || null);
       } catch (err) {
         console.warn('Failed to save to gallery:', err);
+        setSavedImageId(null);
       }
     } catch (err) {
       console.error('Generation failed:', err);
+      setError(err instanceof Error ? err.message : 'Image generation failed. Please try again.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    const nextFavorite = !isFavorite;
+    setIsFavorite(nextFavorite);
+
+    if (!savedImageId) {
+      setError('This image is not saved to your gallery yet, so the favorite could not be stored. Open the gallery to manage favorites.');
+      return;
+    }
+
+    try {
+      await cloudGalleryService.toggleFavorite(savedImageId, nextFavorite);
+    } catch (err) {
+      console.warn('Failed to update favorite:', err);
+      setError('Could not update the favorite in your gallery. Please try again from the gallery.');
     }
   };
 
@@ -359,6 +386,11 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
             Generated in {(generationTime / 1000).toFixed(2)}s
           </p>
         )}
+        {error && (
+          <p className="text-xs text-red-600 mt-2 text-center" role="alert">
+            {error}
+          </p>
+        )}
       </LeftPanelFooter>
     </LeftPanel>
   );
@@ -368,13 +400,28 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-900">My Result</h2>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Heart className="w-5 h-5 text-gray-600" />
+          <button
+            onClick={handleToggleFavorite}
+            className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${isFavorite ? 'text-red-500' : 'text-gray-600'}`}
+            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Heart className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <button
+            onClick={() => navigate('/gallery')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Organize this image into a folder in the gallery"
+            aria-label="Open gallery folders"
+          >
             <Folder className="w-5 h-5 text-gray-600" />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <button
+            onClick={() => navigate('/gallery')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Manage tags in the gallery"
+            aria-label="Open gallery tags"
+          >
             <Tag className="w-5 h-5 text-gray-600" />
           </button>
         </div>

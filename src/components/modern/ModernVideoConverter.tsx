@@ -7,7 +7,7 @@ import RightPanel from '../layout/RightPanel';
 import EmptyState from '../layout/EmptyState';
 import GuideContent from '../layout/GuideContent';
 import APIContent from '../layout/APIContent';
-import { convertImageToVideo } from '../../utils/videoApi';
+import { callEdgeFunction, isSupabaseConfigured } from '../../utils/supabaseClient';
 
 const ModernVideoConverter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'result' | 'guide' | 'api'>('result');
@@ -50,22 +50,29 @@ const ModernVideoConverter: React.FC = () => {
     }, 500);
 
     try {
-      const result = await convertImageToVideo(sourceImage, {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Video conversion service is not configured. Please try again later.');
+      }
+
+      // The image-to-video edge function reads duration and prompt at the top level
+      // of the request body, so they are sent directly instead of nested in options.
+      const result = await callEdgeFunction('image-to-video', {
+        imageUrl: sourceImage,
         duration,
-        effect: effect as any,
-        resolution: resolution as any,
-        outputFormat: 'mp4',
-        quality: 'high',
+        prompt: `Create a smooth cinematic ${effect} motion animation from this image at ${resolution} quality.`
       });
 
       clearInterval(progressInterval);
       setProgress(100);
 
-      if (result && (result as any).videoUrl) {
-        setVideoUrl((result as any).videoUrl);
+      if (result && result.videoUrl) {
+        setVideoUrl(result.videoUrl);
       } else if (result && result.id) {
         setVideoUrl(null);
         setError('Video is being processed. Check back in a few moments.');
+      } else {
+        setVideoUrl(null);
+        setError(result?.error || 'Video conversion failed. Please try again.');
       }
     } catch (err: any) {
       clearInterval(progressInterval);

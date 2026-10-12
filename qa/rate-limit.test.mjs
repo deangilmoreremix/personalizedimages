@@ -1,27 +1,44 @@
-/**
- * QA -- rate-limit (shared-table safety) regression tests.
- *
- * The rate_limits table is SHARED with other VideoRemix applications. These
- * tests pin the shared-database safety contract of checkRateLimit() in
- * supabase/functions/_shared/cors.ts and of the migration
- * supabase/migrations/20261011120500_fix_edge_function_db_contracts.sql:
- *
- *   1. Edge rows are namespaced with an `edge:` identifier so they can never
- *      collide with other apps' check_rate_limit() RPC rows.
- *   2. Inserts use `ON CONFLICT DO NOTHING` (resolution=ignore-duplicates),
- *      which needs no unique index on this shared table.
- *   3. The SELECT picks the freshest window (order=window_start.desc).
- *   4. The migration never deletes or de-duplicates shared rows and never
- *      creates a unique index on rate_limits (which would break the shared
- *      check_rate_limit RPC).
- *
- * Run: node qa/rate-limit.test.mjs
- */
-
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { register } from 'node:module';
+
+function resolveSelfPath() {
+  const fromImportMeta = new URL('./rate-limit.test.mjs', import.meta.url);
+  if (fromImportMeta.protocol === 'file:') return fileURLToPath(fromImportMeta);
+  const fromCwd = join(process.cwd(), 'qa', 'rate-limit.test.mjs');
+  if (existsSync(fromCwd)) return fromCwd;
+  throw new Error('Cannot locate qa/rate-limit.test.mjs');
+}
+
+const SCRIPT_PATH = resolveSelfPath();
+const REPO_ROOT = join(SCRIPT_PATH, '..', '..');
+const UNDER_VITEST = Boolean(process.env.VITEST || process.env.VITEST_WORKER_ID);
+
+if (UNDER_VITEST) {
+  const { test } = await import('vitest');
+  const { spawnSync } = await import('node:child_process');
+  test('rate-limit shared-table safety suite (qa/rate-limit.test.mjs) passes under node', () => {
+    const childEnv = { ...process.env };
+    delete childEnv.VITEST;
+    delete childEnv.VITEST_WORKER_ID;
+    delete childEnv.VITEST_POOL_ID;
+    const res = spawnSync(process.execPath, ['--experimental-strip-types', SCRIPT_PATH], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      env: childEnv,
+    });
+    if (res.error) throw res.error;
+    assert.equal(res.status, 0, `node contract runner failed:\n${res.stdout}\n${res.stderr}`);
+  });
+} else {
+
+
+
+
 
 const denoEnv = new Map();
 
@@ -204,3 +221,4 @@ test('migration adds the credit_transactions CHECK as NOT VALID with a separate 
   assert.match(sql, /credit_transactions_type_check[\s\S]*?NOT\s+VALID/i);
   assert.match(sql, /VALIDATE\s+CONSTRAINT\s+credit_transactions_type_check/i);
 });
+}

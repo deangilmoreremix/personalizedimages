@@ -163,14 +163,7 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
     } catch (err) {
       console.error('❌ Failed to generate wrestling action figure:', err);
       setError(`Failed to generate action figure: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      
-      // Fallback to a placeholder image for better UX
-      const placeholderUrl = `https://placehold.co/800/333/FFF?text=Generation+Failed`;
-      setGeneratedFigure(placeholderUrl);
-      
-      if (onImageGenerated) {
-        onImageGenerated(placeholderUrl);
-      }
+      setGeneratedFigure(null);
     } finally {
       setIsGenerating(false);
     }

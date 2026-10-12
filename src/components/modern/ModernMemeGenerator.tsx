@@ -27,6 +27,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
   const [generatedMeme, setGeneratedMeme] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiEnhancementNotice, setAiEnhancementNotice] = useState<string | null>(null);
 
   const [textColor, setTextColor] = useState('#FFFFFF');
   const [strokeColor, setStrokeColor] = useState('#000000');
@@ -38,6 +39,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
   const [aiPrompt, setAiPrompt] = useState('');
   const [showTextColorPicker, setShowTextColorPicker] = useState(false);
   const [showStrokeColorPicker, setShowStrokeColorPicker] = useState(false);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const templates = getAllTemplates();
 
@@ -66,6 +68,54 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
     }
   };
 
+  const generateCanvasMeme = (processedTop: string, processedBottom: string) => {
+    if (!memeImage) return;
+
+    const canvas = document.createElement('canvas');
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = textColor;
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
+
+        const drawText = (text: string, x: number, y: number) => {
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = strokeWidth;
+          ctx.lineJoin = 'round';
+          ctx.strokeText(text, x, y);
+          ctx.fillText(text, x, y);
+        };
+
+        const applyTransform = (text: string) => {
+          if (textTransform === 'uppercase') return text.toUpperCase();
+          if (textTransform === 'lowercase') return text.toLowerCase();
+          return text.charAt(0).toUpperCase() + text.slice(1);
+        };
+
+        if (processedTop) {
+          drawText(applyTransform(processedTop), canvas.width / 2, fontSize + 20);
+        }
+        if (processedBottom) {
+          drawText(applyTransform(processedBottom), canvas.width / 2, canvas.height - 30);
+        }
+
+        const memeUrl = canvas.toDataURL('image/png');
+        setGeneratedMeme(memeUrl);
+        if (onMemeGenerated) onMemeGenerated(memeUrl);
+      }
+    };
+
+    img.src = memeImage;
+  };
+
   const handleGenerate = async () => {
     if (!memeImage) {
       setError('Please select a meme template');
@@ -74,6 +124,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
 
     setIsGenerating(true);
     setError(null);
+    setAiEnhancementNotice(null);
 
     try {
       const processedTop = replaceTokens(topText);
@@ -81,52 +132,18 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
 
       if (useAiEnhancement && aiPrompt) {
         const enhancedUrl = await generateMemeWithReference(processedTop, processedBottom, memeImage, aiPrompt);
-        setGeneratedMeme(enhancedUrl);
-        if (onMemeGenerated) onMemeGenerated(enhancedUrl);
+        // generateMemeWithReference returns the unmodified reference image when the
+        // edge function is unavailable. Treat that as a failure instead of presenting
+        // the original template as an AI-generated meme.
+        if (enhancedUrl && enhancedUrl !== memeImage) {
+          setGeneratedMeme(enhancedUrl);
+          if (onMemeGenerated) onMemeGenerated(enhancedUrl);
+        } else {
+          setAiEnhancementNotice('AI enhancement is unavailable right now. Generated a standard meme instead.');
+          generateCanvasMeme(processedTop, processedBottom);
+        }
       } else {
-        const canvas = document.createElement('canvas');
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-
-        img.onload = () => {
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-
-          if (ctx) {
-            ctx.drawImage(img, 0, 0);
-            ctx.textAlign = 'center';
-            ctx.fillStyle = textColor;
-            ctx.font = `bold ${fontSize}px ${fontFamily}`;
-
-            const drawText = (text: string, x: number, y: number) => {
-              ctx.strokeStyle = strokeColor;
-              ctx.lineWidth = strokeWidth;
-              ctx.lineJoin = 'round';
-              ctx.strokeText(text, x, y);
-              ctx.fillText(text, x, y);
-            };
-
-            const applyTransform = (text: string) => {
-              if (textTransform === 'uppercase') return text.toUpperCase();
-              if (textTransform === 'lowercase') return text.toLowerCase();
-              return text.charAt(0).toUpperCase() + text.slice(1);
-            };
-
-            if (processedTop) {
-              drawText(applyTransform(processedTop), canvas.width / 2, fontSize + 20);
-            }
-            if (processedBottom) {
-              drawText(applyTransform(processedBottom), canvas.width / 2, canvas.height - 30);
-            }
-
-            const memeUrl = canvas.toDataURL('image/png');
-            setGeneratedMeme(memeUrl);
-            if (onMemeGenerated) onMemeGenerated(memeUrl);
-          }
-        };
-
-        img.src = memeImage;
+        generateCanvasMeme(processedTop, processedBottom);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate meme');
@@ -141,6 +158,33 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
     link.href = generatedMeme;
     link.download = `meme-${Date.now()}.png`;
     link.click();
+  };
+
+  const handleShare = async () => {
+    if (!generatedMeme) return;
+    const shareData = {
+      title: 'My Meme',
+      text: 'Check out the meme I created!',
+      url: generatedMeme
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // User dismissed the share sheet or sharing failed; fall back to clipboard.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedMeme);
+      setShareNotice('Image link copied to clipboard.');
+      setTimeout(() => setShareNotice(null), 2500);
+    } catch {
+      setShareNotice('Sharing is not available in this browser.');
+      setTimeout(() => setShareNotice(null), 2500);
+    }
   };
 
   const leftPanelContent = (
@@ -311,6 +355,7 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
           )}
         </button>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+        {aiEnhancementNotice && <p className="text-sm text-amber-600 mt-2">{aiEnhancementNotice}</p>}
       </LeftPanelFooter>
     </LeftPanel>
   );
@@ -329,11 +374,12 @@ const ModernMemeGenerator: React.FC<ModernMemeGeneratorProps> = ({ tokens, onMem
           <Download className="w-4 h-4" />
           Download
         </button>
-        <button className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2">
+        <button onClick={handleShare} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2">
           <Share2 className="w-4 h-4" />
           Share
         </button>
       </div>
+      {shareNotice && <p className="text-xs text-gray-500 mt-2 text-center">{shareNotice}</p>}
     </div>
   ) : (
     <EmptyState

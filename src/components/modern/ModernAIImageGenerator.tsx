@@ -23,6 +23,8 @@ import {
 import { cloudGalleryService } from '../../services/cloudGalleryService';
 import { promptEnhancementService } from '../../services/promptEnhancementService';
 import { FAST_IMAGE_MODEL_ID } from '../../utils/openaiClient';
+import VoiceInputButton from '../shared/VoiceInputButton';
+import { saveImage, listImages, deleteImage, pruneImages, requestPersistence, type LocalImage } from '../../services/localStore';
 
 interface ModernAIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -41,6 +43,8 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   // Live streaming preview (progressive partial images from the Responses API)
+  // Local-first history (IndexedDB): survives reloads, works offline, needs no login
+  const [history, setHistory] = useState<Array<LocalImage & { url: string }>>([]);
   const [livePreview, setLivePreview] = useState<{ dataUrl: string; index: number } | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const [generationTime, setGenerationTime] = useState<number | null>(null);
@@ -165,6 +169,12 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       onImageGenerated(imageUrl);
       setActiveTab('result');
 
+      // Keep a local copy (best effort)
+      saveImage({ image: imageUrl, prompt: processedPrompt, model: selectedModel, source: 'modern-ai-image' })
+        .then(() => pruneImages(200))
+        .then(refreshHistory)
+        .catch(() => {});
+
       // Save to cloud gallery
       try {
         await cloudGalleryService.saveImage({
@@ -192,6 +202,23 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   };
 
   const handleStop = () => abortRef.current?.abort();
+
+  const refreshHistory = React.useCallback(async () => {
+    try {
+      const items = await listImages(24);
+      setHistory(prev => {
+        prev.forEach(h => URL.revokeObjectURL(h.url));
+        return items.map(i => ({ ...i, url: URL.createObjectURL(i.blob) }));
+      });
+    } catch {
+      /* IndexedDB unavailable (private mode): history is simply off */
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshHistory();
+    requestPersistence();
+  }, [refreshHistory]);
 
   const leftPanelContent = (
     <LeftPanel>
@@ -258,7 +285,10 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 min-h-[100px] text-sm"
         />
         <div className="flex justify-between items-center mt-2">
-          <span className="text-xs text-gray-500">{prompt.length}/500</span>
+          <span className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">{prompt.length}/500</span>
+            <VoiceInputButton onText={(t) => setPrompt(prev => (prev ? prev.trimEnd() + ' ' : '') + t)} />
+          </span>
           <button
             onClick={async () => {
               try {
@@ -398,7 +428,27 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
     </div>
   ) : null;
 
-  const resultContent = generatedImages.length > 0 || livePreviewCard ? (
+  const historyStrip = history.length > 0 ? (
+    <div className="space-y-2" data-testid="local-history">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-900">Saved on this device</h3>
+        <span className="text-xs text-gray-500">{history.length} image{history.length === 1 ? '' : 's'} · private, works offline</span>
+      </div>
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+        {history.map(h => (
+          <div key={h.id} className="group relative aspect-square rounded overflow-hidden bg-gray-100">
+            <img src={h.url} alt={`Saved: ${h.prompt.slice(0, 40)}`} title={h.prompt} className="w-full h-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button className="text-[10px] text-white" onClick={() => setPrompt(h.prompt)}>Reuse prompt</button>
+              <button className="text-[10px] text-white" onClick={() => deleteImage(h.id).then(refreshHistory)}>Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  const resultMain = generatedImages.length > 0 || livePreviewCard ? (
     <div className="space-y-4">
       {livePreviewCard}
       <div className="flex justify-between items-center">
@@ -453,6 +503,13 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
         'Reference images can improve accuracy'
       ]}
     />
+  );
+
+  const resultContent = (
+    <div className="space-y-6">
+      {resultMain}
+      {historyStrip}
+    </div>
   );
 
   const guideContent = (

@@ -11,6 +11,7 @@ import { StockResource } from '../services/stockImageService';
 import { FreepikCompliance } from '../utils/freepikCompliance';
 import { FreepikAttribution } from './shared/FreepikAttribution';
 
+import { resolveTokens } from '../utils/tokenText';
 interface AIImageGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -53,7 +54,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
         enhancedPrompt = `${prompt} (using reference image: ${referenceImage.title || 'Freepik image'})`;
       }
 
-      const result = await generateImage(enhancedPrompt, { category: 'ai-image' });
+      const result = await generateImage(resolveTokens(enhancedPrompt, tokens), { category: 'ai-image' });
       setGeneratedImage(result.imageUrl);
       onImageGenerated(result.imageUrl);
     } catch (err) {

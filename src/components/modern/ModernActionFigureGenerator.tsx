@@ -14,6 +14,7 @@ import { TokenDragItem } from '../../types/DragTypes';
 import { generateActionFigure } from '../../utils/api';
 import templatesService, { ActionFigureTemplate } from '../../services/templatesService';
 
+import { resolveTokens } from '../../utils/tokenText';
 interface ModernActionFigureGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -124,7 +125,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
     const startTime = Date.now();
 
     try {
-      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      const imageUrl = await generateActionFigure(resolveTokens(finalPrompt, tokens), selectedProvider, referenceImage || undefined);
       setGeneratedImage(imageUrl);
       setGenerationTime(Date.now() - startTime);
       setGenerationHistory(prev => [imageUrl, ...prev].slice(0, 10));

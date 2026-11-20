@@ -8,6 +8,8 @@ import EmptyState from '../layout/EmptyState';
 import GuideContent from '../layout/GuideContent';
 import APIContent from '../layout/APIContent';
 import { generateImage } from '../../services/imageGenerationService';
+import { parseCsv } from '../../utils/csv';
+import { resolveTokens } from '../../utils/tokenText';
 
 interface BatchItem {
   id: number;
@@ -33,49 +35,26 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === 'text/csv') {
+    // Excel often labels CSVs application/vnd.ms-excel, so accept by extension as well as MIME type.
+    if (file && (file.type === 'text/csv' || /\.csv$/i.test(file.name))) {
       setCsvFile(file);
       parseCSV(file);
     }
+    event.target.value = '';
   };
 
   const parseCSV = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
-
-      const items: BatchItem[] = lines.slice(1)
-        .filter(line => line.trim())
-        .map((line, index) => {
-          const values = line.split(',').map(v => v.trim());
-          const data: Record<string, string> = {};
-          headers.forEach((header, i) => {
-            data[header] = values[i] || '';
-          });
-          return {
-            id: index,
-            data,
-            status: 'pending' as const
-          };
-        });
-
-      setBatchItems(items);
+      const rows = parseCsv(e.target?.result as string);
+      setBatchItems(rows.map((data, index) => ({ id: index, data, status: 'pending' as const })));
     };
     reader.readAsText(file);
   };
 
-  const resolvePromptForItem = (template: string, itemData: Record<string, string>): string => {
-    let resolved = template;
-    Object.entries(itemData).forEach(([key, value]) => {
-      resolved = resolved.replace(new RegExp(`\\[${key}\\]`, 'gi'), value);
-    });
-    Object.entries(tokens).forEach(([key, value]) => {
-      resolved = resolved.replace(new RegExp(`\\[${key}\\]`, 'gi'), value);
-    });
-    return resolved;
-  };
+  // Row values win over global tokens; matching ignores case/spaces/underscores ("First Name" fills [FIRSTNAME]).
+  const resolvePromptForItem = (template: string, itemData: Record<string, string>): string =>
+    resolveTokens(template, { ...tokens, ...itemData }, { curly: true });
 
   const handleProcess = async () => {
     if (!prompt.trim()) return;

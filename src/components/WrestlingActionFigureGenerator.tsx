@@ -16,6 +16,7 @@ import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 
+import { resolveTokens } from '../utils/tokenText';
 interface WrestlingActionFigureGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -152,7 +153,7 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
       });
       
       // Call the API to generate the figure
-      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      const imageUrl = await generateActionFigure(resolveTokens(finalPrompt, tokens), selectedProvider, referenceImage || undefined);
       
       console.log('✅ Successfully generated wrestling action figure');
       setGeneratedFigure(imageUrl);

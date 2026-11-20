@@ -19,6 +19,7 @@ import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import PersonalizationToggle from './PersonalizationToggle';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
+import { resolveTokens } from '../utils/tokenText';
 interface CartoonImageGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -93,7 +94,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
       const themeLabel = cartoonThemesConfig.themes[selectedTheme]?.label || 'cartoon';
       const styledPrompt = `${finalPrompt} (${themeLabel} cartoon style)`;
 
-      const result = await generateImage(styledPrompt, {
+      const result = await generateImage(resolveTokens(styledPrompt, tokens), {
         style: themeLabel,
         category: 'cartoon'
       });

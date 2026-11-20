@@ -12,7 +12,8 @@
     "sync:responses": "cp src/utils/openaiResponses.ts supabase/functions/_shared/openai-responses.ts",
     "copy:ort": "node scripts/copy-ort.mjs",
     "predev": "node scripts/copy-ort.mjs",
-    "prebuild": "node scripts/copy-ort.mjs"
+    "prebuild": "node scripts/copy-ort.mjs",
+    "e2e": "node e2e/run.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.2",

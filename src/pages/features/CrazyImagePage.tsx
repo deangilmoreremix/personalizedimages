@@ -7,6 +7,8 @@ import {
 import { Link } from 'react-router-dom';
 import { generateImage } from '../../services/imageGenerationService';
 
+import { resolveTokens } from '../../utils/tokenText';
+import { createDefaultTokenValues } from '../../types/personalization';
 const CRAZY_PRESETS = [
   {
     id: 'surreal-mashup',
@@ -96,7 +98,7 @@ export default function CrazyImagePage() {
     setError(null);
 
     try {
-      const result = await generateImage(prompt, {
+      const result = await generateImage(resolveTokens(prompt, createDefaultTokenValues()), {
         size: '1024x1024',
         quality: 'hd',
         category: 'crazy-image',

@@ -15,6 +15,7 @@ import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
+import { resolveTokens } from '../utils/tokenText';
 interface MusicStarActionFigureGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -151,7 +152,7 @@ const MusicStarActionFigureGenerator: React.FC<MusicStarActionFigureGeneratorPro
       });
       
       // Call the API to generate the figure
-      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      const imageUrl = await generateActionFigure(resolveTokens(finalPrompt, tokens), selectedProvider, referenceImage || undefined);
       
       console.log('✅ Successfully generated music star action figure');
       setGeneratedFigure(imageUrl);

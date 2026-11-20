@@ -39,7 +39,6 @@ export interface EditorDoc {
   layers: Layer[]; // bottom -> top
 }
 
-export type TokenValues = Record<string, string>;
 
 let counter = 0;
 export const newLayerId = () => `layer_${Date.now().toString(36)}_${(counter++).toString(36)}`;
@@ -89,21 +88,9 @@ export function createImageLayer(doc: Pick<EditorDoc, 'width' | 'height'>, src: 
   };
 }
 
-/** FIRST_NAME, first-name and FirstName all compare equal: "FIRSTNAME". */
-export const compactKey = (k: string) => k.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-
-/** Replace [TOKEN] placeholders; unknown tokens are left as-is so mistakes stay visible. */
-export function resolveTokens(text: string, values: TokenValues): string {
-  const byCompact: Record<string, string> = {};
-  for (const [k, v] of Object.entries(values)) if (v !== undefined && v !== '') byCompact[compactKey(k)] = v;
-  return text.replace(/\[([A-Za-z0-9_]+)\]/g, (m, key: string) => byCompact[compactKey(key)] ?? m);
-}
-
-/** Tokens used by the layers that none of the given columns can fill. */
-export function unmatchedTokens(tokens: string[], columns: string[]): string[] {
-  const have = new Set(columns.map(compactKey));
-  return tokens.filter(t => !have.has(compactKey(t)));
-}
+import { compactKey, resolveTokens, unmatchedTokens, type TokenValues } from '../../utils/tokenText';
+export { compactKey, resolveTokens, unmatchedTokens };
+export type { TokenValues };
 
 /** Distinct token names used by any text layer, in first-use order. */
 export function collectTokens(layers: Layer[]): string[] {
@@ -156,38 +143,4 @@ export function isEditorDoc(x: any): x is EditorDoc {
   return !!x && typeof x.width === 'number' && typeof x.height === 'number' && Array.isArray(x.layers);
 }
 
-/** Minimal RFC-4180 CSV parser (quotes, escaped quotes, CRLF). First row = headers. */
-export function parseCsv(text: string): Array<Record<string, string>> {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = '';
-  let quoted = false;
-  const src = text.replace(/^﻿/, '');
-  for (let i = 0; i < src.length; i++) {
-    const c = src[i];
-    if (quoted) {
-      if (c === '"' && src[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else if (c === '"') quoted = false;
-      else cell += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ',') {
-      row.push(cell);
-      cell = '';
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && src[i + 1] === '\n') i++;
-      row.push(cell);
-      cell = '';
-      rows.push(row);
-      row = [];
-    } else cell += c;
-  }
-  if (cell !== '' || row.length) {
-    row.push(cell);
-    rows.push(row);
-  }
-  const [header, ...body] = rows.filter(r => r.some(v => v.trim() !== ''));
-  if (!header) return [];
-  return body.map(r => Object.fromEntries(header.map((h, i) => [h.trim(), (r[i] ?? '').trim()])));
-}
+export { parseCsv } from '../../utils/csv';

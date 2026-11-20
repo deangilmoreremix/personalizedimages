@@ -25,6 +25,8 @@ import {
   generateImageWithImagen,
   generateImageWithGptImage
 } from '../utils/api';
+import { resolveTokens } from '../utils/tokenText';
+import { createDefaultTokenValues } from '../types/personalization';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface ModelResult {
@@ -104,29 +106,31 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
 
   const generateWithModel = async (modelId: string): Promise<ModelResult> => {
     const startTime = Date.now();
+    // Fill [FIRSTNAME]-style tokens (sample values unless real ones are provided)
+    const resolvedPrompt = resolveTokens(prompt, { ...createDefaultTokenValues(), ...tokens });
 
     try {
       let imageUrl: string;
 
       switch (modelId) {
         case 'openai':
-          imageUrl = await generateImageWithDalle(prompt, {
+          imageUrl = await generateImageWithDalle(resolvedPrompt, {
             size: '1024x1024',
             quality: 'standard',
             style: 'natural'
           });
           break;
         case 'gemini':
-          imageUrl = await generateImageWithGemini(prompt, aspectRatio, imageStyle);
+          imageUrl = await generateImageWithGemini(resolvedPrompt, aspectRatio, imageStyle);
           break;
         case 'imagen':
-          imageUrl = await generateImageWithImagen(prompt, aspectRatio);
+          imageUrl = await generateImageWithImagen(resolvedPrompt, aspectRatio);
           break;
         case 'gemini2flash':
-          imageUrl = await generateImageWithGemini2Flash(prompt);
+          imageUrl = await generateImageWithGemini2Flash(resolvedPrompt);
           break;
         case 'gpt-image-1':
-          imageUrl = await generateImageWithGptImage(prompt);
+          imageUrl = await generateImageWithGptImage(resolvedPrompt);
           break;
         default:
           throw new Error(`Unknown model: ${modelId}`);

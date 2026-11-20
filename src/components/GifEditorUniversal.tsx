@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Pause, Square, Clock, RefreshCw, Download, Trash, Plus, Minus, Layers, Mail, Settings, Sparkles, Image as ImageIcon, Zap, Dices } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { useDropzone } from 'react-dropzone';
-import gifshot from 'gifshot';
+import { encodeGifFromImages } from '../utils/gifEncoder';
 import { FontSelector } from './ui/FontSelector';
 import UniversalGeneratorWrapper from './UniversalGeneratorWrapper';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, getColorClasses, commonStyles } from './ui/design-system';
@@ -346,29 +346,17 @@ const GifEditorUniversal: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }
     });
 
     // Wait for all frame promises to resolve
-    Promise.all(gifFrames).then(processedFrames => {
-      // Generate GIF with gifshot
-      gifshot.createGIF({
-        images: processedFrames.map(f => f.src),
-        gifWidth: gifWidth,
-        gifHeight: gifHeight,
-        interval: processedFrames.map(f => f.delay / 100), // Convert cs to s
-        numFrames: frames.length,
-        frameDuration: 1, // Let individual frame delays control timing
-        sampleInterval: isEmailOptimized ? 12 : 6, // Higher number = smaller file size
-        quality: isEmailOptimized ? 5 : 10,
-        fontWeight: 'normal',
-        fontSize: '16px',
-        fontFamily: 'Arial',
-        textAlign: 'center',
-        textBaseline: 'middle'
-      }, function(obj: any) {
-        if (obj.error) {
-          console.error('GIF generation error:', obj.error);
-          setError('Failed to generate GIF. Please try with fewer frames or different settings.');
-          setIsGenerating(false);
-          return;
-        }
+    Promise.all(gifFrames)
+      .then(processedFrames =>
+        encodeGifFromImages(
+          processedFrames.map(f => ({ src: f.src, delayMs: f.delay * 10 })), // f.delay is centiseconds
+          { width: gifWidth, height: gifHeight },
+          { maxColors: isEmailOptimized ? 64 : 256 }
+        )
+      )
+      .then(gifDataUrl => {
+        const obj = { image: gifDataUrl };
+
 
         setGeneratedGif(obj.image);
 
@@ -383,8 +371,12 @@ const GifEditorUniversal: React.FC<GifEditorProps> = ({ tokens, onGifGenerated }
 
         setIsGenerating(false);
         setError(null); // Clear any previous errors
+      })
+      .catch(err => {
+        console.error('GIF generation error:', err);
+        setError('Failed to generate GIF. Please try with fewer frames or different settings.');
+        setIsGenerating(false);
       });
-    });
   };
 
   const downloadGif = () => {

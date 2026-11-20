@@ -9,6 +9,8 @@ import {
 } from './layerModel';
 import { deleteProject, listImages, listProjects, saveProject, type LocalImage, type LocalProject } from '../../services/localStore';
 import { removeBackgroundBlob } from '../../services/localBackgroundRemoval';
+import { notifyDone } from '../../services/notifications';
+import { trackEvent } from '../../services/analyticsBeacon';
 
 const PRESETS = [
   { label: 'Square 1:1', w: 1080, h: 1080 },
@@ -260,6 +262,8 @@ export default function LayerEditor({ initialImageId }: { initialImageId?: strin
         out.push({ name: `${String(i + 1).padStart(3, '0')}_${label}`, url });
       }
       setBatch(out);
+      trackEvent('batch_rendered', { count: out.length });
+      notifyDone('Personalized images ready', { body: `${out.length} image${out.length === 1 ? '' : 's'} rendered`, tag: 'batch-ready', url: '/features/layer-editor' });
       setStatus(
         `Rendered ${out.length} personalized image${out.length === 1 ? '' : 's'}` +
           (missing.length ? ` — no CSV column for ${missing.map(m => `[${m}]`).join(', ')}` : '')

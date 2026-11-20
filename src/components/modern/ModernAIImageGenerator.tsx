@@ -24,6 +24,8 @@ import { cloudGalleryService } from '../../services/cloudGalleryService';
 import { promptEnhancementService } from '../../services/promptEnhancementService';
 import { FAST_IMAGE_MODEL_ID } from '../../utils/openaiClient';
 import VoiceInputButton from '../shared/VoiceInputButton';
+import { isNotificationSupported, isNotifyEnabled, notifyDone, setNotifyEnabled } from '../../services/notifications';
+import { trackEvent } from '../../services/analyticsBeacon';
 import { saveImage, listImages, deleteImage, pruneImages, requestPersistence, type LocalImage } from '../../services/localStore';
 
 interface ModernAIImageGeneratorProps {
@@ -47,6 +49,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   const [history, setHistory] = useState<Array<LocalImage & { url: string }>>([]);
   const [livePreview, setLivePreview] = useState<{ dataUrl: string; index: number } | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  const [notifyOn, setNotifyOn] = useState(() => isNotifyEnabled());
   const [generationTime, setGenerationTime] = useState<number | null>(null);
   const [quality, setQuality] = useState<'standard' | 'hd'>('standard');
   const [aspectRatio, setAspectRatio] = useState('1:1');
@@ -168,6 +171,9 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       setGeneratedImages(prev => [imageUrl, ...prev]);
       onImageGenerated(imageUrl);
       setActiveTab('result');
+
+      trackEvent('image_generated', { model: selectedModel, ms: generationTimeMs });
+      notifyDone('Your image is ready', { body: processedPrompt.slice(0, 80), tag: 'image-ready', url: '/features/modern-ai-image' });
 
       // Keep a local copy (best effort)
       saveImage({ image: imageUrl, prompt: processedPrompt, model: selectedModel, source: 'modern-ai-image' })
@@ -388,6 +394,17 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       </LeftPanelSection>
 
       <LeftPanelFooter>
+        {isNotificationSupported() && (
+          <label className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+            <input
+              type="checkbox"
+              checked={notifyOn}
+              onChange={async e => setNotifyOn(await setNotifyEnabled(e.target.checked))}
+              aria-label="Notify me when done"
+            />
+            Notify me when done (if I switch tabs)
+          </label>
+        )}
         <button
           onClick={handleGenerate}
           disabled={isGenerating || !prompt.trim()}

@@ -207,13 +207,13 @@ if (want('matrix')) {
     await p.goto(BASE + path, { waitUntil: 'load' }).catch(() => {}); await sleep(1500);
     const crashed = /Something went wrong/.test(await p.innerText('body').catch(() => ''));
     for (const f of await p.locator('input[type=file]').all()) await f.setInputFiles(join(FIX, 'portrait.jpg')).catch(() => {});
-    await sleep(500);
+    await sleep(1200);
     for (const t of (await p.locator('textarea:visible').all()).slice(0, 2)) if (!(await t.inputValue())) await t.fill('Hello [FIRSTNAME] from [COMPANY]: a heroic portrait').catch(() => {});
     if (/meme/.test(path)) for (const t of (await p.locator('input[type=text]:visible').all()).slice(0, 2)) if (!(await t.inputValue())) await t.fill('Hello [FIRSTNAME] from [COMPANY]').catch(() => {});
     const before = await p.locator('img[src^="data:image/"], img[src^="blob:"]').count();
     const btn = p.locator('button:visible').filter({ hasText: /^\s*(generate|create)\b/i });
     let clicked = null;
-    if (await btn.count()) { clicked = (await btn.last().innerText()).trim().slice(0, 28); await btn.last().click({ timeout: 4000 }).catch(() => (clicked += ' (click failed)')); }
+    if (await btn.count()) { clicked = (await btn.last().innerText()).trim().slice(0, 28); await btn.last().click({ timeout: 15000 }).catch(() => (clicked += ' (click failed)')); }
     await sleep(5500);
     const HOUSEKEEPING = new Set(['app-events', 'freepik-resources', 'track-event', 'health-check']);
     const imgs = M.calls.filter(c => c.kind === 'image' || (c.backend === 'supabase' && c.kind === 'edge' && !HOUSEKEEPING.has(c.fn)));

@@ -9,9 +9,13 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "sync:responses": "cp src/utils/openaiResponses.ts supabase/functions/_shared/openai-responses.ts"
+    "sync:responses": "cp src/utils/openaiResponses.ts supabase/functions/_shared/openai-responses.ts",
+    "copy:ort": "node scripts/copy-ort.mjs",
+    "predev": "node scripts/copy-ort.mjs",
+    "prebuild": "node scripts/copy-ort.mjs"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
     "@netlify/functions": "^5.0.1",
     "@resvg/resvg-js": "^2.6.2",
     "@stripe/react-stripe-js": "^2.9.0",

@@ -25,12 +25,17 @@ export function isLocalRemovalSupported(): boolean {
 
 /** Resolves to an object URL of a transparent image. Caller should URL.revokeObjectURL when done. */
 export function removeBackgroundLocal(dataUrl: string, opts: LocalRemovalOptions = {}): Promise<string> {
+  return removeBackgroundBlob(dataUrl, opts).then(blob => URL.createObjectURL(blob));
+}
+
+/** Same, but resolves to the Blob itself (use when you need to embed/store the result). */
+export function removeBackgroundBlob(dataUrl: string, opts: LocalRemovalOptions = {}): Promise<Blob> {
   const { format = 'png', onProgress, signal } = opts;
   if (!isLocalRemovalSupported()) {
     return Promise.reject(new Error('On-device processing is not supported in this browser'));
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise<Blob>((resolve, reject) => {
     const w = getWorker();
     const id = nextId++;
 
@@ -51,7 +56,7 @@ export function removeBackgroundLocal(dataUrl: string, opts: LocalRemovalOptions
         case 'done':
           cleanup();
           onProgress?.(100, 'inference');
-          resolve(URL.createObjectURL(e.data.blob as Blob));
+          resolve(e.data.blob as Blob);
           break;
         case 'error':
           cleanup();

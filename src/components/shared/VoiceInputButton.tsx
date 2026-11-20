@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { decodeToMono16k, isMicSupported, isSpeechToTextSupported, startMicRecording, transcribe, type MicRecording } from '../../services/speechToText';
 

@@ -440,6 +440,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
             <img src={h.url} alt={`Saved: ${h.prompt.slice(0, 40)}`} title={h.prompt} className="w-full h-full object-cover" />
             <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
               <button className="text-[10px] text-white" onClick={() => setPrompt(h.prompt)}>Reuse prompt</button>
+              <a className="text-[10px] text-white underline" href={`/features/layer-editor?image=${encodeURIComponent(h.id)}`}>Edit layers</a>
               <button className="text-[10px] text-white" onClick={() => deleteImage(h.id).then(refreshHistory)}>Delete</button>
             </div>
           </div>

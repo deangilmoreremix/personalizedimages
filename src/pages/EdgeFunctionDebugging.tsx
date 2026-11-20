@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Server, Shield, AlertCircle, CheckCircle, XCircle, 
-  RefreshCw, Info, Code, Terminal, Zap, Cpu, Image as ImageIcon, Workflow, ClipboardCheck
+  RefreshCw, Info, Code, Terminal, Zap, Cpu, Image as ImageIcon, Workflow, ClipboardCheck, Box
 } from 'lucide-react';
 
 import { supabase, isSupabaseConfigured, callEdgeFunction } from '../utils/supabaseClient';

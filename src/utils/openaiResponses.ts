@@ -296,7 +296,8 @@ export function buildTextBody(opts: TextOptions, defaultModel = DEFAULT_TEXT_MOD
         type: 'json_schema',
         name: opts.jsonSchema.name,
         schema: opts.jsonSchema.schema,
-        strict: opts.jsonSchema.strict ?? true
+        // Non-strict by default: strict mode requires additionalProperties:false on every object.
+        strict: opts.jsonSchema.strict ?? false
       }
     };
   }

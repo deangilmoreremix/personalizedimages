@@ -30,7 +30,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider] = useState<'openai'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
   const [personalizedContent, setPersonalizedContent] = useState('');
   const { shouldShowPanel } = usePersonalizationPreferences('cartoon');

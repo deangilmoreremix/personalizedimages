@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import {
   formatTokenForDisplay,

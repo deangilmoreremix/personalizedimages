@@ -4,7 +4,7 @@ import { HowItWorks } from '../../components/HowItWorks';
 import { FAQ } from '../../components/FAQ';
 import { CTASection } from '../../components/CTASection';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Tv, ArrowRight, Film, MonitorPlay, Clapperboard, Camera, Popcorn, Award, Sparkles, Zap } from 'lucide-react';
+import { Tv, ArrowRight, Film, MonitorPlay, Clapperboard, Camera, Popcorn, Award, Sparkles, Zap, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FloatingShape } from '../../components/FloatingElements';
 

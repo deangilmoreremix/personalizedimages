@@ -88,7 +88,7 @@ describe('request builders', () => {
     });
     expect(body.instructions).toBe('be terse');
     expect(body.input).toEqual([{ role: 'user', content: 'hi' }]);
-    expect(body.text.format).toMatchObject({ type: 'json_schema', name: 'x', strict: true });
+    expect(body.text.format).toMatchObject({ type: 'json_schema', name: 'x', strict: false });
     expect(body.max_output_tokens).toBe(50);
   });
 

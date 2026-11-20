@@ -142,14 +142,15 @@ Respond in JSON format:
       }
 
       const result = JSON.parse(response.text);
+      const enhanced: string = typeof result?.enhanced === 'string' && result.enhanced.trim() ? result.enhanced : prompt;
 
       // Analyze the enhanced prompt
-      const analysis = await this.analyzePrompt(result.enhanced, category);
+      const analysis = await this.analyzePrompt(enhanced, category);
 
       return {
         original: prompt,
-        enhanced: result.enhanced,
-        improvements: result.improvements,
+        enhanced,
+        improvements: Array.isArray(result?.improvements) ? result.improvements : [],
         analysis
       };
     } catch (error) {
@@ -182,8 +183,7 @@ Rules:
 
 Category: ${category || 'general'}
 
-Respond with JSON array of strings:
-["suggestion1", "suggestion2", "suggestion3", "suggestion4", "suggestion5"]`;
+Respond in JSON: {"suggestions": ["suggestion1", "suggestion2", "suggestion3", "suggestion4", "suggestion5"]}`;
 
       const response = await callGPT({
         messages: [
@@ -197,8 +197,9 @@ Respond with JSON array of strings:
           json_schema: {
             name: 'prompt_suggestions',
             schema: {
-              type: 'array',
-              items: { type: 'string' }
+              type: 'object',
+              properties: { suggestions: { type: 'array', items: { type: 'string' } } },
+              required: ['suggestions']
             }
           }
         }
@@ -208,7 +209,8 @@ Respond with JSON array of strings:
         throw new Error(response.error);
       }
 
-      const result = JSON.parse(response.text);
+      const parsed = JSON.parse(response.text);
+      const result = Array.isArray(parsed) ? parsed : parsed?.suggestions;
       return Array.isArray(result) ? result : [];
     } catch (error) {
       console.error('Error getting suggestions:', error);

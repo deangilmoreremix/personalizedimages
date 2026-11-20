@@ -20,7 +20,7 @@ import {
   Hash,
 } from 'lucide-react';
 import { useUserApiKeys } from '../contexts/UserApiKeyContext';
-import { getUserApiKey } from '../utils/userApiKeyStorage';
+import { getUserApiKey, type ApiKeyProvider } from '../utils/userApiKeyStorage';
 import { useAuth } from '../auth/AuthContext';
 import { userProfileService } from '../services/supabaseService';
 import { Loader2 } from 'lucide-react';

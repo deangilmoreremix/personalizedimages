@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Stage, Layer as KLayer, Rect, Image as KImage, Text as KText, Transformer } from 'react-konva';
 import type Konva from 'konva';
-import { ArrowDown, ArrowUp, Crop, Download, Eye, EyeOff, FolderOpen, ImagePlus, Save, Scissors, Trash2, Type, Upload, Users } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Crop, Download, Eye, EyeOff, FolderOpen, ImagePlus, Mail, Save, Scissors, Trash2, Type, Upload, Users } from 'lucide-react';
 import CropDialog from './CropDialog';
+import { renderPersonalizedEmail } from '../../emails/renderEmail';
+import { downloadText } from '../../utils/captions';
+import { exportSlideshow } from '../../utils/videoExport';
 import {
   collectTokens, createImageLayer, createTextLayer, isEditorDoc, moveLayer, parseCsv, removeLayer, resolveTokens,
   rowsToTokenValues, safeFileName, serializeDoc, unmatchedTokens, updateLayer, type EditorDoc, type ImageLayer, type Layer, type TextLayer, type TokenValues
@@ -127,6 +130,9 @@ export default function LayerEditor({ initialImageId }: { initialImageId?: strin
   const [projectName, setProjectName] = useState('Untitled design');
   const [batch, setBatch] = useState<Array<{ name: string; url: string }>>([]);
   const [batchBusy, setBatchBusy] = useState(false);
+  const [email, setEmail] = useState({ heading: 'Hi [FIRSTNAME], this one is for you', body: 'We made something special just for you.', ctaLabel: 'See it', ctaUrl: 'https://example.com', imageUrl: '{{IMAGE_URL}}', accent: '#7c3aed' });
+  const [videoSeconds, setVideoSeconds] = useState(2);
+  const [emailPreview, setEmailPreview] = useState<string | null>(null);
 
   const stageRef = useRef<Konva.Stage>(null);
   const trRef = useRef<Konva.Transformer>(null);
@@ -272,6 +278,63 @@ export default function LayerEditor({ initialImageId }: { initialImageId?: strin
       setStatus(err instanceof Error ? err.message : 'Batch failed');
     } finally {
       setBatchBusy(false);
+    }
+  };
+
+  const buildEmail = async (forPreview: boolean) => {
+    const resolved = (t: string) => (forPreview ? resolveTokens(t, tokenValues) : t.replace(/\[([A-Za-z0-9_]+)\]/g, '{{$1}}'));
+    return renderPersonalizedEmail({
+      preview: resolved(email.heading),
+      heading: resolved(email.heading),
+      body: resolved(email.body),
+      // Email clients block data: URLs, so exports use a hosted URL / ESP merge tag; the preview embeds the design.
+      imageUrl: forPreview ? await exportPng() : email.imageUrl || '{{IMAGE_URL}}',
+      imageAlt: resolved(email.heading),
+      ctaLabel: email.ctaLabel,
+      ctaUrl: email.ctaUrl,
+      accent: email.accent
+    });
+  };
+
+  const previewEmail = async () => {
+    try {
+      setEmailPreview(await buildEmail(true));
+    } catch (e) {
+      setStatus('Could not build the email preview');
+    }
+  };
+
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(await buildEmail(false));
+      setStatus('Email HTML copied');
+    } catch {
+      setStatus('Could not copy (clipboard blocked)');
+    }
+  };
+
+  const downloadEmail = async () => downloadText(`${safeFileName(projectName, 'email')}.html`, await buildEmail(false), 'text/html');
+
+  const makeVideo = async () => {
+    if (!batch.length) return;
+    setStatus('Encoding video…');
+    try {
+      const r = await exportSlideshow(batch.map(b => b.url), {
+        width: doc.width,
+        height: doc.height,
+        secondsPerSlide: videoSeconds,
+        onProgress: (d, t) => setStatus(`Encoding video… ${Math.round((d / t) * 100)}%`)
+      });
+      const url = URL.createObjectURL(r.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeFileName(projectName, 'personalized')}.${r.extension}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      trackEvent('video_exported', { count: batch.length, codec: r.codec });
+      setStatus(`Video ready (${r.extension.toUpperCase()}, ${r.durationSeconds.toFixed(1)}s)`);
+    } catch (e) {
+      setStatus(e instanceof Error ? `Video export failed: ${e.message}` : 'Video export failed');
     }
   };
 
@@ -478,6 +541,12 @@ export default function LayerEditor({ initialImageId }: { initialImageId?: strin
           {batch.length > 0 && (
             <div className="space-y-1" data-testid="batch-results">
               <div className="flex items-center justify-between text-xs"><span>{batch.length} ready</span><button onClick={downloadAll} className="text-violet-700 hover:underline">Download all</button></div>
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <label className="flex items-center gap-1">Seconds each
+                  <input type="number" min={0.5} max={10} step={0.5} value={videoSeconds} onChange={e => setVideoSeconds(Math.min(10, Math.max(0.5, Number(e.target.value) || 2)))} className="w-14 border border-gray-200 rounded px-1" aria-label="Seconds per slide" />
+                </label>
+                <button onClick={makeVideo} className="px-2 py-1 rounded border border-gray-200 hover:bg-gray-50">Make video</button>
+              </div>
               <ul className="max-h-40 overflow-auto space-y-1">
                 {batch.map(b => (
                   <li key={b.name} className="flex items-center gap-2 text-xs">
@@ -490,7 +559,36 @@ export default function LayerEditor({ initialImageId }: { initialImageId?: strin
             </div>
           )}
         </section>
+
+        <section className="space-y-2" aria-label="Email">
+          <p className="text-xs font-medium text-gray-700 flex items-center gap-1"><Mail className="w-3 h-3" /> Email</p>
+          <input value={email.heading} onChange={e => setEmail(v => ({ ...v, heading: e.target.value }))} aria-label="Email heading" className="w-full border border-gray-200 rounded px-2 py-1 text-sm" />
+          <textarea value={email.body} onChange={e => setEmail(v => ({ ...v, body: e.target.value }))} aria-label="Email body" className="w-full border border-gray-200 rounded px-2 py-1 text-sm min-h-[50px]" />
+          <div className="grid grid-cols-2 gap-2">
+            <input value={email.ctaLabel} onChange={e => setEmail(v => ({ ...v, ctaLabel: e.target.value }))} aria-label="Button label" className="border border-gray-200 rounded px-2 py-1 text-sm" />
+            <input value={email.ctaUrl} onChange={e => setEmail(v => ({ ...v, ctaUrl: e.target.value }))} aria-label="Button link" className="border border-gray-200 rounded px-2 py-1 text-sm" />
+          </div>
+          <input value={email.imageUrl} onChange={e => setEmail(v => ({ ...v, imageUrl: e.target.value }))} aria-label="Hosted image URL" placeholder="https://… or {{IMAGE_URL}}" className="w-full border border-gray-200 rounded px-2 py-1 text-sm" />
+          <p className="text-[11px] text-gray-400">Email apps block embedded images: upload the exported PNG, then paste its URL (or keep the merge tag for your email platform).</p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={previewEmail} className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50">Preview</button>
+            <button onClick={copyEmail} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50"><Copy className="w-3 h-3" /> Copy HTML</button>
+            <button onClick={downloadEmail} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50"><Download className="w-3 h-3" /> .html</button>
+          </div>
+        </section>
       </aside>
+
+      {emailPreview && (
+        <div role="dialog" aria-label="Email preview" className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
+              <span className="text-sm font-medium">Email preview</span>
+              <button onClick={() => setEmailPreview(null)} className="text-sm text-gray-500 hover:text-gray-800">Close</button>
+            </div>
+            <iframe title="Email preview" srcDoc={emailPreview} sandbox="" className="flex-1 w-full" />
+          </div>
+        </div>
+      )}
 
       {cropTarget && (
         <CropDialog

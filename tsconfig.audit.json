@@ -1,1 +1,0 @@
-{ "extends": "./tsconfig.app.json", "compilerOptions": {"noEmit": true}, "include": ["src"], "exclude": ["src/components/ui/compound-components.ts","src/data/promptLibrary.ts","src/**/*.test.ts","src/**/*.test.tsx","src/__tests__","src/**/__tests__"] }

@@ -30,6 +30,7 @@
     "gifshot": "^0.4.5",
     "konva": "^9.3.22",
     "lucide-react": "^0.344.0",
+    "mediabunny": "^1.66.2",
     "openai": "^4.28.0",
     "papaparse": "^5.5.3",
     "rdndmb-html5-to-touch": "^8.0.3",

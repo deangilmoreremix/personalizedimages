@@ -493,7 +493,7 @@ const MemeGenerator: React.FC<MemeGeneratorProps> = ({ tokens, onMemeGenerated }
                         }`}
                         onClick={() => setSelectedProvider('openai')}
                       >
-                        DALL-E 3
+                        GPT Image 2.6 Sunburst
                       </button>
                       <button
                         className={`py-2 px-3 text-sm rounded ${

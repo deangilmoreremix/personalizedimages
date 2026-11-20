@@ -59,7 +59,6 @@ Respond in JSON format with this structure:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze this ${category || 'image generation'} prompt:\n\n${prompt}` }
         ],
-        model: 'gpt-4o-mini',
         response_format: {
           type: 'json_schema',
           json_schema: {
@@ -122,7 +121,6 @@ Respond in JSON format:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: 'gpt-4o-mini',
         response_format: {
           type: 'json_schema',
           json_schema: {
@@ -192,7 +190,6 @@ Respond with JSON array of strings:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: partialPrompt }
         ],
-        model: 'gpt-4o-mini',
         temperature: 0.8,
         max_output_tokens: 200,
         response_format: {

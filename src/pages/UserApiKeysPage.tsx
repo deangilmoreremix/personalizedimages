@@ -38,7 +38,7 @@ const PROVIDERS: ProviderConfig[] = [
   {
     provider: 'openai',
     label: 'OpenAI',
-    description: 'GPT-4o, DALL-E 3, Whisper',
+    description: 'GPT-6, GPT Image 2.6, Whisper',
     icon: <Sparkles className="w-5 h-5" />,
     tiers: ['Pro'],
     hint: 'Enter your OpenAI API key to unlock GPT and DALL-E features.',

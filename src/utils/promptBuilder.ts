@@ -299,8 +299,7 @@ export async function buildEnhancedPrompt(
             content: `Enhance this prompt: "${enhancedPrompt}"`
           }
         ],
-        model: 'gpt-4o-mini',
-        max_output_tokens: 200
+        max_output_tokens: 600
       });
 
       if (aiEnhanced.text && aiEnhanced.text.length > enhancedPrompt.length * 0.8) {

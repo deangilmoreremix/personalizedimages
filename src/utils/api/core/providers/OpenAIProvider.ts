@@ -1,22 +1,45 @@
 /**
- * OpenAI Provider Implementation
+ * OpenAI Provider Implementation (Responses API)
  *
- * Handles all OpenAI API interactions including DALL-E 3, GPT-4 Vision, and future models.
+ * Image generation / editing uses GPT Image 2.6 through the Responses API
+ * `image_generation` tool. Vision uses a mainline model through the same API.
+ * (dall-e-2 / dall-e-3 were removed from the API on 2026-05-12.)
  */
 
 import { getApiKey } from '../../../env';
+import {
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_TEXT_MODEL,
+  analyzeImage as coreAnalyzeImage,
+  generateImage as coreGenerateImage,
+  type ImageFormat
+} from '../../../openaiResponses';
+
+const env = (import.meta as any).env || {};
+const IMAGE_MODEL: string = env.VITE_OPENAI_IMAGE_MODEL || DEFAULT_IMAGE_MODEL;
+const TEXT_MODEL: string = env.VITE_OPENAI_TEXT_MODEL || DEFAULT_TEXT_MODEL;
 
 export interface OpenAIOptions {
-  model?: 'dall-e-3' | 'dall-e-2' | 'gpt-4-vision-preview';
-  size?: '1024x1024' | '1792x1024' | '1024x1792' | '512x512' | '256x256';
-  quality?: 'standard' | 'hd';
+  /** Image model (GPT Image). Legacy DALL-E ids are ignored and mapped to the default. */
+  model?: string;
+  size?: '1024x1024' | '1792x1024' | '1024x1792' | '1536x1024' | '1024x1536' | 'auto';
+  quality?: 'standard' | 'hd' | 'low' | 'medium' | 'high' | 'auto';
+  /** @deprecated GPT Image has no `style` parameter; kept so existing callers compile. */
   style?: 'natural' | 'vivid';
+  /** 'url' is no longer available: results are always data URLs. Kept for compatibility. */
   response_format?: 'url' | 'b64_json';
-  n?: number; // Number of images to generate (for variations)
-  timeout?: number; // Request timeout in milliseconds (default: 60000)
+  format?: ImageFormat;
+  n?: number; // Number of variations to generate
+  timeout?: number; // Request timeout in milliseconds (default: 180000)
+  /** Live streaming: progressive previews while the image renders. */
+  onPartial?: (preview: { dataUrl: string; index: number }) => void;
 }
 
-const DEFAULT_TIMEOUT = 60000; // 60 seconds
+const DEFAULT_TIMEOUT = 180000; // high quality renders can take a while
+
+function resolveImageModel(model?: string): string {
+  return model && model.startsWith('gpt-image') ? model : IMAGE_MODEL;
+}
 
 export class OpenAIProvider {
   private apiKey: string;
@@ -29,205 +52,83 @@ export class OpenAIProvider {
     }
   }
 
-  /**
-   * Helper method to make fetch requests with timeout
-   */
-  private async fetchWithTimeout(
-    url: string,
-    options: RequestInit,
-    timeoutMs: number = DEFAULT_TIMEOUT
-  ): Promise<Response> {
+  private async withTimeout<T>(timeoutMs: number, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      return response;
+      return await fn(controller.signal);
     } catch (error) {
-      clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error(`Request timed out after ${timeoutMs}ms`);
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
-  /**
-   * Generate image using DALL-E
-   */
+  /** Generate an image (returns a data URL). Streams previews when `onPartial` is set. */
   async generateImage(prompt: string, options: OpenAIOptions = {}): Promise<string> {
-    const {
-      model = 'dall-e-3',
-      size = '1024x1024',
-      quality = 'standard',
-      style = 'natural',
-      response_format = 'url',
-      timeout = DEFAULT_TIMEOUT
-    } = options;
-
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/generations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        prompt,
-        n: 1,
-        size,
-        quality,
-        style,
-        response_format
-      })
+    const { size = '1024x1024', quality = 'standard', timeout = DEFAULT_TIMEOUT, format, onPartial } = options;
+    return this.withTimeout(timeout, async signal => {
+      const result = await coreGenerateImage(
+        { prompt, size, quality, format, onPartial, imageModel: resolveImageModel(options.model) },
+        { apiKey: this.apiKey, signal },
+        { imageModel: IMAGE_MODEL, textModel: TEXT_MODEL }
+      );
+      return result.dataUrl;
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    if (response_format === 'b64_json') {
-      return `data:image/png;base64,${data.data[0].b64_json}`;
-    }
-
-    return data.data[0].url;
   }
 
-  /**
-   * Edit image using DALL-E (mask-based editing)
-   */
-  async editImage(image: string, mask: string, prompt: string, options: OpenAIOptions = {}): Promise<string> {
-    const { size = '1024x1024', response_format = 'url' } = options;
-
-    // Convert base64 to blob for FormData
-    const imageBlob = await this.base64ToBlob(image);
-    const maskBlob = await this.base64ToBlob(mask);
-
-    const formData = new FormData();
-    formData.append('image', imageBlob);
-    formData.append('mask', maskBlob);
-    formData.append('prompt', prompt);
-    formData.append('n', '1');
-    formData.append('size', size);
-    formData.append('response_format', response_format);
-
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/edits`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: formData
+  /** Edit an image, optionally with a mask (inpainting). `image` / `mask` are data URLs. */
+  async editImage(image: string, mask: string | undefined, prompt: string, options: OpenAIOptions = {}): Promise<string> {
+    const { size = '1024x1024', quality = 'high', timeout = DEFAULT_TIMEOUT, format, onPartial } = options;
+    return this.withTimeout(timeout, async signal => {
+      const result = await coreGenerateImage(
+        { prompt, size, quality, format, onPartial, inputImages: [image], mask: mask || undefined, imageModel: resolveImageModel(options.model) },
+        { apiKey: this.apiKey, signal },
+        { imageModel: IMAGE_MODEL, textModel: TEXT_MODEL }
+      );
+      return result.dataUrl;
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI Edit API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    if (response_format === 'b64_json') {
-      return `data:image/png;base64,${data.data[0].b64_json}`;
-    }
-
-    return data.data[0].url;
   }
 
-  /**
-   * Generate variations of an image
-   */
+  /** Variations are produced by re-imagining the source image with GPT Image. */
   async generateVariations(image: string, options: OpenAIOptions = {}): Promise<string[]> {
-    const { n = 1, size = '1024x1024', response_format = 'url' } = options;
-
-    const imageBlob = await this.base64ToBlob(image);
-
-    const formData = new FormData();
-    formData.append('image', imageBlob);
-    formData.append('n', n.toString());
-    formData.append('size', size);
-    formData.append('response_format', response_format);
-
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/images/variations`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI Variations API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-
-    return data.data.map((item: any) => {
-      if (response_format === 'b64_json') {
-        return `data:image/png;base64,${item.b64_json}`;
-      }
-      return item.url;
-    });
-  }
-
-  /**
-   * Analyze image using GPT-4 Vision
-   */
-  async analyzeImage(imageUrl: string, prompt: string = 'Describe this image in detail'): Promise<string> {
-    const response = await this.fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
-        messages: [
+    const { n = 1, size = '1024x1024', quality = 'medium', timeout = DEFAULT_TIMEOUT } = options;
+    const out: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const dataUrl = await this.withTimeout(timeout, async signal => {
+        const result = await coreGenerateImage(
           {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: imageUrl } }
-            ]
-          }
-        ],
-        max_tokens: 500
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI Vision API error: ${error.error?.message || 'Unknown error'}`);
+            prompt: `Create a creative variation of the provided image, keeping its subject recognisable. Variation ${i + 1} of ${n}.`,
+            size,
+            quality,
+            inputImages: [image],
+            imageModel: resolveImageModel(options.model)
+          },
+          { apiKey: this.apiKey, signal },
+          { imageModel: IMAGE_MODEL, textModel: TEXT_MODEL }
+        );
+        return result.dataUrl;
+      });
+      out.push(dataUrl);
     }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content || 'No description available';
+    return out;
   }
 
-  /**
-   * Convert base64 string to Blob
-   */
-  private async base64ToBlob(base64: string): Promise<Blob> {
-    const response = await fetch(base64);
-    return response.blob();
+  /** Analyze an image with a mainline vision-capable model. */
+  async analyzeImage(imageUrl: string, prompt: string = 'Describe this image in detail'): Promise<string> {
+    return this.withTimeout(60000, signal =>
+      coreAnalyzeImage(imageUrl, prompt, { apiKey: this.apiKey, signal }, { model: TEXT_MODEL, maxOutputTokens: 500 })
+    );
   }
 
-  /**
-   * Check if API key is valid
-   */
+  /** Check if API key is valid */
   async validateApiKey(): Promise<boolean> {
     try {
-      const response = await this.fetchWithTimeout(`${this.baseUrl}/models`, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        }
+      const response = await fetch(`${this.baseUrl}/models`, {
+        headers: { Authorization: `Bearer ${this.apiKey}` }
       });
       return response.ok;
     } catch {

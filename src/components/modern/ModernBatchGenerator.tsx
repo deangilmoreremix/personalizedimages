@@ -170,7 +170,7 @@ const ModernBatchGenerator: React.FC<ModernBatchGeneratorProps> = ({ tokens }) =
 
       <LeftPanelSection title="Model">
         <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-          <option value="openai">DALL-E 3</option>
+          <option value="openai">GPT Image 2.6 Sunburst</option>
           <option value="gemini">Gemini</option>
           <option value="imagen">Imagen 3</option>
         </select>

@@ -1,3 +1,5 @@
+import { generateText } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
 
 interface PromptRecommendationsRequest {
@@ -73,30 +75,17 @@ Deno.serve(async (req) => {
 
     if (useOpenAI) {
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
+        const { text: responseText } = await generateText(
+          {
             messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt }
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
             ],
-            temperature: 0.7,
-            max_tokens: 1024
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        const responseText = data.choices?.[0]?.message?.content || ''
+            maxOutputTokens: 1024
+          },
+          { apiKey: openaiKey as string },
+          openaiModelDefaults().textModel
+        )
 
         try {
           recommendations = JSON.parse(responseText)

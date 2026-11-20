@@ -13,7 +13,7 @@ interface AIModelSelectorProps {
 const AI_MODELS = [
   {
     id: 'openai' as AIModel,
-    name: 'DALL-E 3',
+    name: 'GPT Image 2.6 Sunburst',
     icon: Sparkles,
     description: 'Best for detailed images with text',
     color: 'indigo'
@@ -41,7 +41,7 @@ const AI_MODELS = [
   },
   {
     id: 'gpt-image-1' as AIModel,
-    name: 'GPT-4 Vision',
+    name: 'GPT Image 2.6 Flare',
     icon: Brain,
     description: 'Advanced understanding',
     color: 'green'

@@ -7,6 +7,9 @@
 
 import { getApiKey, hasValidApiKey } from '../../env.js';
 import type { AIProvider } from './types';
+import { generateImage } from '../../openaiResponses';
+
+const env = (import.meta as any).env || {};
 
 export interface ApiRequest {
   prompt: string;
@@ -139,32 +142,13 @@ export class ApiClient {
     const apiKey = getApiKey('openai');
     if (!apiKey) throw new Error('OpenAI API key not available');
 
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'dall-e-3',
-        prompt,
-        n: 1,
-        size: options.size || '1024x1024',
-        quality: options.quality || 'standard',
-        style: options.style || 'natural'
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-    if (!data?.data?.[0]?.url) {
-      throw new Error('No image URL in OpenAI response');
-    }
-    return data.data[0].url;
+    // GPT Image 2.6 via the Responses API; resolves to a data URL.
+    const result = await generateImage(
+      { prompt, size: options.size, quality: options.quality, onPartial: options.onPartial },
+      { apiKey },
+      { imageModel: env.VITE_OPENAI_IMAGE_MODEL, textModel: env.VITE_OPENAI_TEXT_MODEL }
+    );
+    return result.dataUrl;
   }
 
   /**

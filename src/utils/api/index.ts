@@ -72,7 +72,7 @@ export const generateImageWithImagen = async (prompt: string, aspectRatio?: stri
 export const generateImageWithGptImage = async (prompt: string) => {
   console.warn('generateImageWithGptImage is deprecated. Use generateImage instead.');
   const { generateImage } = await import('./image/generation');
-  return generateImage(prompt, { provider: 'openai', model: 'gpt-4-vision-preview' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.6-sunburst' });
 };
 
 // Re-export utility functions for convenience

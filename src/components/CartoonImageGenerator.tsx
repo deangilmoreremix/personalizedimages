@@ -257,7 +257,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
-                DALL-E 3
+                GPT Image 2.6 Sunburst
               </button>
               <button
                 className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'

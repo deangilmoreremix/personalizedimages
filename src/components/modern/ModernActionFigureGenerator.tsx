@@ -42,7 +42,7 @@ const ModernActionFigureGenerator: React.FC<ModernActionFigureGeneratorProps> = 
   const [generationHistory, setGenerationHistory] = useState<string[]>([]);
 
   const providerOptions = [
-    { value: 'openai', label: 'DALL-E 3', speed: 'Medium', quality: 'Excellent' },
+    { value: 'openai', label: 'GPT Image 2.6 Sunburst', speed: 'Medium', quality: 'Excellent' },
     { value: 'gemini', label: 'Gemini', speed: 'Fast', quality: 'Very Good' },
     { value: 'gemini-nano', label: 'Gemini Nano (On-Device)', speed: 'Very Fast', quality: 'Good' }
   ];

@@ -58,7 +58,7 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
 
   const modelConfig = {
     openai: {
-      name: 'DALL-E 3',
+      name: 'GPT Image 2.6 Sunburst',
       icon: <Zap className="w-5 h-5 text-blue-500" />,
       color: 'bg-blue-50 border-blue-200',
       cost: 0.04,
@@ -86,7 +86,7 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
       description: 'Ultra-fast generation, 2-4x faster than others'
     },
     'gpt-image-1': {
-      name: 'GPT-4 Vision',
+      name: 'GPT Image 2.6 Flare',
       icon: <Star className="w-5 h-5 text-indigo-500" />,
       color: 'bg-indigo-50 border-indigo-200',
       cost: 0.04,

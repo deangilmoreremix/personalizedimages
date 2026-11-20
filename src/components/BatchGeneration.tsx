@@ -54,7 +54,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   const cancelledRef = useRef(false);
 
   const modelConfig = {
-    openai: { name: 'DALL-E 3', cost: 0.04 }
+    openai: { name: 'GPT Image 2.6 Sunburst', cost: 0.04 }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,7 +332,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
                   AI Model
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700">
-                  DALL-E 3 (${modelConfig.openai.cost}/img)
+                  GPT Image 2.6 Sunburst (${modelConfig.openai.cost}/img)
                 </div>
               </div>
 

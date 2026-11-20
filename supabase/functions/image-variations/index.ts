@@ -1,3 +1,5 @@
+import { generateImage } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput } from "../_shared/cors.ts"
 
 const corsHeaders = {
@@ -118,24 +120,18 @@ Deno.serve(async (req: Request) => {
 
     if (variations.length === 0 && openaiKey) {
       for (let i = 0; i < variationCount; i++) {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: 'dall-e-3',
-            prompt: `Create a creative variation of the original image. Variation ${i + 1} of ${variationCount}.`,
-            n: 1,
-            size: '1024x1024'
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const url = data.data?.[0]?.url;
-          if (url) variations.push(url);
+        try {
+          const generated = await generateImage(
+            {
+              prompt: `Create a creative variation of the provided image, keeping its subject recognisable. Variation ${i + 1} of ${variationCount}.`,
+              inputImages: [imageUrl]
+            },
+            { apiKey: openaiKey as string },
+            openaiModelDefaults()
+          );
+          variations.push(generated.dataUrl);
+        } catch (e) {
+          console.error('OpenAI variation failed:', e);
         }
       }
     }

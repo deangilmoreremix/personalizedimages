@@ -1,3 +1,5 @@
+import { analyzeImage } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 import { corsHeaders, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
@@ -72,39 +74,12 @@ serve(async (req) => {
         // Create a prompt for meme generation
         const memePrompt = `Create a meme using this reference image. Add "${sanitizedTopText}" as top text and "${sanitizedBottomText}" as bottom text. ${sanitizedStyle ? `Style: ${sanitizedStyle}` : ''} Make it humorous and well-formatted.`
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: memePrompt },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: `data:${imageBlob.type};base64,${base64Data}`
-                    }
-                  }
-                ]
-              }
-            ],
-            max_tokens: 300
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        const description = data.choices?.[0]?.message?.content || ''
+        const description = await analyzeImage(
+          `data:${imageBlob.type};base64,${base64Data}`,
+          memePrompt,
+          { apiKey: openaiKey as string },
+          { model: openaiModelDefaults().textModel, maxOutputTokens: 300 }
+        )
 
         // Implement actual meme generation using canvas-based text overlay
         console.log('Generated meme description:', description)

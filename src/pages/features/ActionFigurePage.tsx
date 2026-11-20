@@ -495,7 +495,7 @@ const ActionFigurePage = () => {
             },
             {
               question: "Which AI model gives the best results?",
-              answer: "Each model has different strengths. Gemini AI provides excellent detail and creativity, DALL-E 3 offers precise control, and Ideogram excels at realistic packaging details. We recommend trying all three to see which works best for your specific needs."
+              answer: "Each model has different strengths. Gemini AI provides excellent detail and creativity, GPT Image 2.6 Sunburst offers precise control, and Ideogram excels at realistic packaging details. We recommend trying all three to see which works best for your specific needs."
             }
           ]}
         />

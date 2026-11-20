@@ -1,8 +1,9 @@
+import { DEFAULT_IMAGE_MODEL as IMAGE_MODEL } from '../utils/openaiResponses';
 import { supabase, isSupabaseConfigured, callEdgeFunction } from '../utils/supabaseClient';
 
 export interface GenerationOptions {
-  size?: '1024x1024' | '1792x1024' | '1024x1792';
-  quality?: 'standard' | 'hd';
+  size?: '1024x1024' | '1792x1024' | '1024x1792' | '1536x1024' | '1024x1536';
+  quality?: 'standard' | 'hd' | 'low' | 'medium' | 'high';
   style?: string;
   category?: string;
 }
@@ -105,7 +106,7 @@ export async function saveGeneratedImage(
       prompt,
       image_url: imageUrl,
       provider,
-      model: 'dall-e-3',
+      model: IMAGE_MODEL,
       category,
       tokens_used: tokensUsed || {}
     })

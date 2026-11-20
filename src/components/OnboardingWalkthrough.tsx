@@ -24,7 +24,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'AI Image Generation',
-    description: 'Create professional images using AI models like DALL-E 3, Gemini, and Imagen. Simply describe what you want and watch it come to life in seconds.',
+    description: 'Create professional images using AI models like GPT Image 2.6 Sunburst, Gemini, and Imagen. Simply describe what you want and watch it come to life in seconds.',
     icon: Image,
     color: 'from-emerald-500 to-teal-500',
     image: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=800',

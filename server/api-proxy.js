@@ -132,30 +132,58 @@ app.post('/api/proxy/openai', validateApiKey, validateInput, async (req, res) =>
     const { sanitizedPrompt, options } = req.body;
     const apiKey = req.headers['x-api-key'];
     
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    const stream = req.body.stream === true || options?.stream === true;
+    const body = {
+      model: process.env.OPENAI_TEXT_MODEL || 'gpt-6.2-sol',
+      input: sanitizedPrompt,
+      tools: [{
+        type: 'image_generation',
+        model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.6-sunburst',
+        action: 'generate',
+        size: ({ '1792x1024': '1536x1024', '1024x1792': '1024x1536' })[options?.size] || options?.size || 'auto',
+        quality: ({ standard: 'medium', hd: 'high' })[options?.quality] || options?.quality || 'auto',
+        output_format: 'png',
+        ...(stream ? { partial_images: Math.min(3, Math.max(0, Number(options?.partialImages ?? 2))) } : {})
+      }],
+      tool_choice: { type: 'image_generation' },
+      store: false,
+      stream
+    };
+
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        ...(stream ? { Accept: 'text/event-stream' } : {})
       },
-      body: JSON.stringify({
-        model: 'dall-e-3',
-        prompt: sanitizedPrompt,
-        n: 1,
-        size: options?.size || '1024x1024',
-        quality: options?.quality || 'standard',
-        style: options?.style || 'natural'
-      })
+      body: JSON.stringify(body)
     });
-    
+
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({}));
       return res.status(response.status).json({ error: error.error?.message || 'OpenAI API error' });
     }
-    
+
+    if (stream) {
+      // Pass the SSE stream straight through for live partial-image previews.
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders?.();
+      const { Readable } = await import('node:stream');
+      Readable.fromWeb(response.body).pipe(res);
+      return;
+    }
+
     const data = await response.json();
-    res.json(data);
-    
+    const call = (data.output || []).find((o) => o.type === 'image_generation_call' && o.result);
+    if (!call) {
+      return res.status(502).json({ error: 'No image returned (request may have been refused)' });
+    }
+    // Keep the old { data: [{ url }] } shape so existing callers still work; url is a data URL.
+    res.json({ data: [{ url: `data:image/png;base64,${call.result}`, b64_json: call.result, revised_prompt: call.revised_prompt }] });
+
   } catch (error) {
     console.error('OpenAI proxy error:', error);
     res.status(500).json({ error: 'Internal server error' });

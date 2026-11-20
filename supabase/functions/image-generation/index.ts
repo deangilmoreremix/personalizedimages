@@ -1,3 +1,5 @@
+import { generateImage } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput } from "../_shared/cors.ts"
 
 interface AppliedToken {
@@ -159,28 +161,8 @@ Deno.serve(async (req) => {
     if (provider === 'gpt-5' && openaiKey && validateApiKey(openaiKey, 'openai')) {
       // Use GPT-5 (likely referring to GPT-4o or future GPT-5) for image generation
       try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3", // Using DALL-E 3 as GPT-5 image generation capability
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`GPT-5/OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
+        const generated = await generateImage({ prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''), size, quality }, { apiKey: openaiKey as string }, openaiModelDefaults())
+        imageUrl = generated.dataUrl
 
       } catch (error) {
         console.error('GPT-5 image generation failed:', error)
@@ -200,28 +182,8 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
+        const generated = await generateImage({ prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''), size, quality }, { apiKey: openaiKey as string }, openaiModelDefaults())
+        imageUrl = generated.dataUrl
 
       } catch (error) {
         console.error('OpenAI fallback image generation failed:', error)
@@ -232,28 +194,8 @@ Deno.serve(async (req) => {
     } else if (provider === 'openai' && openaiKey && validateApiKey(openaiKey, 'openai')) {
       // Fallback to standard OpenAI DALL-E
       try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''),
-            n: 1,
-            size: size,
-            quality: quality
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        imageUrl = data.data[0].url
+        const generated = await generateImage({ prompt: enhancedPrompt + (sanitizedStyle ? ` Style: ${sanitizedStyle}` : ''), size, quality }, { apiKey: openaiKey as string }, openaiModelDefaults())
+        imageUrl = generated.dataUrl
 
       } catch (error) {
         console.error('OpenAI image generation failed:', error)

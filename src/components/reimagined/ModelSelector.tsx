@@ -10,7 +10,7 @@ interface ModelSelectorProps {
 const models = [
   {
     id: 'openai',
-    name: 'DALL-E 3',
+    name: 'GPT Image 2.6 Sunburst',
     icon: Sparkles,
     description: 'Premium Quality',
     features: ['Multiple sizes', 'HD quality', 'Natural & Vivid styles'],
@@ -59,7 +59,7 @@ const models = [
   },
   {
     id: 'gpt-image-1',
-    name: 'GPT-4 Vision',
+    name: 'GPT Image 2.6 Flare',
     icon: Eye,
     description: 'Advanced AI',
     features: ['Complex prompts', 'Exceptional detail', 'Latest tech'],

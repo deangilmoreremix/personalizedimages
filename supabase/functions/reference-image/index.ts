@@ -1,3 +1,5 @@
+import { generateImage } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { getCorsHeaders, validateApiKey, sanitizeInput, isValidUrl, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
 
 interface ReferenceImageRequest {
@@ -136,27 +138,8 @@ Deno.serve(async (req) => {
     } else if ((provider === 'openai' || provider === 'gpt-image-1') && openaiKey) {
       const contextPrompt = `Using a reference image as inspiration: ${enhancedPrompt}. The reference image contains important visual elements that should be incorporated into the generated image.`
 
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: contextPrompt,
-          n: 1,
-          size: "1024x1024"
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error?.message || 'OpenAI API error')
-      }
-
-      const data = await response.json()
-      imageUrl = data.data[0].url
+      const generated = await generateImage({ prompt: contextPrompt }, { apiKey: openaiKey as string }, openaiModelDefaults())
+      imageUrl = generated.dataUrl
 
     } else {
       return new Response(

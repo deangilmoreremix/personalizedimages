@@ -269,7 +269,7 @@ function createProviderRequest(prompt: string, provider: AIProvider, options: Pa
 function getModelForProvider(provider: AIProvider, options: Partial<ImageGenerationRequest>): string {
   switch (provider) {
     case 'openai':
-      return options.quality === 'hd' ? 'dall-e-3' : 'dall-e-3';
+      return options.quality === 'hd' ? 'gpt-image-2.6-sunburst' : 'gpt-image-2.6-flare';
     case 'gemini':
       return options.style === 'ghibli' ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
     case 'imagen':
@@ -310,5 +310,5 @@ export const generateImageWithImagen = async (prompt: string, aspectRatio?: stri
 
 export const generateImageWithGptImage = async (prompt: string) => {
   console.warn('generateImageWithGptImage is deprecated. Use generateImage instead.');
-  return generateImage(prompt, { provider: 'openai', model: 'gpt-4-vision-preview' });
+  return generateImage(prompt, { provider: 'openai', model: 'gpt-image-2.6-sunburst' });
 };

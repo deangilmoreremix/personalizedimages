@@ -30,7 +30,7 @@ const PromptHelper: React.FC<PromptHelperProps> = ({ basePrompt, onPromptSelect,
     try {
       setIsLoading(true);
       setError(null);
-      const providerName = provider === 'openai' ? 'DALL-E' : provider === 'imagen' ? 'Imagen' : 'Gemini';
+      const providerName = provider === 'openai' ? 'GPT Image' : provider === 'imagen' ? 'Imagen' : 'Gemini';
       const suggestions = await getPromptRecommendations(basePrompt, tokens, providerName);
       setRecommendations(suggestions);
     } catch (err) {

@@ -1,5 +1,7 @@
 import { createEdgeFunction, createSecureResponse, SecurityError } from '../_shared/middleware.ts';
 import { validateApiKey } from '../_shared/cors.ts';
+import { generateImage } from '../_shared/openai-responses.ts';
+import { openaiModelDefaults } from '../_shared/openai-models.ts';
 
 interface ImageGenerationRequest {
   prompt: string;
@@ -16,32 +18,12 @@ async function generateImage(prompt: string, provider: string, size: string, qua
     throw new SecurityError('OpenAI API key not configured', 500, 'API_KEY_ERROR');
   }
 
-  const response = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${openaiKey}`
-    },
-    body: JSON.stringify({
-      model: "dall-e-3",
-      prompt: prompt + (style ? ` Style: ${style}` : ''),
-      n: 1,
-      size,
-      quality
-    })
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new SecurityError(
-      `Image generation failed: ${error.error?.message || 'Unknown error'}`,
-      response.status,
-      'GENERATION_ERROR'
-    );
-  }
-
-  const data = await response.json();
-  return data.data[0].url;
+  const generated = await generateImage(
+    { prompt: prompt + (style ? ` Style: ${style}` : ''), size, quality },
+    { apiKey: openaiKey as string },
+    openaiModelDefaults()
+  );
+  return generated.dataUrl;
 }
 
 export default createEdgeFunction(
@@ -86,7 +68,7 @@ export default createEdgeFunction(
       {
         field: 'quality',
         type: 'string',
-        pattern: /^(standard|hd)$/
+        pattern: /^(standard|hd|auto|low|medium|high)$/
       }
     ],
     auditAction: 'image_generation'

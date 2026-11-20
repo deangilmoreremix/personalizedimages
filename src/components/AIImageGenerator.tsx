@@ -78,7 +78,7 @@ const AIImageGenerator: React.FC<AIImageGeneratorProps> = ({ tokens, onImageGene
           <div>
             <label className="block text-sm font-medium mb-2">AI Model</label>
             <div className="px-4 py-2 rounded bg-blue-50 text-blue-700 text-sm border border-blue-200 inline-block">
-              DALL-E 3 (OpenAI)
+              GPT Image 2.6 (OpenAI)
             </div>
           </div>
 

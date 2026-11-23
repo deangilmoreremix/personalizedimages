@@ -4,7 +4,20 @@
 import { callEdgeFunction, isSupabaseConfigured, supabase } from './supabaseClient';
 import { getGeminiApiKey, getOpenAIApiKey, getGiphyApiKey, getFreepikApiKey, hasApiKey, blobToBase64 } from './apiUtils';
 import { generateImageWithGeminiNano as generateImageWithGeminiNanoService, editImageWithGeminiNano as editImageWithGeminiNanoService, generateVariationsWithGeminiNano as generateVariationsWithGeminiNanoService, GeminiNanoConfig, ImageEditOptions, ImageGenerationOptions } from './geminiNanoApi';
+import { responsesGenerateImage, responsesGenerateText } from './openaiClient';
 import { quickEnhance, type GeneratorCategory } from './promptEnhancer';
+
+async function toDataUrlFromUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch image');
+  const blob = await res.blob();
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => (typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Failed to read image')));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 /**
  * Generate an image description that can be used for AI image generation
@@ -76,88 +89,55 @@ export async function generateImageDescriptionWithAI(tokens: Record<string, stri
 }
 
 /**
- * Generate an image with DALL-E (OpenAI) - Enhanced with all DALL-E 3 features
+ * Generate an image with OpenAI GPT Image 2.6 via the Responses API (optionally streaming)
  */
 export async function generateImageWithDalle(
   prompt: string,
   options: {
-    size?: '1024x1024' | '1792x1024' | '1024x1792';
-    quality?: 'standard' | 'hd';
+    size?: '1024x1024' | '1792x1024' | '1024x1792' | '1536x1024' | '1024x1536' | 'auto';
+    quality?: 'standard' | 'hd' | 'low' | 'medium' | 'high' | 'auto';
     style?: 'natural' | 'vivid';
     n?: number;
+    /** Override the image model (defaults to GPT Image 2.6 Sunburst). */
+    imageModel?: string;
+    /** Live streaming: called with progressive previews while the image renders. */
+    onPartial?: (preview: { dataUrl: string; index: number }) => void;
+    signal?: AbortSignal;
   } = {}
 ): Promise<string> {
+  // NOTE: name kept for backwards compatibility; this now uses the Responses API
+  // with GPT Image 2.6 (dall-e-3 was removed from the API on 2026-05-12).
   try {
-    console.log('🖼️ Generating image with DALL-E 3 (Enhanced)');
+    console.log('🖼️ Generating image with GPT Image 2.6 (Responses API)');
+    const { size = '1024x1024', quality = 'standard', style, imageModel, onPartial, signal } = options;
 
-    // Set defaults for DALL-E 3 features
-    const {
-      size = '1024x1024',
-      quality = 'standard',
-      style = 'natural',
-      n = 1
-    } = options;
-
-    // Try edge function first
-    if (isSupabaseConfigured()) {
+    // Edge function first, unless live streaming is requested (streaming goes through the
+    // Responses client, which uses the edge proxy automatically when no browser key exists).
+    if (isSupabaseConfigured() && !onPartial && getOpenAIApiKey() === '') {
       try {
         const result = await callEdgeFunction('image-generation', {
           provider: 'openai',
           prompt,
           size,
           quality,
-          style,
-          n
+          style
         });
-
         if (result && result.imageUrl) {
           return result.imageUrl;
         }
       } catch (edgeError) {
-        console.warn('Edge function failed for DALL-E image generation:', edgeError);
-        // Continue to direct API fallback
+        console.warn('Edge function failed for image generation:', edgeError);
       }
     }
 
-    // Fall back to direct API call
-    const apiKey = getOpenAIApiKey();
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required. Please configure VITE_OPENAI_API_KEY in your environment variables.');
-    }
-
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: prompt,
-        n: n,
-        size: size,
-        quality: quality,
-        style: style
-      }),
-    });
-
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
-
-      try {
-        const errorData = await response.json();
-        errorMessage += errorData.error?.message || 'Unknown error';
-      } catch {
-        errorMessage += 'Unknown error';
-      }
-
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data[0].url;
+    const styled = style === 'vivid' ? `${prompt}\n\nStyle: vivid, dramatic, hyper-real.` : prompt;
+    const result = await responsesGenerateImage(
+      { prompt: styled, size, quality, imageModel, onPartial },
+      signal
+    );
+    return result.dataUrl;
   } catch (error) {
-    console.error('Error generating image with DALL-E:', error);
+    console.error('Error generating image with GPT Image:', error);
     throw error;
   }
 }
@@ -169,55 +149,25 @@ export async function generateImageVariations(
   imageUrl: string,
   options: {
     n?: number;
-    size?: '1024x1024' | '1792x1024' | '1024x1792';
+    size?: '1024x1024' | '1792x1024' | '1024x1792' | '1536x1024' | '1024x1536';
   } = {}
 ): Promise<string[]> {
+  // /v1/images/variations no longer exists for current models: variations are produced by
+  // editing the source image with GPT Image 2.6 through the Responses API.
   try {
-    console.log('🔄 Generating image variations with DALL-E');
-
+    console.log('🔄 Generating image variations with GPT Image 2.6');
     const { n = 1, size = '1024x1024' } = options;
-
-    const apiKey = getOpenAIApiKey();
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required for image variations. Please configure VITE_OPENAI_API_KEY in your environment variables.');
+    const source = imageUrl.startsWith('data:') ? imageUrl : await toDataUrlFromUrl(imageUrl);
+    const results: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const r = await responsesGenerateImage({
+        prompt: `Create a creative variation of the provided image, keeping its subject recognisable. Variation ${i + 1} of ${n}.`,
+        inputImages: [source],
+        size
+      });
+      results.push(r.dataUrl);
     }
-
-    // First, fetch the image and convert to base64
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error('Failed to fetch reference image');
-    }
-
-    const imageBlob = await imageResponse.blob();
-    const base64Data = await blobToBase64(imageBlob);
-
-    const response = await fetch('https://api.openai.com/v1/images/variations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: new URLSearchParams({
-        image: base64Data,
-        n: n.toString(),
-        size: size
-      })
-    });
-
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
-
-      try {
-        const errorData = await response.json();
-        errorMessage += errorData.error?.message || 'Unknown error';
-      } catch {
-        errorMessage += 'Unknown error';
-      }
-
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data.map((item: any) => item.url);
+    return results;
   } catch (error) {
     console.error('Error generating image variations:', error);
     throw error;
@@ -232,139 +182,49 @@ export async function editImageWithDalle(
   maskUrl: string,
   prompt: string,
   options: {
-    size?: '1024x1024' | '1792x1024' | '1024x1792';
+    size?: '1024x1024' | '1792x1024' | '1024x1792' | '1536x1024' | '1024x1536';
+    onPartial?: (preview: { dataUrl: string; index: number }) => void;
   } = {}
 ): Promise<string> {
   try {
-    console.log('✏️ Editing image with DALL-E');
+    console.log('✏️ Editing image with GPT Image 2.6');
+    const { size = '1024x1024', onPartial } = options;
 
-    const { size = '1024x1024' } = options;
-
-    const apiKey = getOpenAIApiKey();
-    if (!apiKey) {
-      console.warn('No OpenAI API key available, returning original image');
-      return imageUrl;
-    }
-
-    // Fetch and convert images to base64
-    const [imageResponse, maskResponse] = await Promise.all([
-      fetch(imageUrl),
-      fetch(maskUrl)
+    const [source, mask] = await Promise.all([
+      imageUrl.startsWith('data:') ? imageUrl : toDataUrlFromUrl(imageUrl),
+      maskUrl ? (maskUrl.startsWith('data:') ? maskUrl : toDataUrlFromUrl(maskUrl)) : Promise.resolve(undefined)
     ]);
 
-    if (!imageResponse.ok || !maskResponse.ok) {
-      throw new Error('Failed to fetch image or mask');
-    }
-
-    const [imageBlob, maskBlob] = await Promise.all([
-      imageResponse.blob(),
-      maskResponse.blob()
-    ]);
-
-    const [imageBase64, maskBase64] = await Promise.all([
-      blobToBase64(imageBlob),
-      blobToBase64(maskBlob)
-    ]);
-
-    const response = await fetch('https://api.openai.com/v1/images/edits', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: new URLSearchParams({
-        image: imageBase64,
-        mask: maskBase64,
-        prompt: prompt,
-        n: '1',
-        size: size
-      })
+    const result = await responsesGenerateImage({
+      prompt,
+      inputImages: [source],
+      mask,
+      size,
+      quality: 'high',
+      onPartial
     });
-
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
-
-      try {
-        const errorData = await response.json();
-        errorMessage += errorData.error?.message || 'Unknown error';
-      } catch {
-        errorMessage += 'Unknown error';
-      }
-
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data.data[0].url;
+    return result.dataUrl;
   } catch (error) {
-    console.error('Error editing image with DALL-E:', error);
+    console.error('Error editing image with GPT Image:', error);
     // Return original image as fallback
     return imageUrl;
   }
 }
 
 /**
- * Generate an image with GPT-4 Vision (gpt-image-1)
+ * Generate an image with GPT Image 2.6 (Responses API)
  */
-export async function generateImageWithGptImage(prompt: string): Promise<string> {
+export async function generateImageWithGptImage(
+  prompt: string,
+  options: { onPartial?: (preview: { dataUrl: string; index: number }) => void; imageModel?: string; signal?: AbortSignal } = {}
+): Promise<string> {
   try {
-    console.log('🖼️ Generating image with GPT-4 Vision (gpt-image-1)');
-    
-    // Try edge function first
-    if (isSupabaseConfigured()) {
-      try {
-        const result = await callEdgeFunction('image-generation', {
-          provider: 'gpt-image-1',
-          prompt
-        });
-        
-        if (result && result.imageUrl) {
-          return result.imageUrl;
-        }
-      } catch (edgeError) {
-        console.warn('Edge function failed for GPT-4 Vision image generation:', edgeError);
-        // Continue to direct API fallback
-      }
-    }
-    
-    // Fall back to direct API call
-    const apiKey = getOpenAIApiKey();
-    if (!apiKey) {
-      
-
-      throw new Error('API configuration required. Please configure your API keys in environment variables.');
-    }
-    
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024"
-      }),
-    });
-    
-    if (!response.ok) {
-      let errorMessage = `${response.status} `;
-      
-      try {
-        const errorData = await response.json();
-        errorMessage += errorData.error?.message || 'Unknown error';
-      } catch {
-        errorMessage += 'Unknown error';
-      }
-      
-      throw new Error(errorMessage);
-    }
-    
-    const data = await response.json();
-    return data.data[0].url;
+    console.log('🖼️ Generating image with GPT Image 2.6');
+    const { signal, ...imageOptions } = options;
+    const result = await responsesGenerateImage({ prompt, ...imageOptions }, signal);
+    return result.dataUrl;
   } catch (error) {
-    console.error('Error generating image with GPT-4 Vision:', error);
+    console.error('Error generating image with GPT Image:', error);
     throw error;
   }
 }
@@ -1230,28 +1090,9 @@ export async function getPromptRecommendations(basePrompt: string, tokens: Recor
       .map(([key, value]) => `${key}: ${value}`)
       .join(', ');
 
-    const prompt = `Based on this prompt: "${basePrompt}" and personalization tokens (${tokenString}), generate 3 enhanced prompt variations for ${modelName} style image generation. Make them detailed and specific, following best practices for DALL-E 3 image generation. Format as a JSON array of strings.`;
+    const prompt = `Based on this prompt: "${basePrompt}" and personalization tokens (${tokenString}), generate 3 enhanced prompt variations for ${modelName} style image generation. Make them detailed and specific, following best practices for GPT Image generation. Format as a JSON array of strings.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1024,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const responseText = data.choices?.[0]?.message?.content || '';
+    const { text: responseText } = await responsesGenerateText({ input: prompt, maxOutputTokens: 1024 });
 
     let recommendations;
 

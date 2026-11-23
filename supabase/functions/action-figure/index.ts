@@ -1,3 +1,5 @@
+import { generateImage } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { getCorsHeaders, authenticateUser, checkRateLimit, checkCredits, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 interface ActionFigureRequest {
@@ -73,27 +75,8 @@ Deno.serve(async (req) => {
     let imageUrl: string = ''
 
     if (provider === 'openai' && openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: enhancedPrompt,
-          n: 1,
-          size: "1024x1024"
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-      }
-
-      const data = await response.json()
-      imageUrl = data.data[0].url
+      const generated = await generateImage({ prompt: enhancedPrompt }, { apiKey: openaiKey as string }, openaiModelDefaults())
+      imageUrl = generated.dataUrl
 
     } else if (provider === 'gemini' && geminiKey) {
       const requestBody: any = {

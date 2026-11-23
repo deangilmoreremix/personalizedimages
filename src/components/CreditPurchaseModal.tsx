@@ -142,7 +142,7 @@ export const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
               💡 Credit Usage Examples
             </h4>
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>• OpenAI DALL-E 3 image: 10 credits</li>
+              <li>• OpenAI GPT Image 2.6 Sunburst image: 10 credits</li>
               <li>• Gemini image generation: 8 credits</li>
               <li>• Meme generation: 5 credits</li>
               <li>• Video generation: 50 credits</li>

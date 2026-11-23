@@ -13,6 +13,7 @@ import SemanticMaskingEditor from './SemanticMaskingEditor';
 import ConversationalRefinementPanel from './ConversationalRefinementPanel';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 
+import { resolveTokens } from '../utils/tokenText';
 interface TVShowActionFigureGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -145,7 +146,7 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
       });
       
       // Call the API to generate the figure
-      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      const imageUrl = await generateActionFigure(resolveTokens(finalPrompt, tokens), selectedProvider, referenceImage || undefined);
       
       console.log('✅ Successfully generated TV show action figure');
       setGeneratedFigure(imageUrl);
@@ -284,7 +285,7 @@ const TVShowActionFigureGenerator: React.FC<TVShowActionFigureGeneratorProps> = 
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
-                DALL-E 3
+                GPT Image 2.6 Sunburst
               </button>
               <button
                 className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'

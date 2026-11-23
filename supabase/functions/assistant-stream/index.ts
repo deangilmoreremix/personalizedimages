@@ -1,3 +1,5 @@
+import { buildTextBody, streamResponse, type ChatMessage } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getCorsHeaders, authenticateUser, checkRateLimit } from "../_shared/cors.ts"
 
@@ -211,65 +213,30 @@ At the end of your response include a marker with feature IDs like this: FEATURE
   };
 
   const formattedMessages = [systemMessage, ...messages];
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+  const body = buildTextBody(
+    {
+      messages: formattedMessages as ChatMessage[],
+      maxOutputTokens: 800
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: formattedMessages,
-      temperature,
-      max_tokens: 800,
-      stream: true
-    })
-  });
+    openaiModelDefaults().textModel
+  );
 
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
-  }
+  // Lazily consumed inside the ReadableStream below; HTTP errors surface as a stream error.
+  const events = streamResponse(body, { apiKey });
+  const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
-      const reader = response.body?.getReader();
-      if (!reader) {
-        controller.close();
-        return;
-      }
-
-      const decoder = new TextDecoder();
-
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n').filter(line => line.trim() !== '');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.substring(6);
-              if (data === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  controller.enqueue(new TextEncoder().encode(content));
-                }
-              } catch (_e) {
-              }
-            }
+        for await (const evt of events) {
+          if (evt.type === 'response.output_text.delta' && typeof evt.delta === 'string') {
+            controller.enqueue(encoder.encode(evt.delta));
           }
         }
+        controller.close();
       } catch (error) {
         console.error('Stream error:', error);
         controller.error(error);
-      } finally {
-        controller.close();
       }
     }
   });

@@ -1,3 +1,5 @@
+import { generateImage } from '../_shared/openai-responses.ts';
+import { openaiModelDefaults } from '../_shared/openai-models.ts';
 import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 const corsHeaders = {
@@ -116,23 +118,19 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!editedImageUrl && openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: `${editPrompt}. Based on reference image content.`,
-          n: 1,
-          size: '1024x1024'
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        editedImageUrl = data.data?.[0]?.url || '';
+      try {
+        const generated = await generateImage(
+          {
+            prompt: editPrompt,
+            // Real edit: pass the source image so GPT Image edits it instead of re-imagining it.
+            inputImages: imageUrl ? [imageUrl] : undefined
+          },
+          { apiKey: openaiKey as string },
+          openaiModelDefaults()
+        );
+        editedImageUrl = generated.dataUrl;
+      } catch (e) {
+        console.error('OpenAI image edit failed:', e);
       }
     }
 

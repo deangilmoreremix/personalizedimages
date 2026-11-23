@@ -85,11 +85,11 @@ const GenerationControls: React.FC<GenerationControlsProps> = ({
           imageUrl = await generateImageWithImagen(processedPrompt);
           break;
         case 'gpt-image-1':
-          setStatusMessage('Generating with GPT-4 Vision...');
+          setStatusMessage('Generating with GPT Image 2.6 Flare...');
           imageUrl = await generateImageWithGptImage(processedPrompt);
           break;
         default:
-          setStatusMessage('Generating with DALL-E 3...');
+          setStatusMessage('Generating with GPT Image 2.6 Sunburst...');
           imageUrl = await generateImageWithDalle(processedPrompt);
       }
 

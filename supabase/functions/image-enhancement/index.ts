@@ -1,3 +1,5 @@
+import { generateImage } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { getCorsHeaders, authenticateUser, checkRateLimit, validateApiKey, sanitizeInput, isValidUrl } from "../_shared/cors.ts"
 
 interface ImageEnhancementRequest {
@@ -140,97 +142,29 @@ Deno.serve(async (req) => {
       }
 
     } else if (provider === 'openai' && openaiKey) {
+      // GPT Image models handle variations, masked edits and enhancement via one Responses call.
+      let prompt: string
+      let inputImages: string[] | undefined
+      let mask: string | undefined
+
       if (enhancementType === 'variations') {
-        const imageResponse = await fetch(imageUrl)
-        if (!imageResponse.ok) {
-          throw new Error('Failed to fetch image')
-        }
-
-        const imageBlob = await imageResponse.blob()
-        const formData = new FormData()
-        formData.append('image', imageBlob)
-        formData.append('n', '1')
-        formData.append('size', '1024x1024')
-
-        const response = await fetch('https://api.openai.com/v1/images/variations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: formData
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
-
+        prompt = 'Create a creative variation of the provided image, keeping its subject recognisable.'
+        inputImages = [imageUrl]
       } else if (enhancementType === 'edit' && maskUrl && sanitizedPrompt) {
-        const [imageResponse, maskResponse] = await Promise.all([
-          fetch(imageUrl),
-          fetch(maskUrl)
-        ])
-
-        if (!imageResponse.ok || !maskResponse.ok) {
-          throw new Error('Failed to fetch image or mask')
-        }
-
-        const [imageBlob, maskBlob] = await Promise.all([
-          imageResponse.blob(),
-          maskResponse.blob()
-        ])
-
-        const formData = new FormData()
-        formData.append('image', imageBlob)
-        formData.append('mask', maskBlob)
-        formData.append('prompt', sanitizedPrompt)
-        formData.append('n', '1')
-        formData.append('size', '1024x1024')
-
-        const response = await fetch('https://api.openai.com/v1/images/edits', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: formData
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
-
+        prompt = sanitizedPrompt
+        inputImages = [imageUrl]
+        mask = maskUrl
       } else {
-        const enhancementPrompt = `An enhanced, higher quality version of: ${sanitizedPrompt || 'professional photograph with improved detail'}`
-
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: enhancementPrompt,
-            n: 1,
-            size: "1024x1024"
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
-        }
-
-        const data = await response.json()
-        resultImageUrl = data.data[0].url
+        prompt = `An enhanced, higher quality version of: ${sanitizedPrompt || 'professional photograph with improved detail'}`
+        inputImages = imageUrl ? [imageUrl] : undefined
       }
+
+      const generated = await generateImage(
+        { prompt, inputImages, mask, quality: 'high' },
+        { apiKey: openaiKey as string },
+        openaiModelDefaults()
+      )
+      resultImageUrl = generated.dataUrl
 
     } else {
       return new Response(

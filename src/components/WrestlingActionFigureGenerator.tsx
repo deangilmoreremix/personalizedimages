@@ -16,6 +16,7 @@ import TokenPalette from './shared/tokens/TokenPalette';
 import UniversalPersonalizationPanel from './UniversalPersonalizationPanel';
 import { usePersonalizationPreferences } from '../hooks/usePersonalizationPreferences';
 
+import { resolveTokens } from '../utils/tokenText';
 interface WrestlingActionFigureGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -152,7 +153,7 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
       });
       
       // Call the API to generate the figure
-      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      const imageUrl = await generateActionFigure(resolveTokens(finalPrompt, tokens), selectedProvider, referenceImage || undefined);
       
       console.log('✅ Successfully generated wrestling action figure');
       setGeneratedFigure(imageUrl);
@@ -291,7 +292,7 @@ const WrestlingActionFigureGenerator: React.FC<WrestlingActionFigureGeneratorPro
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
-                DALL-E 3
+                GPT Image 2.6 Sunburst
               </button>
               <button
                 className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini'

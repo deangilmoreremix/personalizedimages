@@ -59,7 +59,6 @@ Respond in JSON format with this structure:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze this ${category || 'image generation'} prompt:\n\n${prompt}` }
         ],
-        model: 'gpt-4o-mini',
         response_format: {
           type: 'json_schema',
           json_schema: {
@@ -122,7 +121,6 @@ Respond in JSON format:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: 'gpt-4o-mini',
         response_format: {
           type: 'json_schema',
           json_schema: {
@@ -144,14 +142,15 @@ Respond in JSON format:
       }
 
       const result = JSON.parse(response.text);
+      const enhanced: string = typeof result?.enhanced === 'string' && result.enhanced.trim() ? result.enhanced : prompt;
 
       // Analyze the enhanced prompt
-      const analysis = await this.analyzePrompt(result.enhanced, category);
+      const analysis = await this.analyzePrompt(enhanced, category);
 
       return {
         original: prompt,
-        enhanced: result.enhanced,
-        improvements: result.improvements,
+        enhanced,
+        improvements: Array.isArray(result?.improvements) ? result.improvements : [],
         analysis
       };
     } catch (error) {
@@ -184,15 +183,13 @@ Rules:
 
 Category: ${category || 'general'}
 
-Respond with JSON array of strings:
-["suggestion1", "suggestion2", "suggestion3", "suggestion4", "suggestion5"]`;
+Respond in JSON: {"suggestions": ["suggestion1", "suggestion2", "suggestion3", "suggestion4", "suggestion5"]}`;
 
       const response = await callGPT({
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: partialPrompt }
         ],
-        model: 'gpt-4o-mini',
         temperature: 0.8,
         max_output_tokens: 200,
         response_format: {
@@ -200,8 +197,9 @@ Respond with JSON array of strings:
           json_schema: {
             name: 'prompt_suggestions',
             schema: {
-              type: 'array',
-              items: { type: 'string' }
+              type: 'object',
+              properties: { suggestions: { type: 'array', items: { type: 'string' } } },
+              required: ['suggestions']
             }
           }
         }
@@ -211,7 +209,8 @@ Respond with JSON array of strings:
         throw new Error(response.error);
       }
 
-      const result = JSON.parse(response.text);
+      const parsed = JSON.parse(response.text);
+      const result = Array.isArray(parsed) ? parsed : parsed?.suggestions;
       return Array.isArray(result) ? result : [];
     } catch (error) {
       console.error('Error getting suggestions:', error);

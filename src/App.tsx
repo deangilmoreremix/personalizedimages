@@ -58,6 +58,7 @@ const ModernVideoConverterPage = React.lazy(() => import('./pages/features/Moder
 const GeminiNanoEditorPage = React.lazy(() => import('./pages/features/GeminiNanoEditorPage'));
 const CrazyImagePage = React.lazy(() => import('./pages/features/CrazyImagePage'));
 const GifEditorDemo = React.lazy(() => import('./pages/GifEditorDemo'));
+const LayerEditorPage = React.lazy(() => import('./pages/features/LayerEditorPage'));
 const FontsPage = React.lazy(() => import('./pages/FontsPage'));
 const TokensPanel = React.lazy(() => import('./pages/TokensPanel'));
 const GeminiDocs = React.lazy(() => import('./pages/GeminiDocs'));
@@ -119,6 +120,7 @@ const AppLayout = () => {
             <Route path="/features/modern-video-converter" element={<ModernVideoConverterPage />} />
             <Route path="/features/gemini-nano-editor" element={<GeminiNanoEditorPage />} />
             <Route path="/gif-editor" element={<GifEditorDemo />} />
+            <Route path="/features/layer-editor" element={<LayerEditorPage />} />
             <Route path="/fonts" element={<FontsPage />} />
             <Route path="/tokens" element={<ProtectedRoute><TokensPanel tokens={{}} /></ProtectedRoute>} />
             <Route path="/gemini-docs" element={<GeminiDocs />} />

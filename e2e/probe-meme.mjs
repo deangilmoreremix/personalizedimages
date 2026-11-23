@@ -1,0 +1,17 @@
+import { Mocks, loadPlaywright, signedInStorage, FIX, join } from './lib.mjs';
+const { chromium } = loadPlaywright();
+const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {});
+const ctx = await b.newContext({ viewport: { width: 1400, height: 1000 }, ignoreHTTPSErrors: true });
+await ctx.addInitScript(x => localStorage.setItem(x.key, x.value), signedInStorage());
+await ctx.addInitScript(() => { window.__drawn = []; const o = CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText = function (t, ...a) { window.__drawn.push(String(t)); return o.call(this, t, ...a); }; });
+await new Mocks().install(ctx); const p = await ctx.newPage();
+p.on('console', m => { if (/meme|error|fail/i.test(m.text()) && !/font|Freepik|404/i.test(m.text())) console.log(' [' + m.type() + ']', m.text().slice(0, 200)); });
+await p.goto('http://localhost:4180/features/meme-generator', { waitUntil: 'load' }); await new Promise(r => setTimeout(r, 1500));
+console.log('inputs:', await p.locator('input:visible, textarea:visible').evaluateAll(els => els.map(e => `${e.tagName}[${e.type}] ph="${e.placeholder}" val="${e.value}"`)).then(a => a.slice(0, 12)));
+await p.locator('input[type=file]').first().setInputFiles(join(FIX, 'portrait.jpg')); await new Promise(r => setTimeout(r, 1000));
+const ta=p.locator('textarea:visible'); await ta.nth(0).fill('Hello [FIRSTNAME]'); await ta.nth(1).fill('from [COMPANY]');
+await p.getByRole('button', { name: 'Generate Meme' }).click(); await new Promise(r => setTimeout(r, 3000));
+console.log('drawn:', await p.evaluate(() => window.__drawn)); 
+console.log('result imgs:', await p.locator('img').evaluateAll(els => els.map(e => e.src.slice(0, 30)).filter(s => /^(data|blob)/.test(s))));
+console.log('text:', (await p.innerText('body')).replace(/\s+/g, ' ').match(/(Please[^.]*\.|error[^.]*|Download[^.]{0,20})/i)?.[0]);
+await b.close();

@@ -22,6 +22,11 @@ import {
 } from '../../utils/api';
 import { cloudGalleryService } from '../../services/cloudGalleryService';
 import { promptEnhancementService } from '../../services/promptEnhancementService';
+import { FAST_IMAGE_MODEL_ID } from '../../utils/openaiClient';
+import VoiceInputButton from '../shared/VoiceInputButton';
+import { isNotificationSupported, isNotifyEnabled, notifyDone, setNotifyEnabled } from '../../services/notifications';
+import { trackEvent } from '../../services/analyticsBeacon';
+import { saveImage, listImages, deleteImage, pruneImages, requestPersistence, type LocalImage } from '../../services/localStore';
 
 interface ModernAIImageGeneratorProps {
   tokens: Record<string, string>;
@@ -39,6 +44,12 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   const [selectedModel, setSelectedModel] = useState('openai');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  // Live streaming preview (progressive partial images from the Responses API)
+  // Local-first history (IndexedDB): survives reloads, works offline, needs no login
+  const [history, setHistory] = useState<Array<LocalImage & { url: string }>>([]);
+  const [livePreview, setLivePreview] = useState<{ dataUrl: string; index: number } | null>(null);
+  const abortRef = React.useRef<AbortController | null>(null);
+  const [notifyOn, setNotifyOn] = useState(() => isNotifyEnabled());
   const [generationTime, setGenerationTime] = useState<number | null>(null);
   const [quality, setQuality] = useState<'standard' | 'hd'>('standard');
   const [aspectRatio, setAspectRatio] = useState('1:1');
@@ -71,11 +82,11 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
   ];
 
   const models = [
-    { id: 'openai', name: 'DALL-E 3', description: 'OpenAI\'s latest model' },
+    { id: 'openai', name: 'GPT Image 2.6 Sunburst', description: 'Detailed visual work · live preview' },
     { id: 'gemini', name: 'Gemini', description: 'Google\'s AI model' },
     { id: 'gemini2flash', name: 'Gemini 2 Flash', description: 'Fast generation' },
     { id: 'imagen', name: 'Imagen 3', description: 'High quality images' },
-    { id: 'gpt-image-1', name: 'GPT Image', description: 'Advanced AI' }
+    { id: 'gpt-image-1', name: 'GPT Image 2.6 Flare', description: 'Fast iteration · live preview' }
   ];
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +116,9 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
+    setLivePreview(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
     const startTime = Date.now();
 
     try {
@@ -132,13 +146,23 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
           imageUrl = await generateImageWithImagen(enhancedPrompt, aspectRatio);
           break;
         case 'gpt-image-1':
-          imageUrl = await generateImageWithGptImage(enhancedPrompt);
+          // Flare: fast iteration
+          setActiveTab('result');
+          imageUrl = await generateImageWithGptImage(enhancedPrompt, {
+            imageModel: FAST_IMAGE_MODEL_ID,
+            onPartial: setLivePreview,
+            signal: controller.signal
+          });
           break;
         default:
+          // Sunburst: detailed work, with progressive live previews
+          setActiveTab('result');
           imageUrl = await generateImageWithDalle(enhancedPrompt, {
-            size: aspectRatio === '1:1' ? '1024x1024' : aspectRatio === '16:9' ? '1792x1024' : '1024x1792',
+            size: aspectRatio === '1:1' ? '1024x1024' : aspectRatio === '16:9' ? '1536x1024' : '1024x1536',
             quality,
-            style: style === 'natural' ? 'natural' : 'vivid'
+            style: style === 'natural' ? 'natural' : 'vivid',
+            onPartial: setLivePreview,
+            signal: controller.signal
           });
       }
 
@@ -147,6 +171,15 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       setGeneratedImages(prev => [imageUrl, ...prev]);
       onImageGenerated(imageUrl);
       setActiveTab('result');
+
+      trackEvent('image_generated', { model: selectedModel, ms: generationTimeMs });
+      notifyDone('Your image is ready', { body: processedPrompt.slice(0, 80), tag: 'image-ready', url: '/features/modern-ai-image' });
+
+      // Keep a local copy (best effort)
+      saveImage({ image: imageUrl, prompt: processedPrompt, model: selectedModel, source: 'modern-ai-image' })
+        .then(() => pruneImages(200))
+        .then(refreshHistory)
+        .catch(() => {});
 
       // Save to cloud gallery
       try {
@@ -169,8 +202,29 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       console.error('Generation failed:', err);
     } finally {
       setIsGenerating(false);
+      setLivePreview(null);
+      abortRef.current = null;
     }
   };
+
+  const handleStop = () => abortRef.current?.abort();
+
+  const refreshHistory = React.useCallback(async () => {
+    try {
+      const items = await listImages(24);
+      setHistory(prev => {
+        prev.forEach(h => URL.revokeObjectURL(h.url));
+        return items.map(i => ({ ...i, url: URL.createObjectURL(i.blob) }));
+      });
+    } catch {
+      /* IndexedDB unavailable (private mode): history is simply off */
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshHistory();
+    requestPersistence();
+  }, [refreshHistory]);
 
   const leftPanelContent = (
     <LeftPanel>
@@ -237,7 +291,10 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 min-h-[100px] text-sm"
         />
         <div className="flex justify-between items-center mt-2">
-          <span className="text-xs text-gray-500">{prompt.length}/500</span>
+          <span className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">{prompt.length}/500</span>
+            <VoiceInputButton onText={(t) => setPrompt(prev => (prev ? prev.trimEnd() + ' ' : '') + t)} />
+          </span>
           <button
             onClick={async () => {
               try {
@@ -337,6 +394,17 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
       </LeftPanelSection>
 
       <LeftPanelFooter>
+        {isNotificationSupported() && (
+          <label className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+            <input
+              type="checkbox"
+              checked={notifyOn}
+              onChange={async e => setNotifyOn(await setNotifyEnabled(e.target.checked))}
+              aria-label="Notify me when done"
+            />
+            Notify me when done (if I switch tabs)
+          </label>
+        )}
         <button
           onClick={handleGenerate}
           disabled={isGenerating || !prompt.trim()}
@@ -363,8 +431,44 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
     </LeftPanel>
   );
 
-  const resultContent = generatedImages.length > 0 ? (
+  const livePreviewCard = isGenerating && livePreview ? (
+    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3" aria-live="polite">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-medium text-violet-700">
+          Rendering live… preview {livePreview.index + 1}
+        </p>
+        <button onClick={handleStop} className="text-xs px-2 py-1 rounded bg-white border border-violet-200 hover:bg-violet-100">
+          Stop
+        </button>
+      </div>
+      <img src={livePreview.dataUrl} alt="Live preview" className="w-full max-w-md mx-auto rounded-lg blur-[1px]" />
+    </div>
+  ) : null;
+
+  const historyStrip = history.length > 0 ? (
+    <div className="space-y-2" data-testid="local-history">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-900">Saved on this device</h3>
+        <span className="text-xs text-gray-500">{history.length} image{history.length === 1 ? '' : 's'} · private, works offline</span>
+      </div>
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+        {history.map(h => (
+          <div key={h.id} className="group relative aspect-square rounded overflow-hidden bg-gray-100">
+            <img src={h.url} alt={`Saved: ${h.prompt.slice(0, 40)}`} title={h.prompt} className="w-full h-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button className="text-[10px] text-white" onClick={() => setPrompt(h.prompt)}>Reuse prompt</button>
+              <a className="text-[10px] text-white underline" href={`/features/layer-editor?image=${encodeURIComponent(h.id)}`}>Edit layers</a>
+              <button className="text-[10px] text-white" onClick={() => deleteImage(h.id).then(refreshHistory)}>Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  const resultMain = generatedImages.length > 0 || livePreviewCard ? (
     <div className="space-y-4">
+      {livePreviewCard}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-900">My Result</h2>
         <div className="flex gap-2">
@@ -419,6 +523,13 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
     />
   );
 
+  const resultContent = (
+    <div className="space-y-6">
+      {resultMain}
+      {historyStrip}
+    </div>
+  );
+
   const guideContent = (
     <GuideContent
       title="AI Image Generation Process"
@@ -445,7 +556,7 @@ const ModernAIImageGenerator: React.FC<ModernAIImageGeneratorProps> = ({
         }
       ]}
       tips={[
-        'DALL-E 3 produces highly realistic and detailed images',
+        'GPT Image 2.6 produces highly realistic and detailed images',
         'Gemini Flash is fastest for quick iterations',
         'HD quality doubles generation time but improves details',
         'Use specific art styles (oil painting, watercolor, etc.) for better results'

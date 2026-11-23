@@ -296,7 +296,7 @@ const GenerationQueue: React.FC<GenerationQueueProps> = ({ tokens = {} }) => {
                     onChange={(e) => setNewModel(e.target.value)}
                     className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                   >
-                    <option value="openai">OpenAI (DALL-E 3)</option>
+                    <option value="openai">OpenAI (GPT Image 2.6)</option>
                     <option value="gemini">Google Gemini</option>
                     <option value="imagen">Google Imagen</option>
                   </select>

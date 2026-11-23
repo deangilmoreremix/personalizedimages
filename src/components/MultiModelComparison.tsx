@@ -25,6 +25,8 @@ import {
   generateImageWithImagen,
   generateImageWithGptImage
 } from '../utils/api';
+import { resolveTokens } from '../utils/tokenText';
+import { createDefaultTokenValues } from '../types/personalization';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface ModelResult {
@@ -58,7 +60,7 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
 
   const modelConfig = {
     openai: {
-      name: 'DALL-E 3',
+      name: 'GPT Image 2.6 Sunburst',
       icon: <Zap className="w-5 h-5 text-blue-500" />,
       color: 'bg-blue-50 border-blue-200',
       cost: 0.04,
@@ -86,7 +88,7 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
       description: 'Ultra-fast generation, 2-4x faster than others'
     },
     'gpt-image-1': {
-      name: 'GPT-4 Vision',
+      name: 'GPT Image 2.6 Flare',
       icon: <Star className="w-5 h-5 text-indigo-500" />,
       color: 'bg-indigo-50 border-indigo-200',
       cost: 0.04,
@@ -104,29 +106,31 @@ const MultiModelComparison: React.FC<MultiModelComparisonProps> = ({ tokens }) =
 
   const generateWithModel = async (modelId: string): Promise<ModelResult> => {
     const startTime = Date.now();
+    // Fill [FIRSTNAME]-style tokens (sample values unless real ones are provided)
+    const resolvedPrompt = resolveTokens(prompt, { ...createDefaultTokenValues(), ...tokens });
 
     try {
       let imageUrl: string;
 
       switch (modelId) {
         case 'openai':
-          imageUrl = await generateImageWithDalle(prompt, {
+          imageUrl = await generateImageWithDalle(resolvedPrompt, {
             size: '1024x1024',
             quality: 'standard',
             style: 'natural'
           });
           break;
         case 'gemini':
-          imageUrl = await generateImageWithGemini(prompt, aspectRatio, imageStyle);
+          imageUrl = await generateImageWithGemini(resolvedPrompt, aspectRatio, imageStyle);
           break;
         case 'imagen':
-          imageUrl = await generateImageWithImagen(prompt, aspectRatio);
+          imageUrl = await generateImageWithImagen(resolvedPrompt, aspectRatio);
           break;
         case 'gemini2flash':
-          imageUrl = await generateImageWithGemini2Flash(prompt);
+          imageUrl = await generateImageWithGemini2Flash(resolvedPrompt);
           break;
         case 'gpt-image-1':
-          imageUrl = await generateImageWithGptImage(prompt);
+          imageUrl = await generateImageWithGptImage(resolvedPrompt);
           break;
         default:
           throw new Error(`Unknown model: ${modelId}`);

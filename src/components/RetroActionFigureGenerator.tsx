@@ -15,6 +15,7 @@ import { useEmailPersonalization } from '../hooks/useEmailPersonalization';
 import EmailPersonalizationToggle from './EmailPersonalizationToggle';
 import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 
+import { resolveTokens } from '../utils/tokenText';
 interface RetroActionFigureGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -148,7 +149,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
       });
       
       // Call the API to generate the figure
-      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      const imageUrl = await generateActionFigure(resolveTokens(finalPrompt, tokens), selectedProvider, referenceImage || undefined);
       
       console.log('✅ Successfully generated retro action figure');
       setGeneratedFigure(imageUrl);
@@ -282,7 +283,7 @@ const RetroActionFigureGenerator: React.FC<RetroActionFigureGeneratorProps> = ({
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
-                DALL-E 3
+                GPT Image 2.6 Sunburst
               </button>
               <button
                 className={`py-2 px-4 text-sm rounded ${selectedProvider === 'gemini'

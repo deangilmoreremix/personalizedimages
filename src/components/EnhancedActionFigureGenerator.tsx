@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Wand2, Image as ImageIcon, Download, RefreshCw, Zap, Camera, Layers, Sparkles, SlidersHorizontal, Lightbulb, Dices, Upload, Box, Package, X, Shapes, PaintBucket } from 'lucide-react';
+import { resolveTokens } from '../utils/tokenText';
 import { generateActionFigure, generateImageWithGeminiNano } from '../utils/api';
 import DroppableTextArea from './DroppableTextArea';
 import { TokenDragItem } from '../types/DragTypes';
@@ -148,7 +149,7 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
       });
       
       // Call the API to generate the figure
-      const imageUrl = await generateActionFigure(finalPrompt, selectedProvider, referenceImage || undefined);
+      const imageUrl = await generateActionFigure(resolveTokens(finalPrompt, tokens), selectedProvider, referenceImage || undefined);
       
       console.log('✅ Successfully generated action figure');
       setGeneratedFigure(imageUrl);
@@ -362,7 +363,7 @@ const EnhancedActionFigureGenerator: React.FC<EnhancedActionFigureGeneratorProps
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
-                DALL-E 3
+                GPT Image 2.6 Sunburst
               </button>
               <button
                 className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'

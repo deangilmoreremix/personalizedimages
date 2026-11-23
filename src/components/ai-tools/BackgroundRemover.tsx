@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Scissors, Sparkles, RotateCcw } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { freepikAiService } from '../../services/freepikAiService';
+import { removeBackgroundLocal, isLocalRemovalSupported } from '../../services/localBackgroundRemoval';
 import ImageDropZone from './shared/ImageDropZone';
 import ProcessingOverlay from './shared/ProcessingOverlay';
 import ResultDisplay from './shared/ResultDisplay';
@@ -13,6 +14,8 @@ export default function BackgroundRemover() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outputFormat, setOutputFormat] = useState<'png' | 'webp'>('png');
+  const [stage, setStage] = useState<'download' | 'inference' | 'cloud'>('inference');
+  const [usedCloud, setUsedCloud] = useState(false);
 
   const handleRemoveBackground = useCallback(async () => {
     if (!image) return;
@@ -20,7 +23,29 @@ export default function BackgroundRemover() {
     setProgress(0);
     setError(null);
 
+    setUsedCloud(false);
+
+    // 1) Free + private: run the model in the browser. 2) Fallback: Freepik cloud API.
+    if (isLocalRemovalSupported()) {
+      try {
+        const url = await removeBackgroundLocal(image.dataUrl, {
+          format: outputFormat,
+          onProgress: (pct, st) => {
+            setProgress(pct);
+            setStage(st);
+          }
+        });
+        setResultUrl(url);
+        setProcessing(false);
+        return;
+      } catch (localErr) {
+        console.warn('On-device background removal failed, falling back to cloud:', localErr);
+      }
+    }
+
     try {
+      setStage('cloud');
+      setUsedCloud(true);
       const result = await freepikAiService.removeBackground(
         { imageUrl: image.dataUrl, outputFormat },
         setProgress
@@ -40,10 +65,11 @@ export default function BackgroundRemover() {
 
   const handleReset = useCallback(() => {
     clearImage();
+    if (resultUrl?.startsWith('blob:')) URL.revokeObjectURL(resultUrl);
     setResultUrl(null);
     setError(null);
     setProgress(0);
-  }, [clearImage]);
+  }, [clearImage, resultUrl]);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -54,13 +80,13 @@ export default function BackgroundRemover() {
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">Background Remover</h3>
-            <p className="text-sm text-gray-500">Remove backgrounds with AI precision</p>
+            <p className="text-sm text-gray-500">Free and private: runs on your device, your image never leaves the browser</p>
           </div>
         </div>
       </div>
 
       <div className="p-5 relative">
-        {processing && <ProcessingOverlay progress={progress} label="Removing background..." />}
+        {processing && <ProcessingOverlay progress={progress} label={stage === 'download' ? 'Downloading AI model (first use only)...' : stage === 'cloud' ? 'Removing background in the cloud...' : 'Removing background...'} />}
 
         {resultUrl ? (
           <ResultDisplay

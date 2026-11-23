@@ -155,11 +155,11 @@ export const useUniversalAIFeatures = ({
   // Model selection functions
   const getProviderName = useCallback((model: AIModel) => {
     switch (model) {
-      case 'openai': return 'DALL-E 3';
+      case 'openai': return 'GPT Image 2.6 Sunburst';
       case 'imagen': return 'Imagen 3';
       case 'gemini': return 'Gemini';
       case 'gemini2flash': return 'Gemini 2.5 Flash';
-      case 'gpt-image-1': return 'GPT-4 Vision';
+      case 'gpt-image-1': return 'GPT Image 2.6 Flare';
       default: return model;
     }
   }, []);
@@ -248,7 +248,7 @@ export const useUniversalAIFeatures = ({
         case 'gpt-image-1':
           imageUrl = await generateImageWithGptImage(enhancedPrompt);
           break;
-        default: // openai - DALL-E 3
+        default: // openai - GPT Image 2.6 Sunburst
           imageUrl = await generateImageWithDalle(enhancedPrompt, dalleOptions);
       }
 

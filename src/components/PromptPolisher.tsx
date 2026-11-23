@@ -14,7 +14,7 @@ const PromptPolisher: React.FC<PromptPolisherProps> = ({
   onPromptUpdate,
   disabled = false,
 }) => {
-  const [selectedModel, setSelectedModel] = useState<GPTModel>('gpt-4o');
+  const [selectedModel, setSelectedModel] = useState<GPTModel>('gpt-6.2-sol');
   const [isPolishing, setIsPolishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ const PromptPolisher: React.FC<PromptPolisherProps> = ({
       </div>
 
       <p className="text-xs text-purple-700 mb-3">
-        Enhance your image prompts with AI for better DALL-E 3 results
+        Enhance your image prompts with AI for better GPT Image 2.6 Sunburst results
       </p>
 
       <div className="flex items-center gap-3 mb-3">

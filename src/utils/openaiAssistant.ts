@@ -1,5 +1,4 @@
-import OpenAI from 'openai';
-import { getUserApiKey } from './userApiKeyStorage';
+import { responsesGenerateText } from './openaiClient';
 
 interface OpenAIAssistantOptions {
   messages: Array<{ role: string; content: string }>;
@@ -16,18 +15,8 @@ interface OpenAIAssistantResponse {
  * Creates and returns an OpenAI assistant instance
  */
 export async function createOpenAIAssistant() {
-  const userKey = getUserApiKey('openai');
-  const apiKey = userKey || import.meta.env.VITE_OPENAI_API_KEY;
+  // Key / proxy resolution happens inside the Responses client (user key -> env key -> edge proxy).
 
-  if (!apiKey) {
-    throw new Error('OpenAI API key not found. Set it in Settings > API Keys or as VITE_OPENAI_API_KEY in your environment variables.');
-  }
-
-  const openai = new OpenAI({
-    apiKey,
-    dangerouslyAllowBrowser: true // Note: In production, you should use a backend proxy
-  });
-  
   /**
    * Process messages with the OpenAI assistant
    */
@@ -60,32 +49,17 @@ First provide a helpful, conversational response, then recommend 1-3 relevant fe
 IMPORTANT: Keep responses concise (max 3-4 sentences).
 At the end of your response include a marker with feature IDs like this: FEATURES:["image","action-figure"]`;
 
-      // Format messages for the OpenAI API
-      const formattedMessages = [
-        { role: 'system', content: systemMessage },
-        ...messages
-      ];
-
-      // Create a streaming completion
-      const stream = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: formattedMessages,
-        stream: true,
-        temperature: 0.7,
-        max_tokens: 800,
-      });
-
-      let fullResponse = '';
+      // Live-streamed completion through the Responses API
       let suggestedFeatures: string[] = [];
-
-      // Process the stream
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        if (content) {
-          fullResponse += content;
-          onUpdate?.(fullResponse);
-        }
-      }
+      const { text } = await responsesGenerateText({
+        messages: [
+          { role: 'system', content: systemMessage },
+          ...(messages as Array<{ role: 'user' | 'assistant'; content: string }>)
+        ],
+        maxOutputTokens: 800,
+        onToken: (_token, full) => onUpdate?.(full)
+      });
+      let fullResponse = text;
 
       // Extract suggested features
       const featuresMatch = fullResponse.match(/FEATURES:\[(.*?)\]/);

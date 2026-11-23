@@ -19,6 +19,7 @@ import EmailPersonalizationPanel from './EmailPersonalizationPanel';
 import PersonalizationToggle from './PersonalizationToggle';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, getElevationClasses, getAnimationClasses, commonStyles } from './ui/design-system';
 
+import { resolveTokens } from '../utils/tokenText';
 interface CartoonImageGeneratorProps {
   tokens: Record<string, string>;
   onImageGenerated: (imageUrl: string) => void;
@@ -30,7 +31,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
   const [customPrompt, setCustomPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider] = useState<'openai'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
 
   const [personalizedContent, setPersonalizedContent] = useState('');
   const { shouldShowPanel } = usePersonalizationPreferences('cartoon');
@@ -93,7 +94,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
       const themeLabel = cartoonThemesConfig.themes[selectedTheme]?.label || 'cartoon';
       const styledPrompt = `${finalPrompt} (${themeLabel} cartoon style)`;
 
-      const result = await generateImage(styledPrompt, {
+      const result = await generateImage(resolveTokens(styledPrompt, tokens), {
         style: themeLabel,
         category: 'cartoon'
       });
@@ -257,7 +258,7 @@ const CartoonImageGenerator: React.FC<CartoonImageGeneratorProps> = ({ tokens, o
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
-                DALL-E 3
+                GPT Image 2.6 Sunburst
               </button>
               <button
                 className={`py-2 px-3 text-sm rounded ${selectedProvider === 'gemini'

@@ -28,7 +28,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
   const [prompt, setPrompt] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedProvider] = useState<'openai'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'gemini' | 'gemini-nano'>('openai');
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [sceneType, setSceneType] = useState<string>('nature');
@@ -214,7 +214,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
       case 'gemini':
         return "Gemini AI is excellent at capturing the painterly quality and detailed backgrounds of Ghibli films.";
       case 'openai':
-        return "DALL-E 3 can create excellent Ghibli-inspired scenes with detailed instructions.";
+        return "GPT Image 2.6 Sunburst can create excellent Ghibli-inspired scenes with detailed instructions.";
       default:
         return "Each model has different strengths for Ghibli-style imagery.";
     }
@@ -303,7 +303,7 @@ const GhibliImageGenerator: React.FC<GhibliImageGeneratorProps> = ({ tokens, onI
                   : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setSelectedProvider('openai')}
               >
-                DALL-E 3
+                GPT Image 2.6 Sunburst
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">{getStyleTip()}</p>

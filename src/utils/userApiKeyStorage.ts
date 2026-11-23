@@ -47,7 +47,7 @@ export interface ApiKeyStatus {
 const PROVIDER_META: Record<ApiKeyProvider, { label: string; hint: string }> = {
   openai: {
     label: 'OpenAI',
-    hint: 'Starts with sk-... Used for GPT, DALL-E, Whisper',
+    hint: 'Starts with sk-... Used for GPT, GPT Image, Whisper',
   },
   gemini: {
     label: 'Google Gemini',

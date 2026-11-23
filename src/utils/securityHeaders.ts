@@ -127,7 +127,7 @@ class SecurityHeadersManager {
     meta.httpEquiv = 'Permissions-Policy';
     meta.content = [
       'camera=()',
-      'microphone=()',
+      'microphone=(self)',
       'geolocation=()',
       'gyroscope=()',
       'magnetometer=()',

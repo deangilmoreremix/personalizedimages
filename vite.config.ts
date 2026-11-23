@@ -18,7 +18,7 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
+            if (/node_modules\/(react|react-dom|react-router|react-router-dom|@remix-run|scheduler)\//.test(id)) {
               return 'react-vendor';
             }
             if (id.includes('framer-motion') || id.includes('react-colorful') || id.includes('lucide-react')) {

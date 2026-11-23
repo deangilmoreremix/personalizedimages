@@ -24,6 +24,8 @@ import {
   Layers
 } from 'lucide-react';
 import { generateImage, InsufficientCreditsError, GenerationError } from '../services/imageGenerationService';
+import { parseCsv } from '../utils/csv';
+import { resolveTokens } from '../utils/tokenText';
 import { DESIGN_SYSTEM, getGridClasses, getButtonClasses, getAlertClasses, commonStyles } from './ui/design-system';
 
 interface BatchItem {
@@ -54,7 +56,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
   const cancelledRef = useRef(false);
 
   const modelConfig = {
-    openai: { name: 'DALL-E 3', cost: 0.04 }
+    openai: { name: 'GPT Image 2.6 Sunburst', cost: 0.04 }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,40 +66,28 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const csvText = e.target?.result as string;
-        const lines = csvText.split('\n').filter(line => line.trim());
+        const rows = parseCsv(e.target?.result as string);
 
-        if (lines.length < 2) {
+        if (rows.length < 1) {
           alert('CSV file must have at least a header row and one data row');
           return;
         }
 
-        const headers = lines[0].split(',').map(h => h.trim());
-        const newItems: BatchItem[] = [];
-
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim());
-          if (values.length === headers.length) {
-            const itemTokens: Record<string, string> = {};
-
-            headers.forEach((header, index) => {
-              if (header.toLowerCase() !== 'prompt') {
-                itemTokens[header] = values[index] || '';
-              }
-            });
-
-            // Merge with global tokens
-            const mergedTokens = { ...tokens, ...itemTokens };
-
-            newItems.push({
-              id: `batch-${Date.now()}-${i}`,
-              prompt: values[headers.findIndex(h => h.toLowerCase() === 'prompt')] || '',
-              tokens: mergedTokens,
-              model: 'openai',
-              status: 'pending'
-            });
+        const newItems: BatchItem[] = rows.map((row, i) => {
+          const itemTokens: Record<string, string> = {};
+          let rowPrompt = '';
+          for (const [header, value] of Object.entries(row)) {
+            if (header.toLowerCase() === 'prompt') rowPrompt = value;
+            else itemTokens[header] = value;
           }
-        }
+          return {
+            id: `batch-${Date.now()}-${i}`,
+            prompt: rowPrompt,
+            tokens: { ...tokens, ...itemTokens }, // row values win over global tokens
+            model: 'openai',
+            status: 'pending'
+          } as BatchItem;
+        });
 
         setBatchItems(prev => [...prev, ...newItems]);
       } catch (error) {
@@ -133,10 +123,8 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
     const startTime = Date.now();
 
     try {
-      let resolvedPrompt = item.prompt;
-      Object.entries(item.tokens).forEach(([key, value]) => {
-        resolvedPrompt = resolvedPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'gi'), value);
-      });
+      // Supports [TOKEN] and {{TOKEN}}; "First Name" columns fill FIRSTNAME.
+      const resolvedPrompt = resolveTokens(item.prompt, item.tokens, { curly: true });
 
       const sizeMap: Record<string, '1024x1024' | '1792x1024' | '1024x1792'> = {
         '1:1': '1024x1024',
@@ -332,7 +320,7 @@ const BatchGeneration: React.FC<BatchGenerationProps> = ({ tokens }) => {
                   AI Model
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700">
-                  DALL-E 3 (${modelConfig.openai.cost}/img)
+                  GPT Image 2.6 Sunburst (${modelConfig.openai.cost}/img)
                 </div>
               </div>
 

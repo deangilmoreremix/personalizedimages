@@ -20,7 +20,7 @@ import {
   Hash,
 } from 'lucide-react';
 import { useUserApiKeys } from '../contexts/UserApiKeyContext';
-import { getUserApiKey } from '../utils/userApiKeyStorage';
+import { getUserApiKey, type ApiKeyProvider } from '../utils/userApiKeyStorage';
 import { useAuth } from '../auth/AuthContext';
 import { userProfileService } from '../services/supabaseService';
 import { Loader2 } from 'lucide-react';
@@ -38,7 +38,7 @@ const PROVIDERS: ProviderConfig[] = [
   {
     provider: 'openai',
     label: 'OpenAI',
-    description: 'GPT-4o, DALL-E 3, Whisper',
+    description: 'GPT-6, GPT Image 2.6, Whisper',
     icon: <Sparkles className="w-5 h-5" />,
     tiers: ['Pro'],
     hint: 'Enter your OpenAI API key to unlock GPT and DALL-E features.',

@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getUserApiKey } from './userApiKeyStorage';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -49,6 +50,15 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
 
   const apiUrl = `${supabaseUrl}/functions/v1/${functionName}`;
 
+  // Deployed edge functions are bring-your-own-key: they read the caller's OpenAI key from
+  // the `x-user-api-key` header (set in Settings > API Keys, or VITE_OPENAI_API_KEY).
+  let userOpenAIKey = '';
+  try {
+    userOpenAIKey = getUserApiKey('openai') || (import.meta as any).env?.VITE_OPENAI_API_KEY || '';
+  } catch {
+    /* storage unavailable */
+  }
+
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -60,6 +70,7 @@ async function callEdgeFunction(functionName: string, payload: any = {}) {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          ...(userOpenAIKey ? { 'x-user-api-key': userOpenAIKey } : {}),
         },
         body: JSON.stringify(payload),
         signal: controller.signal,

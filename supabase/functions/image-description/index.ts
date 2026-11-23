@@ -1,3 +1,5 @@
+import { generateText } from '../_shared/openai-responses.ts'
+import { openaiModelDefaults } from '../_shared/openai-models.ts'
 import { getCorsHeaders, authenticateUser, checkRateLimit, sanitizeInput } from "../_shared/cors.ts"
 
 const corsHeaders = {
@@ -51,23 +53,15 @@ Deno.serve(async (req: Request) => {
     const prompt = `Generate a detailed, creative image description for personalized content with these attributes: ${tokenEntries}. Write a vivid, descriptive paragraph suitable as an image generation prompt.`;
 
     if (openaiKey) {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 300,
-          temperature: 0.8
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        description = data.choices?.[0]?.message?.content || '';
+      try {
+        const result = await generateText(
+          { input: prompt, maxOutputTokens: 300 },
+          { apiKey: openaiKey as string },
+          openaiModelDefaults().textModel
+        );
+        description = result.text;
+      } catch (e) {
+        console.error('OpenAI description failed:', e);
       }
     } else if (geminiKey) {
       const response = await fetch(
